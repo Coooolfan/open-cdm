@@ -5,6 +5,20 @@ plugins {
     id 'com.clougence.java-conventions'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id 'distribution'
+    id 'application'
+}
+
+application {
+    mainClass = 'com.clougence.clouddm.boot.DmConsoleLauncher'
+}
+
+tasks.named('run', JavaExec) {
+    description = 'Run DmConsoleLauncher for development'
+    group = 'application'
+
+    jvmArgs '-Xms256m', '-Xmx1024m', '-Djava.awt.headless=true'
+    workingDir = rootProject.projectDir
+    systemProperties = System.properties
 }
 
 dependencies {
