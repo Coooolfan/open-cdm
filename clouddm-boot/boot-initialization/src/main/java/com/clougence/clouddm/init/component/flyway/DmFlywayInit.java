@@ -27,40 +27,28 @@ public class DmFlywayInit {
 
     @Value("${clouddm.mode.personal_desktop_version:false}")
     private boolean    desktopVersion;
-
     @Value("${spring.flyway.enabled:true}")
     private Boolean    flywayEnabled;
-
     @Value("${spring.flyway.baseline-on-migrate:true}")
     private Boolean    baselineOnMigrate;
-
     @Value("${spring.flyway.sql-migration-prefix:V}")
     private String     sqlMigrationPrefix;
-
     @Value("${spring.flyway.sql-migration-separator:__}")
     private String     sqlMigrationSeparator;
-
     @Value("${spring.flyway.sql-migration-suffixes:.java}")
     private String     sqlMigrationSuffixes;
-
     @Value("${spring.flyway.dm.baseline-description:<< ClouGence DM >>}")
     private String     dmBaselineDescription;
-
     @Value("${spring.flyway.dm.locations}")
     private String[]   dmLocations;
-
     @Value("${spring.flyway.dm.table}")
     private String     dmTable;
-
     @Value("${spring.flyway.rdp.baseline-description:<< ClouGence RDP >>}")
     private String     rdpBaselineDescription;
-
     @Value("${spring.flyway.rdp.locations}")
     private String[]   rdpLocations;
-
     @Value("${spring.flyway.rdp.table}")
     private String     rdpTable;
-
     @Resource
     private DataSource dataSource;
 

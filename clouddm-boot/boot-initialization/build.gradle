@@ -4,6 +4,11 @@
 plugins {
     id 'com.clougence.java-conventions'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'application'
+}
+
+application {
+    mainClass = 'com.clougence.clouddm.init.boot.InitApplication'
 }
 
 dependencies {
@@ -16,6 +21,7 @@ dependencies {
 
     // spring
     implementation "org.springframework:spring-tx:${SPRING_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-web:${SPRINGBOOT_VERSION}"
     implementation "org.springframework.boot:spring-boot-starter-jdbc:${SPRINGBOOT_VERSION}"
     implementation "org.springframework:spring-beans:${SPRING_VERSION}"
     implementation "org.springframework:spring-context:${SPRING_VERSION}"
