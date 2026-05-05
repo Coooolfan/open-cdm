@@ -14,7 +14,7 @@ import com.clougence.clouddm.console.web.global.exception.PrintErrorUncaughtExcH
 import com.clougence.clouddm.console.web.global.rsocket.RSocketServerServiceImpl;
 import com.clougence.clouddm.init.InitApplication;
 import com.clougence.clouddm.init.service.InitDBStatusDetector;
-import com.clougence.clouddm.init.service.SystemStatusResult;
+import com.clougence.clouddm.init.model.SystemStatusResult;
 import com.clougence.utils.format.DateFormatType;
 
 import lombok.extern.slf4j.Slf4j;

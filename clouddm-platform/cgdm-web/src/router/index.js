@@ -287,6 +287,11 @@ const routes = [
     ]
   },
   {
+    path: '/initialization',
+    name: 'Initialization',
+    component: () => import(/* webpackChunkName: "initialization" */ '@/views/initialization/index')
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/sql'
   }

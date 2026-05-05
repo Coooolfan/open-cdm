@@ -24,9 +24,11 @@ import com.clougence.clouddm.console.web.component.file.mode.FormatConvertDef;
 import com.clougence.clouddm.console.web.component.whitelist.WhiteListService;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.constants.DmMode;
+import com.clougence.clouddm.console.web.constants.SystemStatus;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.model.vo.ConsoleSettingsVO;
 import com.clougence.clouddm.console.web.model.vo.GlobalSettingsVO;
+import com.clougence.clouddm.console.web.model.vo.SystemStatusVO;
 import com.clougence.clouddm.console.web.service.system.impl.DsVersionsServiceImpl;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.dsfamily.definition.ui.browser.RdbUiMenuDef;
@@ -60,6 +62,9 @@ public class DmHomeController {
         GlobalSettingsVO settings = new GlobalSettingsVO();
         settings.setBuildVersion(DmBuildInfo.BUILD_VERSION);
         settings.setBuildId(DmBuildInfo.BUILD_ID);
+        SystemStatusVO systemStatus = new SystemStatusVO();
+        systemStatus.setStatus(SystemStatus.Ready);
+        settings.setSystemStatus(systemStatus);
 
         if (this.dmConfig.getDmMode() == DmMode.desktop && this.dmConfig.getPersonalConfig() != null) {
             settings.setPersonal(this.dmConfig.getPersonalConfig());

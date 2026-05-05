@@ -18,4 +18,5 @@ public class GlobalSettingsVO {
     private String              buildId;
     private DmPersonalConfig    personal;
     private Map<String, Object> productVersions;
+    private SystemStatusVO      systemStatus;
 }

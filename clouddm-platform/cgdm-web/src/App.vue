@@ -190,6 +190,7 @@
 <script>
 import enUS from 'ant-design-vue/es/locale/en_US';
 import zhCN from 'ant-design-vue/es/locale/zh_CN';
+import { isDmSystemInitial } from './utils/dmGlobalSettings';
 
 export default {
   name: 'App',
@@ -215,6 +216,21 @@ export default {
 
     console.log(this.$i18n.global.locale.value);
     this.locale = this.$i18n.global.locale.value === 'zh-CN' ? zhCN : enUS;
+
+    // 先检测系统是否需要初始化 - 使用 DM 接口
+    try {
+      const globalSettingRes = await this.$services.dmGlobalSettings();
+      if (globalSettingRes.success && isDmSystemInitial(globalSettingRes)) {
+        this.showChild = true;
+        this.removeLoadingEle();
+        this.$router.push({ name: 'Initialization' });
+        return;
+      }
+    } catch (e) {
+      // 如果接口不可用，继续正常流程
+    }
+
+    // 正常流程
     await this.$store.dispatch('getUserInfo');
     this.showChild = true;
     this.removeLoadingEle();

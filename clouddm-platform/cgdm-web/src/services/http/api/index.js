@@ -48,6 +48,7 @@ import { consolejobApi } from '@/services/http/api/consoleJob';
 import { systemConfigApi } from '@/services/http/api/systemConfig';
 import { taskRestartHistoryApi } from '@/services/http/api/taskRestartHistory';
 import { transferApi } from '@/services/http/api/transfer';
+import { initApi } from '@/services/http/api/init';
 import { verifyApi } from '@/services/http/api/verify';
 import { mfaApi } from '@/services/http/api/mfa';
 import { financeApi } from '@/services/http/api/finance';
@@ -107,6 +108,7 @@ export const api = {
   ...systemConfigApi,
   ...taskRestartHistoryApi,
   ...transferApi,
+  ...initApi,
   ...verifyApi,
   ...mfaApi,
   ...financeApi,
