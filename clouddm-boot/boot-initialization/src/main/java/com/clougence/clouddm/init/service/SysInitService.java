@@ -131,7 +131,9 @@ public class SysInitService {
     }
 
     /**
-     * 仅更新数据库配置（dbOnly 模式，不执行 Flyway 迁移和账号初始化）。
+     * 仅更新数据库配置。
+     * 对于新库、空库或明确要求重建的场景，同步执行初始化并写入管理员账号；
+     * 对于已有非空库，仅更新连接并执行迁移/修复，不重置管理员账号。
      */
     public void updateDbConfig(Map<String, String> userConfig) throws Exception {
         replaceConfigLines(userConfig);
@@ -140,6 +142,8 @@ public class SysInitService {
         String jdbcUrl = userConfig.getOrDefault("spring.datasource.jdbcurl", props.getProperty("spring.datasource.jdbcurl"));
         String dbUser = userConfig.getOrDefault("spring.datasource.username", props.getProperty("spring.datasource.username"));
         String dbPass = userConfig.getOrDefault("spring.datasource.password", props.getProperty("spring.datasource.password"));
+        String adminEmail = userConfig.get(InitSeedConstants.RUNTIME_ADMIN_EMAIL_KEY);
+        String adminPassword = userConfig.get(InitSeedConstants.RUNTIME_ADMIN_PASSWORD_KEY);
         boolean createIfMissing = Boolean.parseBoolean(userConfig.getOrDefault(INIT_DB_CREATE_IF_MISSING, "false"));
         boolean rebuildIfNotEmpty = Boolean.parseBoolean(userConfig.getOrDefault(INIT_DB_REBUILD_IF_NOT_EMPTY, "false"));
 
@@ -147,8 +151,21 @@ public class SysInitService {
             return;
         }
 
+        DatabaseInspection inspection = inspectDatabase(jdbcUrl, dbUser, dbPass, false);
+        boolean bootstrapAdmin = !inspection.databaseExists || inspection.empty || rebuildIfNotEmpty;
+
+        log.info("[SysInitService] Updating DB config, bootstrapAdmin={}, databaseExists={}, empty={}, rebuildIfNotEmpty={}, adminEmail={}",
+            bootstrapAdmin,
+            inspection.databaseExists,
+            inspection.empty,
+            rebuildIfNotEmpty,
+            adminEmail);
+
         prepareDatabase(jdbcUrl, dbUser, dbPass, createIfMissing, rebuildIfNotEmpty);
-        runFlywayMigration(jdbcUrl, dbUser, dbPass, null, null);
+        runFlywayMigration(jdbcUrl, dbUser, dbPass, bootstrapAdmin ? adminEmail : null, bootstrapAdmin ? adminPassword : null);
+        if (bootstrapAdmin && StringUtils.isNotBlank(adminEmail) && StringUtils.isNotBlank(adminPassword)) {
+            updateAdminUser(jdbcUrl, dbUser, dbPass, adminEmail, adminPassword);
+        }
         runFixTasks(jdbcUrl, dbUser, dbPass);
     }
 

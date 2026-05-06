@@ -123,8 +123,6 @@ public class ConsoleRSocketConfig {
             this.workerMapper,
             this.dmWorkerStatusMapper,
             consoleServerSideRegistry(),
-            jwtService,
-            userService,
             RSocketSerializationImpl.DEFAULT);
     }
 

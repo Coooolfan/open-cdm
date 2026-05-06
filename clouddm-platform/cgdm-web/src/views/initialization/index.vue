@@ -93,7 +93,7 @@
             <span>{{ $t('initialization.testConnection') }}</span>
           </a-button>
           <a-button v-if="!isConfirmStep" type="primary" :disabled="!canNext" @click="nextStep">{{ $t('initialization.next') }}</a-button>
-          <a-button v-if="isConfirmStep" type="primary" :loading="applying" @click="handleApply">{{ $t('initialization.applyConfig') }}</a-button>
+          <a-button v-if="isConfirmStep" type="primary" :loading="applying" @click="handleConfirmAction">{{ confirmActionLabel }}</a-button>
         </div>
       </div>
     </div>
@@ -169,6 +169,7 @@ export default {
       currentStep: 0,
       testingDb: false,
       applying: false,
+      restartTimedOut: false,
       restartStatusType: '',
       restartStatusMessage: ''
     };
@@ -240,6 +241,9 @@ export default {
         return !this.securityMissingFields.length;
       }
       return true;
+    },
+    confirmActionLabel() {
+      return this.restartTimedOut ? this.$t('shua-xin') : this.$t('initialization.applyConfig');
     }
   },
   beforeUnmount() {
@@ -448,8 +452,18 @@ export default {
       return 'upcoming';
     },
 
+    handleConfirmAction() {
+      if (this.restartTimedOut) {
+        window.location.reload();
+        return;
+      }
+
+      return this.handleApply();
+    },
+
     async handleApply() {
       this.applying = true;
+      this.restartTimedOut = false;
       this.restartStatusType = '';
       this.restartStatusMessage = '';
       try {
@@ -496,6 +510,7 @@ export default {
 
       this.restartStatusType = 'error';
       this.restartStatusMessage = this.$t('initialization.restartTimeout');
+      this.restartTimedOut = true;
       this.applying = false;
     }
   }

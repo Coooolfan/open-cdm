@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 public class ListSubAccountsFO {
 
-    private long   roleId;
+    private Long   roleId;
 
     private String userNameOrSubAccountPrefix;
 }

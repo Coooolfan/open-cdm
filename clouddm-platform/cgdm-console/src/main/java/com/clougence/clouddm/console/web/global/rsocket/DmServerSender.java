@@ -11,7 +11,6 @@ import org.springframework.messaging.rsocket.RSocketRequester;
 
 import com.clougence.clouddm.comm.RSocketSerialization;
 import com.clougence.clouddm.comm.component.RSocketRequestManager;
-import com.clougence.clouddm.comm.component.http.CanalHttpClient;
 import com.clougence.clouddm.comm.component.server.RSocketServerSender;
 import com.clougence.clouddm.comm.component.server.ServerSideRegistry;
 import com.clougence.clouddm.comm.constants.rsocket.RSocketLogNames;
@@ -21,7 +20,6 @@ import com.clougence.clouddm.comm.model.*;
 import com.clougence.clouddm.comm.model.auth.WorkerIdentity;
 import com.clougence.clouddm.comm.model.rsocket.AsyncRequestFuture;
 import com.clougence.clouddm.comm.util.RSocketRespUtil;
-import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.constants.DmErrorCode;
 import com.clougence.clouddm.console.web.constants.I18nDmMsgKeys;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerMapper;
@@ -31,12 +29,8 @@ import com.clougence.clouddm.console.web.dal.model.DmWorkerStatusDO;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.console.web.util.MessageUtils;
 import com.clougence.clouddm.sdk.execute.dsconf.Serialization;
-import com.clougence.rdp.component.jwtsession.RdpJwtManager;
-import com.clougence.rdp.component.jwtsession.RdpJwtService;
 import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.rdp.service.RdpUserService;
 import com.clougence.utils.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 
 import lombok.SneakyThrows;
@@ -48,29 +42,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DmServerSender implements RSocketServerSender {
 
-    private static final String         URL_SUFFIX = DmControllerUrlPrefix.CONSOLE_PREFIX + "/rsocket/forward";
     private final int                   TIMEOUT_MS = 60000;
     private final RSocketRequestManager requestManager;
     private final DmWorkerMapper        workerMapper;
     private final DmWorkerStatusMapper  statusMapper;
     private final ServerSideRegistry    registry;
-    private final RdpJwtService         jwtService;
-    private final RdpUserService        userService;
     private final RSocketSerialization  serialization;
 
-    public DmServerSender(RSocketRequestManager requestManager, DmWorkerMapper workerMapper, DmWorkerStatusMapper statusMapper, ServerSideRegistry registry, RdpJwtService jwtService,
-                          RdpUserService userService, RSocketSerialization serialization){
+    public DmServerSender(RSocketRequestManager requestManager, DmWorkerMapper workerMapper, DmWorkerStatusMapper statusMapper, ServerSideRegistry registry,
+                          RSocketSerialization serialization){
         this.requestManager = requestManager;
         this.workerMapper = workerMapper;
         this.statusMapper = statusMapper;
         this.registry = registry;
-        this.jwtService = jwtService;
-        this.userService = userService;
         this.serialization = serialization;
     }
-
-    private final int SERVER_FORWARD_PORT = 8222;
-    private String    jwtToken;
 
     @SneakyThrows
     @Override
@@ -82,8 +68,9 @@ public class DmServerSender implements RSocketServerSender {
             DmWorkerStatusDO workerStatus = chooseLocalRegisteredWorker(statusDOs);
             if (workerStatus == null) {
                 DmWorkerStatusDO randomWorker = statusDOs.get(RandomUtils.nextInt(0, statusDOs.size()));
-                log.info("forward rsocket request to random worker " + randomWorker.getWorkerIp() + ", api method name is " + apiFullMethodName);
-                return forwardRequest(apiFullMethodName, randomWorker.getConsoleIp(), randomWorker.getWorkerSeqNumber(), param);
+                String errMsg = buildRemoteForwardDisabledMessage(apiFullMethodName, randomWorker.getWorkerSeqNumber(), randomWorker.getConsoleIp());
+                log.warn(errMsg);
+                return RSocketRespUtil.buildError(errMsg);
             } else {
                 RSocketRequester requester = registry.getRequesterMap().get(workerStatus.getWorkerSeqNumber());
                 if (requester == null) {
@@ -179,8 +166,9 @@ public class DmServerSender implements RSocketServerSender {
                          + stopwatch.elapsed(TimeUnit.MILLISECONDS) + " ms.");
                 return response;
             } else {
-                log.info("forward rsocket request to specified console (" + workerStatus.getConsoleIp() + "), method name:" + apiFullMethodName);
-                return forwardRequestWithJsonParams(apiFullMethodName, workerStatus.getConsoleIp(), workerStatus.getWorkerSeqNumber(), paramJson);
+                String errMsg = buildRemoteForwardDisabledMessage(apiFullMethodName, workerStatus.getWorkerSeqNumber(), workerStatus.getConsoleIp());
+                log.warn(errMsg);
+                return RSocketRespUtil.buildError(errMsg);
             }
         } catch (Exception e) {
             MDC.put("module", RSocketLogNames.RSOCKET_SEND_RECV_ERROR_LOG_NAME);
@@ -265,40 +253,9 @@ public class DmServerSender implements RSocketServerSender {
         return sidecarStatusDO.getConsoleIp().equals(localIp) && registry.getRequesterMap().get(sidecarStatusDO.getWorkerSeqNumber()) != null;
     }
 
-    @SneakyThrows
-    protected RSocketRespDTO<?> forwardRequest(String apiMethodName, String consoleIp, String specifiedSidecarWsn, Object[] param) {
-        String[] jsonParams = new String[param.length];
-        for (int i = 0; i < param.length; i++) {
-            jsonParams[i] = JsonUtils.toJson(param[i]);
-        }
-        return forwardRequestWithJsonParams(apiMethodName, consoleIp, specifiedSidecarWsn, jsonParams);
-    }
-
-    @SneakyThrows
-    protected RSocketRespDTO<?> forwardRequestWithJsonParams(String apiMethodName, String consoleIp, String specifiedSidecarWsn, String[] jsonParams) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        String url = "http://" + consoleIp + ":" + SERVER_FORWARD_PORT + URL_SUFFIX;
-
-        refreshJwtTokenIfNeed();
-
-        RequestForwardDTO forwardDTO = new RequestForwardDTO();
-        forwardDTO.setApiMethodName(apiMethodName);
-        forwardDTO.setJsonParams(jsonParams);
-        forwardDTO.setTargetWsn(specifiedSidecarWsn);
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put("jwt_token", jwtToken);
-        headers.put(RdpJwtManager.CSRF_TOKEN_NAME, jwtToken);
-
-        log.info("[FORWARD] Send http request to worker api " + apiMethodName);
-
-        return CanalHttpClient.forwardRSocketRequest(url, objectMapper.writeValueAsString(forwardDTO), headers);
-    }
-
-    protected void refreshJwtTokenIfNeed() {
-        if (StringUtils.isBlank(jwtToken) || jwtService.verifyJwtToken(jwtToken) == null) {
-            this.jwtToken = jwtService.genJwtToken(userService.getInnerUser());
-        }
+    private String buildRemoteForwardDisabledMessage(String apiMethodName, String workerSeqNumber, String consoleIp) {
+        return String.format("remote console forwarding is disabled, worker must be registered on the local console. route=%s, wsn=%s, consoleIp=%s",
+            apiMethodName, workerSeqNumber, consoleIp);
     }
 
     @Override
