@@ -393,6 +393,47 @@ public class DefaultDriverLoaderFunctionalTest {
     }
 
     @Test
+    public void refreshResources_shouldSkipAnalysisWhenFilesIdxAlreadyExists() throws Exception {
+        IndexedDownloadPreparer.resetCounters();
+
+        DefaultDriverLoader prepareLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
+        prepareLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
+        prepareLoader.loadDriverXml(xmlStream(
+            "<drivers>"
+                + "<driver driverFamily=\"indexed-driver\" version=\"1.1\">"
+                + "<resource type=\"downloaded\">asset.bin</resource>"
+                + "</driver>"
+                + "</drivers>"));
+
+        DriverVersion preparedVersion = prepareLoader.findDriver("indexed-driver", "1.1");
+        assertNotNull(preparedVersion);
+
+        prepareLoader.prepareDriverVersion(preparedVersion, resource -> false, new DriverPrepareProgress() {
+        });
+        assertEquals(1, IndexedDownloadPreparer.analysisCount);
+
+        IndexedDownloadPreparer.resetCounters();
+
+        DefaultDriverLoader refreshLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
+        refreshLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
+        refreshLoader.loadDriverXml(xmlStream(
+            "<drivers>"
+                + "<driver driverFamily=\"indexed-driver\" version=\"1.1\">"
+                + "<resource type=\"downloaded\">asset.bin</resource>"
+                + "</driver>"
+                + "</drivers>"));
+
+        DriverVersion refreshedVersion = refreshLoader.findDriver("indexed-driver", "1.1");
+        assertNotNull(refreshedVersion);
+
+        refreshLoader.refreshDriverVersion(refreshedVersion);
+
+        assertEquals(0, IndexedDownloadPreparer.analysisCount);
+        assertTrue(refreshedVersion.isPrepared());
+        assertEquals(1, refreshedVersion.getFiles().size());
+    }
+
+    @Test
     public void refreshResources_shouldRecoverFilesForMatchingResDefOnly() throws Exception {
         DefaultDriverLoader prepareLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
         prepareLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
@@ -920,12 +961,19 @@ public class DefaultDriverLoaderFunctionalTest {
 
     private static final class IndexedDownloadPreparer extends AbstractResourcePreparer {
 
+        private static int analysisCount;
+
+        private static void resetCounters() {
+            analysisCount = 0;
+        }
+
         private IndexedDownloadPreparer(java.io.File localDir, Properties config) {
             super(localDir, config);
         }
 
         @Override
         public void analysis(DriverVersion driverVersion, ResDef resDef, ClassLoader classLoader, DriverPrepareProgress progress) throws Exception {
+            analysisCount++;
             resDef.setFileDefList(Collections.emptyList());
             updateFilesIndex(driverVersion, resDef);
         }

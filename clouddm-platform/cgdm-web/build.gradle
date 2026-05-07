@@ -18,12 +18,12 @@ def resolveNodeBinDir = {
     File nvmVersionsDir = new File(System.getProperty('user.home'), '.nvm/versions/node')
     if (nvmVersionsDir.isDirectory()) {
         List<File> versionDirs = (nvmVersionsDir.listFiles() ?: [])
-            .findAll { it.isDirectory() }
-            .sort { a, b -> b.name <=> a.name }
+                .findAll { it.isDirectory() }
+                .sort { a, b -> b.name <=> a.name }
 
         File nvmBinDir = versionDirs
-            .collect { new File(it, 'bin') }
-            .find { new File(it, npmExecutableName).exists() && new File(it, nodeExecutableName).exists() }
+                .collect { new File(it, 'bin') }
+                .find { new File(it, npmExecutableName).exists() && new File(it, nodeExecutableName).exists() }
 
         if (nvmBinDir) {
             return nvmBinDir
@@ -37,6 +37,9 @@ def resolveNodeBinDir = {
 def nodeBinDir = resolveNodeBinDir()
 def npmCommand = nodeBinDir ? new File(nodeBinDir, npmExecutableName).absolutePath : npmExecutableName
 def taskPath = nodeBinDir ? "${nodeBinDir.absolutePath}${File.pathSeparator}${System.getenv('PATH') ?: ''}" : (System.getenv('PATH') ?: '')
+def frontendBuildEnabled = providers.gradleProperty('buildFrontend')
+        .map { it.toBoolean() }
+        .orElse(false)
 
 sourceSets {
     main {
@@ -82,7 +85,11 @@ tasks.register('npmBuild', Exec) {
     dependsOn 'npmInstall'
 }
 
-processResources.dependsOn('npmBuild')
+tasks.named('processResources') {
+    if (frontendBuildEnabled.get()) {
+        dependsOn('npmBuild')
+    }
+}
 
 jar {
     archiveBaseName = 'clouddm-js'

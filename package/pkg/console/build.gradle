@@ -3,7 +3,6 @@
  */
 plugins {
     id 'com.clougence.java-conventions'
-    id 'io.spring.dependency-management' version '1.0.14.RELEASE'
     id 'distribution'
 }
 
@@ -43,7 +42,9 @@ tasks.register('tgz', Tar) {
         from "${buildDir}/../app.conf"
     }
     into("${consolePath}/bin") {
-        fileMode 0755
+        filePermissions {
+            unix(0755)
+        }
         from "${buildDir}/../../bin"
     }
     into("${consolePath}/bin") {
