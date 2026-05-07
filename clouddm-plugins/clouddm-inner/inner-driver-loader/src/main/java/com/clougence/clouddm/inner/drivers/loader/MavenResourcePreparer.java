@@ -77,6 +77,7 @@ public class MavenResourcePreparer extends AbstractResourcePreparer {
             List<MavenFileDef> analyzedFileDefs = buildJarFileDefs(jarArtifacts, versionDir, repositories);
             this.analysisCache.put(analysisCacheKey, cloneMavenFileDefs(analyzedFileDefs));
             driverResource.setFileDefList(cloneFileDefs(analyzedFileDefs));
+            updateFilesIndex(driverVersion, driverResource);
         } finally {
             if (tempRepoDir.exists()) {
                 FileUtils.forceDelete(tempRepoDir);
@@ -145,6 +146,7 @@ public class MavenResourcePreparer extends AbstractResourcePreparer {
             }
 
             driverResource.setFileDefList(new ArrayList<>(fileDefMap.values()));
+            updateFilesIndex(driverVersion, driverResource);
         } finally {
             if (tempRepoDir.exists()) {
                 FileUtils.forceDelete(tempRepoDir);

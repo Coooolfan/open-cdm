@@ -194,12 +194,25 @@ public abstract class AbstractDriverLoader implements DriverLoader {
 
             try {
                 preparer.analysis(driverVersion, driverResource, dsFactoryClassLoader, ResourcePreparer.NONE);
+                syncFilesIndex(preparer, driverVersion, driverResource);
                 preparer.refresh(driverVersion, driverResource, dsFactoryClassLoader, ResourcePreparer.NONE);
                 allPrepared = allPrepared && driverResource.isPrepared();
             } catch (Exception e) {
-                log.error(e.getMessage(), e);
-                driverResource.setPrepared(false);
-                allPrepared = false;
+                if (!restoreFilesIndex(preparer, driverVersion, driverResource, e)) {
+                    log.error(e.getMessage(), e);
+                    driverResource.setPrepared(false);
+                    allPrepared = false;
+                    continue;
+                }
+
+                try {
+                    preparer.refresh(driverVersion, driverResource, dsFactoryClassLoader, ResourcePreparer.NONE);
+                    allPrepared = allPrepared && driverResource.isPrepared();
+                } catch (Exception refreshException) {
+                    log.error(refreshException.getMessage(), refreshException);
+                    driverResource.setPrepared(false);
+                    allPrepared = false;
+                }
             }
         }
 
@@ -233,7 +246,9 @@ public abstract class AbstractDriverLoader implements DriverLoader {
 
             try {
                 preparer.analysis(driverVersion, driverResource, dsFactoryClassLoader, progress);
+                syncFilesIndex(preparer, driverVersion, driverResource);
                 preparer.resolve(driverVersion, driverResource, dsFactoryClassLoader, progress);
+                syncFilesIndex(preparer, driverVersion, driverResource);
                 allPrepared = allPrepared && driverResource.isPrepared();
                 progress.onComplete(driverVersion, driverResource, currentIndex, resources.size());
             } catch (Exception e) {
@@ -281,6 +296,30 @@ public abstract class AbstractDriverLoader implements DriverLoader {
             return null;
         }
         return version.getDsFactoryDef().getDsFactoryClassLoader();
+    }
+
+    private void syncFilesIndex(ResourcePreparer preparer, DriverVersion driverVersion, ResDef driverResource) throws IOException {
+        if (preparer instanceof com.clougence.drivers.factory.prepare.AbstractResourcePreparer abstractResourcePreparer) {
+            abstractResourcePreparer.updateFilesIndex(driverVersion, driverResource);
+        }
+    }
+
+    private boolean restoreFilesIndex(ResourcePreparer preparer, DriverVersion driverVersion, ResDef driverResource, Exception cause) {
+        if (!(preparer instanceof com.clougence.drivers.factory.prepare.AbstractResourcePreparer abstractResourcePreparer)) {
+            return false;
+        }
+
+        try {
+            boolean restored = abstractResourcePreparer.restoreFilesIndex(driverVersion, driverResource);
+            if (restored) {
+                log.warn("analysis failed, fallback to files.idx, family={}, version={}, resourceType={}, coordinate={}", driverVersion.getFamilyName(),
+                    driverVersion.getVersion(), driverResource.getResourceType(), driverResource.getCoordinate(), cause);
+            }
+            return restored;
+        } catch (IOException ioException) {
+            log.error(ioException.getMessage(), ioException);
+            return false;
+        }
     }
 
     //

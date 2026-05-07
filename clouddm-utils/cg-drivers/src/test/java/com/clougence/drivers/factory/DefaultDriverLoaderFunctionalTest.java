@@ -31,6 +31,7 @@ import com.clougence.drivers.*;
 import com.clougence.drivers.def.FileDef;
 import com.clougence.drivers.def.ResDef;
 import com.clougence.drivers.def.VerDef;
+import com.clougence.drivers.factory.prepare.AbstractResourcePreparer;
 import com.clougence.drivers.factory.prepare.ClassResourcePreparer;
 import com.clougence.drivers.factory.prepare.FileResourcePreparer;
 import com.clougence.drivers.testsupport.TestDsFactory;
@@ -343,6 +344,104 @@ public class DefaultDriverLoaderFunctionalTest {
         assertEquals(1, version.getFiles().size());
         assertEquals("nested/driver.jar", version.getFiles().get(0).getRelativePath());
         assertEquals(versionFile.toFile().getAbsolutePath(), version.getFiles().get(0).getAbsolutePath());
+    }
+
+    @Test
+    public void refreshResources_shouldRecoverPreparedFilesFromFilesIdxAfterRestart() throws Exception {
+        DefaultDriverLoader prepareLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
+        prepareLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
+        prepareLoader.loadDriverXml(xmlStream(
+            "<drivers>"
+                + "<driver driverFamily=\"indexed-driver\" version=\"1.0\">"
+                + "<resource type=\"downloaded\">asset.bin</resource>"
+                + "</driver>"
+                + "</drivers>"));
+
+        DriverVersion preparedVersion = prepareLoader.findDriver("indexed-driver", "1.0");
+        assertNotNull(preparedVersion);
+
+        prepareLoader.prepareDriverVersion(preparedVersion, resource -> false, new DriverPrepareProgress() {
+        });
+
+        Path versionDir = this.tempDir.resolve("indexed-driver").resolve("1.0");
+        Path indexFile = versionDir.resolve("files.idx");
+        assertTrue(Files.exists(versionDir.resolve("asset.bin")));
+        assertTrue(Files.exists(indexFile));
+        assertEquals(1, preparedVersion.getFiles().size());
+
+        DefaultDriverLoader refreshLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
+        refreshLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
+        refreshLoader.loadDriverXml(xmlStream(
+            "<drivers>"
+                + "<driver driverFamily=\"indexed-driver\" version=\"1.0\">"
+                + "<resource type=\"downloaded\">asset.bin</resource>"
+                + "</driver>"
+                + "</drivers>"));
+
+        DriverVersion refreshedVersion = refreshLoader.findDriver("indexed-driver", "1.0");
+        assertNotNull(refreshedVersion);
+        assertTrue(refreshedVersion.getFiles().isEmpty());
+
+        refreshLoader.refreshDriverVersion(refreshedVersion);
+
+        assertTrue(refreshedVersion.isPrepared());
+        assertTrue(refreshedVersion.getResources().get(0).isPrepared());
+        assertEquals(1, refreshedVersion.getFiles().size());
+        assertEquals("asset.bin", refreshedVersion.getFiles().get(0).getRelativePath());
+        assertEquals(versionDir.resolve("asset.bin").toFile().getAbsolutePath(), refreshedVersion.getFiles().get(0).getAbsolutePath());
+        assertTrue(refreshedVersion.getFiles().get(0).isPrepared());
+    }
+
+    @Test
+    public void refreshResources_shouldRecoverFilesForMatchingResDefOnly() throws Exception {
+        DefaultDriverLoader prepareLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
+        prepareLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
+        prepareLoader.loadDriverXml(xmlStream(
+            "<drivers>"
+                + "<driver driverFamily=\"indexed-driver\" version=\"2.0\">"
+                + "<resource type=\"downloaded\">asset-a.bin</resource>"
+                + "<resource type=\"downloaded\">asset-b.bin</resource>"
+                + "</driver>"
+                + "</drivers>"));
+
+        DriverVersion preparedVersion = prepareLoader.findDriver("indexed-driver", "2.0");
+        assertNotNull(preparedVersion);
+
+        prepareLoader.prepareDriverVersion(preparedVersion, resource -> false, new DriverPrepareProgress() {
+        });
+
+        Path versionDir = this.tempDir.resolve("indexed-driver").resolve("2.0");
+        Path indexFile = versionDir.resolve("files.idx");
+        assertTrue(Files.exists(indexFile));
+
+        List<String> indexLines = Files.readAllLines(indexFile, StandardCharsets.UTF_8);
+        ResDef firstPreparedResource = preparedVersion.getResources().get(0);
+        ResDef secondPreparedResource = preparedVersion.getResources().get(1);
+        assertTrue(indexLines.contains("relative " + firstPreparedResource.getFilesIndexId() + " asset-a.bin"));
+        assertTrue(indexLines.contains("relative " + secondPreparedResource.getFilesIndexId() + " asset-b.bin"));
+        assertNotEquals(firstPreparedResource.getFilesIndexId(), secondPreparedResource.getFilesIndexId());
+
+        DefaultDriverLoader refreshLoader = new DefaultDriverLoader(this.tempDir.toFile(), new Properties());
+        refreshLoader.registerPreparer("downloaded", IndexedDownloadPreparer::new);
+        refreshLoader.loadDriverXml(xmlStream(
+            "<drivers>"
+                + "<driver driverFamily=\"indexed-driver\" version=\"2.0\">"
+                + "<resource type=\"downloaded\">asset-a.bin</resource>"
+                + "<resource type=\"downloaded\">asset-b.bin</resource>"
+                + "</driver>"
+                + "</drivers>"));
+
+        DriverVersion refreshedVersion = refreshLoader.findDriver("indexed-driver", "2.0");
+        assertNotNull(refreshedVersion);
+
+        refreshLoader.refreshDriverVersion(refreshedVersion);
+
+        assertTrue(refreshedVersion.isPrepared());
+        assertEquals(2, refreshedVersion.getFiles().size());
+        assertEquals(1, refreshedVersion.getResources().get(0).getFileDefList().size());
+        assertEquals(1, refreshedVersion.getResources().get(1).getFileDefList().size());
+        assertEquals("asset-a.bin", refreshedVersion.getResources().get(0).getFileDefList().get(0).getRelativePath());
+        assertEquals("asset-b.bin", refreshedVersion.getResources().get(1).getFileDefList().get(0).getRelativePath());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -816,6 +915,36 @@ public class DefaultDriverLoaderFunctionalTest {
         @Override
         public java.util.jar.Manifest getManifest(String resource) {
             return null;
+        }
+    }
+
+    private static final class IndexedDownloadPreparer extends AbstractResourcePreparer {
+
+        private IndexedDownloadPreparer(java.io.File localDir, Properties config) {
+            super(localDir, config);
+        }
+
+        @Override
+        public void analysis(DriverVersion driverVersion, ResDef resDef, ClassLoader classLoader, DriverPrepareProgress progress) throws Exception {
+            resDef.setFileDefList(Collections.emptyList());
+            updateFilesIndex(driverVersion, resDef);
+        }
+
+        @Override
+        public void resolve(DriverVersion driverVersion, ResDef resDef, ClassLoader classLoader, DriverPrepareProgress progress) throws Exception {
+            Path versionDir = driverVersion.getAbsoluteDir().toPath();
+            Files.createDirectories(versionDir);
+
+            Path assetFile = versionDir.resolve(resDef.getCoordinate());
+            Files.write(assetFile, Collections.singletonList("indexed-driver"), StandardCharsets.UTF_8);
+
+            FileDef fileDef = new FileDef();
+            fileDef.setRelativePath(resDef.getCoordinate());
+            fileDef.setAbsolutePath(assetFile.toFile().getAbsolutePath());
+            fileDef.setPrepared(true);
+            resDef.setFileDefList(Collections.singletonList(fileDef));
+            updateFilesIndex(driverVersion, resDef);
+            resDef.setPrepared(true);
         }
     }
 

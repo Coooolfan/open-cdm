@@ -21,7 +21,7 @@ public class FileResourcePreparer extends AbstractResourcePreparer {
     }
 
     @Override
-    public void analysis(DriverVersion driverVersion, ResDef driverResource, ClassLoader classLoader, DriverPrepareProgress progress) {
+    public void analysis(DriverVersion driverVersion, ResDef driverResource, ClassLoader classLoader, DriverPrepareProgress progress) throws IOException {
         if (driverResource == null) {
             return;
         }
@@ -66,6 +66,7 @@ public class FileResourcePreparer extends AbstractResourcePreparer {
         }
 
         driverResource.setFileDefList(fileDefs);
+        updateFilesIndex(driverVersion, driverResource);
     }
 
     @Override

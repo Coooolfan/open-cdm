@@ -109,12 +109,13 @@ public class MavenLoaderPluginFunctionalTest {
         preparer.analysis(version, resource, null, null);
 
         Path versionDir = this.tempDir.resolve("plugin-driver").resolve("1.0.0");
+        Path filesIndex = versionDir.resolve("files.idx");
         Path jarPath = this.tempDir.resolve("plugin-driver").resolve("1.0.0").resolve("demo-artifact-1.0.0.jar");
         Path dependencyPath = this.tempDir.resolve("plugin-driver").resolve("1.0.0").resolve("demo-dependency-1.0.0.jar");
-        assertFalse(Files.exists(versionDir));
+        assertTrue(Files.exists(versionDir));
+        assertTrue(Files.exists(filesIndex));
         assertFalse(Files.exists(jarPath));
         assertFalse(Files.exists(dependencyPath));
-        assertEquals(0, Files.list(this.tempDir).count());
 
         assertNotNull(resource.getFileDefList());
         assertEquals(2, resource.getFileDefList().size());
@@ -201,6 +202,49 @@ public class MavenLoaderPluginFunctionalTest {
         assertEquals(requestCountAfterFirstAnalysis, requestCounter.get());
         assertNotSame(firstResource.getFileDefList(), secondResource.getFileDefList());
         assertEquals(firstResource.getFileDefList().size(), secondResource.getFileDefList().size());
+    }
+
+    @Test
+    public void refreshDriverVersion_shouldRecoverMavenFilesFromFilesIdxAfterRestart() throws Exception {
+        byte[] rootJarBytes = "fake-maven-jar".getBytes(StandardCharsets.UTF_8);
+        byte[] dependencyJarBytes = "fake-maven-dependency".getBytes(StandardCharsets.UTF_8);
+        String baseUrl = startHttpServer(rootJarBytes, dependencyJarBytes);
+
+        Properties config = new Properties();
+        config.setProperty(MavenResourcePreparer.REPOSITORY_KEY, baseUrl + "/repo");
+
+        DefaultDriverLoader prepareLoader = new DefaultDriverLoader(this.tempDir.toFile(), config);
+        prepareLoader.registerPreparer("maven", MavenResourcePreparer::new);
+        prepareLoader.loadDriverXml(TestDriversXml.mavenOnly("restart-driver", "1.0.0", "com.example:demo-artifact:1.0.0"));
+
+        DriverVersion preparedVersion = prepareLoader.findDriver("restart-driver", "1.0.0");
+        assertNotNull(preparedVersion);
+
+        prepareLoader.prepareDriverVersion(preparedVersion, resource -> false, new DriverPrepareProgress() {
+        });
+
+        Path versionDir = this.tempDir.resolve("restart-driver").resolve("1.0.0");
+        assertTrue(Files.exists(versionDir.resolve("files.idx")));
+        assertEquals(2, preparedVersion.getFiles().size());
+
+        this.httpServer.stop(0);
+        this.httpServer = null;
+
+        DefaultDriverLoader refreshLoader = new DefaultDriverLoader(this.tempDir.toFile(), config);
+        refreshLoader.registerPreparer("maven", MavenResourcePreparer::new);
+        refreshLoader.loadDriverXml(TestDriversXml.mavenOnly("restart-driver", "1.0.0", "com.example:demo-artifact:1.0.0"));
+
+        DriverVersion refreshedVersion = refreshLoader.findDriver("restart-driver", "1.0.0");
+        assertNotNull(refreshedVersion);
+        assertTrue(refreshedVersion.getFiles().isEmpty());
+
+        refreshLoader.refreshDriverVersion(refreshedVersion);
+
+        assertTrue(refreshedVersion.isPrepared());
+        assertEquals(2, refreshedVersion.getFiles().size());
+        assertTrue(refreshedVersion.getFiles().stream().allMatch(file -> file.isPrepared()));
+        assertTrue(refreshedVersion.getFiles().stream().anyMatch(file -> "demo-artifact-1.0.0.jar".equals(file.getRelativePath())));
+        assertTrue(refreshedVersion.getFiles().stream().anyMatch(file -> "demo-dependency-1.0.0.jar".equals(file.getRelativePath())));
     }
 
     private String startHttpServer(byte[] rootJarBytes, byte[] dependencyJarBytes) throws Exception {
