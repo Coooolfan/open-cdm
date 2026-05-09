@@ -342,7 +342,7 @@
             rdp_user
         WHERE
             parent_id = #{parentId}
-            <if test="roleId != 0">
+            <if test="roleId != null and roleId != 0">
                 AND role_id=#{roleId}
             </if>
             <if test="prefix != null">

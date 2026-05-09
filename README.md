@@ -131,13 +131,13 @@ docker compose -f docker-alone-arm64-<version>.yml up -d
 - `clouddm-plugins`：数据源插件、认证 Provider、功能插件和内部扩展。
 - `package`：tgz 打包、Docker 镜像、compose 模板和交付输出。
 
-详细模块边界请见 [docs/modules.md](docs/modules.md)。
+详细模块边界请见 [docs/modules.md](../open-cdm-operations/docs/modules.md)。
 
 ## 文档
 
-- 架构说明：[docs/architecture.md](docs/architecture.md)
-- 模块说明：[docs/modules.md](docs/modules.md)
-- 开发约定：[docs/development.md](docs/development.md)
+- 架构说明：[docs/architecture.md](../open-cdm-operations/docs/architecture.md)
+- 模块说明：[docs/modules.md](../open-cdm-operations/docs/modules.md)
+- 开发约定：[docs/development.md](../open-cdm-operations/docs/development.md)
 
 README 只保留项目首页级信息；详细架构、模块边界和开发约定已拆分到单独文档。
 

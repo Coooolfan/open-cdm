@@ -732,7 +732,12 @@ export default {
     },
     async getSubAccountList(searchType) {
       this.subAccountListLoading = true;
-      const res = await this.$services.rdpUserManagerListSubAccounts({ data: this.search });
+      const res = await this.$services.rdpUserManagerListSubAccounts({
+        data: {
+          ...this.search,
+          roleId: this.search.roleId || 0
+        }
+      });
       this.subAccountListLoading = false;
       if (res.success) {
         this.subAccountList = generateData(res.data);
