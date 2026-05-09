@@ -219,7 +219,7 @@ export default {
     ...mapState(['deployEnvListMap', 'userInfo', 'regionList', 'globalSetting']),
     deployEnvList() {
       return Object.values(this.deployEnvListMap).filter(
-        (env) => !(this.globalSetting.deployEnv === 'output' && env.value === CLUSTER_ENV.ALIBABA_CLOUD_HOSTED)
+        (env) => !(this.globalSetting.outputDeployEnv && env.value === CLUSTER_ENV.ALIBABA_CLOUD_HOSTED)
       );
     }
   },

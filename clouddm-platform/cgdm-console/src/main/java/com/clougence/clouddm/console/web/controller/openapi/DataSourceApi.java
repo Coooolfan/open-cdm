@@ -1,20 +1,31 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.openapi;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.clougence.clouddm.base.metadata.ds.DataSourceType;
 import com.clougence.clouddm.api.common.rpc.ResApiData;
 import com.clougence.clouddm.api.common.rpc.ResApiDataUtils;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
+import com.clougence.clouddm.base.metadata.ds.DataSourceType;
 import com.clougence.clouddm.console.web.component.auth.BizResOwnerCacheService;
 import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
 import com.clougence.clouddm.console.web.component.auth.DmResAuthService;
@@ -27,6 +38,9 @@ import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.constants.DmMcpI18nKey;
 import com.clougence.clouddm.console.web.constants.I18nDmMsgKeys;
 import com.clougence.clouddm.console.web.dal.model.DmDsConfigDO;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.mcp.McpApiProvider;
+import com.clougence.clouddm.console.web.global.mcp.model.McpTool;
 import com.clougence.clouddm.console.web.model.fo.openapi.DmApiDsDetailFO;
 import com.clougence.clouddm.console.web.model.fo.openapi.DmApiDsLeafFO;
 import com.clougence.clouddm.console.web.model.fo.openapi.DmApiDsLevelsFO;
@@ -37,23 +51,23 @@ import com.clougence.clouddm.console.web.model.vo.openapi.DmConsoleSettingsVO;
 import com.clougence.clouddm.console.web.service.browse.BrowseService;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
-import com.clougence.rdp.component.mcp.McpApiProvider;
-import com.clougence.rdp.component.mcp.model.McpTool;
-import com.clougence.rdp.component.openapi.OpenApiSessionManager;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.dal.model.RdpDsEnvDO;
-import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.rdp.component.openapi.OpenApiSessionManager;
+import com.clougence.clouddm.console.web.dal.model.RdpDsEnvDO;
+import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpDsEnvService;
 import com.clougence.rdp.service.RdpUserService;
 import com.clougence.rdp.service.openapi.RdpDsOpenApiService;
 import com.clougence.rdp.service.openapi.model.*;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -228,9 +242,9 @@ public class DataSourceApi extends BasicApi {
         } else {
             // ds object list
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-            DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels());
-            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+            DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels());
+            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
             List<BrowseLevelsVO> vos = this.browseService.listLevels(puid, uid, levels, fo.isRefreshCache());
 
             // filter
@@ -259,9 +273,9 @@ public class DataSourceApi extends BasicApi {
         }
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels());
-        this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels());
+        this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getLeafType());
         List<BrowseLevelsVO> vos = this.browseService.listLeaf(puid, uid, levels, leafType, null, fo.isRefreshCache());
@@ -328,18 +342,6 @@ public class DataSourceApi extends BasicApi {
 
         String puid = (String) request.getAttribute(RdpUserService.PUID);
         rdpDsOpenApiService.updateAccountAndPasswd(data, securityFile, secretFile, puid);
-        return ResApiDataUtils.buildSuccess(requestId);
-    }
-
-    @RequestAuth(strategy = RequestAuth.AuthStrategy.Ignore)
-    @RequestMapping(value = "/updatealiyunrdsaksk", method = RequestMethod.POST)
-    public ResApiData<?> updateAliyunRdsAkSk(@RequestBody @Valid ApiUpdateAliyunRdsAkSkFO updateFO, HttpServletRequest request) {
-        String requestId = (String) request.getAttribute(OpenApiSessionManager.OPEN_API_REQUEST_ID);
-        log.info("updateAliyunRdsAkSk for open api request id :" + requestId);
-
-        //api user must be an primary user,just check owner
-        String puid = (String) request.getAttribute(RdpUserService.PUID);
-        rdpDsOpenApiService.updateAliyunRdsAkSk(puid, updateFO);
         return ResApiDataUtils.buildSuccess(requestId);
     }
 

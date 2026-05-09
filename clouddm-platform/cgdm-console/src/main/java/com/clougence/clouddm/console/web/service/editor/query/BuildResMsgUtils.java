@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.service.editor.query;
 
 import java.util.ArrayList;
@@ -17,11 +32,11 @@ import com.clougence.clouddm.console.web.service.editor.model.DsAvailableDTO;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.platform.plugin.PluginManager;
-import com.clougence.clouddm.sdk.execute.session.SessionContextDTO;
 import com.clougence.clouddm.sdk.execute.resultset.echo.ResultPhase;
 import com.clougence.clouddm.sdk.execute.resultset.echo.ResultSet;
 import com.clougence.clouddm.sdk.execute.resultset.echo.ResultSetCount;
 import com.clougence.clouddm.sdk.execute.resultset.echo.ResultSetMeta;
+import com.clougence.clouddm.sdk.execute.session.SessionContextDTO;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.i18n.I18nUtils;
@@ -93,7 +108,7 @@ public class BuildResMsgUtils {
 
         if (result.isHasRewrite()) {
             dto.setOriginal(result.getOriginalScript().trim());
-            I18nUtils i18n = PluginManager.findDsI18nUtil(ctx.getLevels().getDsDO().getDataSourceType());
+            I18nUtils i18n = PluginManager.findDsI18nUtil(ctx.getLevels().dsDO().getDataSourceType());
             dto.setRewriteTags(result.getRewriteTag().stream().map(i18n::getMessage).collect(Collectors.toList()));
         }
         return dto;
@@ -129,7 +144,7 @@ public class BuildResMsgUtils {
     }
 
     public static WsResMsg buildStatus(WsQueryFO queryDTO, QueryCtx ctx, DsQueryEditorService queryService) {
-        DsAvailableDTO statusDTO = queryService.availableDataSource(queryDTO.getPrimaryUserId(), queryDTO.getCurrentUserId(), ctx.getLevels().getDsDO().getId());
+        DsAvailableDTO statusDTO = queryService.availableDataSource(queryDTO.getPrimaryUserId(), queryDTO.getCurrentUserId(), ctx.getLevels().dsDO().getId());
 
         WsStatusResMsg dto = new WsStatusResMsg();
         dto.setOriginal(queryDTO.getQueryType().name());
@@ -177,7 +192,7 @@ public class BuildResMsgUtils {
         dto.setResultType(WsResultType.QueryScript);
 
         SessionContextDTO ctxDTO = ctx.getCtxDTO();
-        List<UmiTypes> levelsDef = ctx.getLevels().getLevelsDef();
+        List<UmiTypes> levelsDef = ctx.getLevels().levelsDef();
 
         List<String> lineData = new ArrayList<>();
         if (levelsDef.contains(UmiTypes.Catalog)) {
@@ -198,7 +213,7 @@ public class BuildResMsgUtils {
 
         if (phase.isHasRewrite()) {
             dto.setOriginal(phase.getOriginalScript().trim());
-            I18nUtils i18n = PluginManager.findDsI18nUtil(ctx.getLevels().getDsDO().getDataSourceType());
+            I18nUtils i18n = PluginManager.findDsI18nUtil(ctx.getLevels().dsDO().getDataSourceType());
             dto.setRewriteTags(phase.getRewriteTag().stream().map(i18n::getMessage).collect(Collectors.toList()));
         }
 

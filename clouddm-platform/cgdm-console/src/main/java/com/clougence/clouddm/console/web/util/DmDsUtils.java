@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.util;
 
 import java.util.*;
@@ -14,16 +29,16 @@ import com.clougence.clouddm.console.web.component.auth.model.UserCacheEntry;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsConfig;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.platform.plugin.PluginManager;
-import com.clougence.clouddm.sdk.service.secrules.Requester;
 import com.clougence.clouddm.sdk.execute.ExecuteVariables;
 import com.clougence.clouddm.sdk.execute.session.QueryRequest;
 import com.clougence.clouddm.sdk.execute.session.ResultLimit;
 import com.clougence.clouddm.sdk.execute.session.SessionContextDTO;
 import com.clougence.clouddm.sdk.execute.session.SessionSpi;
-import com.clougence.clouddm.sdk.ui.menus.DsMenuType;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.clouddm.sdk.service.config.ConsoleConfigService;
+import com.clougence.clouddm.sdk.service.secrules.Requester;
+import com.clougence.clouddm.sdk.ui.menus.DsMenuType;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.schema.dialect.Dialect;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
@@ -37,9 +52,9 @@ public class DmDsUtils {
 
     private static final Map<DataSourceType, SessionSpi> DS_SESSION_SPI_CACHE = new ConcurrentHashMap<>();
     private static final Map<DataSourceType, Dialect>    DS_DIALECT_CACHE     = new ConcurrentHashMap<>();
-    private static       BizResOwnerCacheService ownerCacheService;
-    private static       ConsoleConfigService    consoleService;
-    private final static long                    MB_SIZE              = 1024L * 1024L;
+    private static BizResOwnerCacheService               ownerCacheService;
+    private static ConsoleConfigService                  consoleService;
+    private final static long                            MB_SIZE              = 1024L * 1024L;
 
     public static void initUtils(ApplicationContext spring) {
         ownerCacheService = spring.getBean(BizResOwnerCacheService.class);

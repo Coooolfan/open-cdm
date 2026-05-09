@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpOpAuditMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpOpAuditMapper">
 
-    <resultMap id="rdpOperationAuditDO" type="com.clougence.rdp.dal.model.RdpOpAuditDO">
+    <resultMap id="rdpOperationAuditDO" type="com.clougence.clouddm.console.web.dal.model.RdpOpAuditDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
@@ -20,7 +20,7 @@
         <result column="resource_value" property="resourceValue"/>
         <result column="resource_name" property="resourceName"/>
         <result column="security_level" property="securityLevel"
-                javaType="com.clougence.rdp.constant.auth.SecurityLevel"/>
+                javaType="com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel"/>
         <result column="uuid_key" property="uuidKey"/>
         <result column="audit_type" property="auditType"
                 javaType="com.clougence.rdp.constant.operation.AuditType"/>
@@ -133,7 +133,7 @@
         ORDER BY operate_date DESC,id LIMIT #{pageSize}
     </select>
 
-    <select id="querySection" resultType="com.clougence.rdp.dal.model.RdpOpAuditDO">
+    <select id="querySection" resultType="com.clougence.clouddm.console.web.dal.model.RdpOpAuditDO">
         SELECT
             <include refid="rdpOperationAudit"/>
         FROM
@@ -145,7 +145,7 @@
         ORDER BY operate_date DESC,id limit #{pageSize}
     </select>
 
-    <select id="queryByCondition" resultType="com.clougence.rdp.dal.model.RdpOpAuditDO">
+    <select id="queryByCondition" resultType="com.clougence.clouddm.console.web.dal.model.RdpOpAuditDO">
         SELECT
         <include refid="rdpOperationAudit"/>
         FROM
@@ -179,7 +179,7 @@
         ORDER BY operate_date DESC,id LIMIT #{pageSize}
     </select>
 
-    <select id="pageByCondition" resultType="com.clougence.rdp.dal.model.RdpOpAuditDO">
+    <select id="pageByCondition" resultType="com.clougence.clouddm.console.web.dal.model.RdpOpAuditDO">
         SELECT
         <include refid="rdpOperationAudit"/>
         FROM

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.editor.query;
 
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.DM_QUERY_CONSOLE;
@@ -8,21 +23,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
-
-import com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
+import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
 import com.clougence.clouddm.console.web.component.auth.BizResOwnerCacheService;
 import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
 import com.clougence.clouddm.console.web.component.auth.model.DsCacheEntry;
@@ -35,6 +43,7 @@ import com.clougence.clouddm.console.web.dal.enumeration.DataSourceStatus;
 import com.clougence.clouddm.console.web.dal.mapper.DmFileMapper;
 import com.clougence.clouddm.console.web.dal.model.DmFileDO;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.editor.query.*;
 import com.clougence.clouddm.console.web.model.vo.editor.query.DsStatusConfVO;
 import com.clougence.clouddm.console.web.model.vo.editor.query.DsStatusSupportConfVO;
@@ -52,13 +61,13 @@ import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbIsolation;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbSupportLevel;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbSupportSpi;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel;
+import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.StringUtils;
@@ -66,6 +75,11 @@ import com.clougence.utils.i18n.I18nUtils;
 import com.clougence.utils.io.FileUtils;
 import com.clougence.utils.io.FilenameUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -98,7 +112,7 @@ public class QueryEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         RdbIsolation initIsolation = RdbIsolation.valueOfCode(fo.getInitIsolation());
         String sessionId = this.queryService.createSession(uid, fo.getLevels(), fo.getInitAutoCommit(), initIsolation);
@@ -202,14 +216,14 @@ public class QueryEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getTargetType());
         List<String> leafName = fo.getTargetNames();
 
         leafName = leafName.stream().filter(tabName -> {
-            DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), tabName);
-            return this.dmAuthServiceForBiz.checkResPathWithoutError(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+            DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), tabName);
+            return this.dmAuthServiceForBiz.checkResPathWithoutError(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
         }).collect(Collectors.toList());
 
         if (leafName.isEmpty()) {

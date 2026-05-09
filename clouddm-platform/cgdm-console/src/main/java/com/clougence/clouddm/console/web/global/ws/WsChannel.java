@@ -1,11 +1,23 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.global.ws;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import jakarta.annotation.Resource;
-import jakarta.websocket.server.ServerEndpoint;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.CloseStatus;
@@ -17,18 +29,20 @@ import com.alibaba.fastjson.JSONObject;
 import com.clougence.clouddm.api.common.boot.UnifiedPostConstruct;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.global.events.DmGlobalEventBus;
-import com.clougence.clouddm.console.web.global.session.WebSoInterceptor;
+import com.clougence.clouddm.console.web.global.jwtsession.JwtCheckResult;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy;
+import com.clougence.clouddm.console.web.global.jwtsession.WebSoInterceptor;
 import com.clougence.clouddm.console.web.model.vo.editor.query.WsResMsg;
 import com.clougence.clouddm.console.web.model.vo.system.WsSysMsg;
 import com.clougence.clouddm.console.web.service.editor.query.ConsoleQueryApi;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
-import com.clougence.rdp.component.jwtsession.RdpJwtCheckResult;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.io.IOUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.websocket.server.ServerEndpoint;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -75,7 +89,7 @@ public class WsChannel extends TextWebSocketHandler implements UnifiedPostConstr
         WsUtils.writeToSocket(ws, WsType.WS_SYS_STATUS, status);
 
         if (inited) {
-            RdpJwtCheckResult checkResult = (RdpJwtCheckResult) ws.getAttributes().get(WebSoInterceptor.WS_CHECK_RESULT);
+            JwtCheckResult checkResult = (JwtCheckResult) ws.getAttributes().get(WebSoInterceptor.WS_CHECK_RESULT);
             if (checkResult.isSuccess()) {
                 this.acceptChannel(ws);
             } else {

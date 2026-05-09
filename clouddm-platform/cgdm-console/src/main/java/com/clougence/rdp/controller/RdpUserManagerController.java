@@ -1,15 +1,24 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.controller;
 
+import static com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel.HIGH;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.*;
-import static com.clougence.rdp.constant.auth.SecurityLevel.HIGH;
 
 import java.util.List;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,22 +27,26 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel;
+import com.clougence.clouddm.console.web.model.fo.ResetPasswdFO;
+import com.clougence.clouddm.console.web.model.fo.UpdateResourceManageFO;
+import com.clougence.clouddm.console.web.model.fo.role.UpdateUserRoleFO;
+import com.clougence.clouddm.console.web.model.fo.user.*;
+import com.clougence.clouddm.console.web.model.lo.UpdateUserRoleLO;
+import com.clougence.clouddm.console.web.model.vo.ListUserVO;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.Sm2Utils;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
+import com.clougence.rdp.constant.RdpControllerUrlPrefix;
 import com.clougence.rdp.constant.RdpErrorCode;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.SecurityLevel;
 import com.clougence.rdp.constant.operation.AuditType;
-import com.clougence.rdp.controller.model.fo.*;
-import com.clougence.rdp.controller.model.http.RdpControllerUrlPrefix;
-import com.clougence.rdp.controller.model.lo.UpdateUserRoleLO;
-import com.clougence.rdp.controller.model.vo.ListUserVO;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpAuthServiceForBiz;
@@ -44,10 +57,13 @@ import com.clougence.rdp.service.model.AddSubAccountMO;
 import com.clougence.rdp.service.model.CheckSubAccountMO;
 import com.clougence.rdp.service.model.UpdateUserInfoMO;
 import com.clougence.rdp.service.model.ValidateResultMO;
-import com.clougence.rdp.util.RdpI18nUtils;
-import com.clougence.rdp.util.Sm2Utils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -71,7 +87,7 @@ public class RdpUserManagerController {
     private RdpUserConfigService rdpUserConfigService;
 
     @Resource
-    private RdpConsoleConfig     rdpConfig;
+    private DmConsoleConfig      rdpConfig;
 
     @Resource
     private RdpOpAuditService    rdpOpAuditService;
@@ -185,10 +201,6 @@ public class RdpUserManagerController {
     @RequestAuth(level = HIGH, value = RDP_USER_MANAGE)
     @RequestMapping(value = "/deletesubaccount", method = { RequestMethod.POST })
     public ResWebData<?> deleteSubAccount(@Valid @RequestBody DeleteSubAccountFO fo, HttpServletRequest request) {
-        if (GlobalDeployMode.inCloud()) {
-            throw new UnsupportedOperationException("This operation not supported in CLOUD mode.");
-        }
-
         String puid = (String) request.getAttribute(RdpUserService.PUID);
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
@@ -229,10 +241,6 @@ public class RdpUserManagerController {
     @RequestAuth(level = HIGH, value = RDP_USER_MANAGE)
     @RequestMapping(value = "/updateuserrole", method = RequestMethod.POST)
     public ResWebData<?> updateUserRole(@Valid @RequestBody UpdateUserRoleFO fo, HttpServletRequest request, HttpServletResponse response) {
-        if (GlobalDeployMode.inCloud()) {
-            throw new UnsupportedOperationException("This operation not supported in CLOUD mode.");
-        }
-
         String uid = (String) request.getAttribute(RdpUserService.UID);
         String puid = (String) request.getAttribute(RdpUserService.PUID);
 
@@ -284,10 +292,6 @@ public class RdpUserManagerController {
     @RequestAuth(level = HIGH, value = RDP_AUTH_MANAGE)
     @RequestMapping(value = "/updateresourcemanage", method = RequestMethod.POST)
     public ResWebData<?> updateResourceManage(@Valid @RequestBody UpdateResourceManageFO fo, HttpServletRequest request) {
-        if (GlobalDeployMode.inCloud()) {
-            throw new UnsupportedOperationException("This operation not supported in CLOUD mode.");
-        }
-
         String uid = (String) request.getAttribute(RdpUserService.UID);
         String puid = (String) request.getAttribute(RdpUserService.PUID);
 

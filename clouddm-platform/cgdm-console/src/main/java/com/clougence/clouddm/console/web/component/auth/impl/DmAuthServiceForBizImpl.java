@@ -1,10 +1,23 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.auth.impl;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 
@@ -15,25 +28,26 @@ import com.clougence.clouddm.console.web.dal.mapper.DmFileMapper;
 import com.clougence.clouddm.console.web.dal.model.DmFileDO;
 import com.clougence.clouddm.console.web.service.envparam.DmEnvParamService;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
-import com.clougence.clouddm.sdk.model.env.EnvParamKeys;
-import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.mapper.RdpDataSourceMapper;
-import com.clougence.rdp.dal.mapper.RdpResAuthMapper;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpResAuthDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
-import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.clouddm.sdk.model.env.EnvParamKeys;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
+import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.rdp.constant.I18nRdpMsgKeys;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.mapper.RdpDataSourceMapper;
+import com.clougence.clouddm.console.web.dal.mapper.DmResAuthMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpAuthServiceForBiz;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -50,11 +64,11 @@ public class DmAuthServiceForBizImpl implements DmAuthServiceForBiz {
     @Resource
     private RdpAuthServiceForBiz rdpAuthServiceForBiz;
     @Resource
-    private RdpUserMapper        rdpUserMapper;
+    private RdpUserMapper   rdpUserMapper;
     @Resource
-    private RdpResAuthMapper     rdpResAuthMapper;
+    private DmResAuthMapper resAuthMapper;
     @Resource
-    private DmFileMapper         dmFileMapper;
+    private DmFileMapper    dmFileMapper;
     @Resource
     private DmEnvParamService    dmEnvParamService;
 
@@ -143,8 +157,8 @@ public class DmAuthServiceForBizImpl implements DmAuthServiceForBiz {
             throw new IllegalArgumentException(RdpI18nUtils.getMessage(I18nRdpMsgKeys.DS_IS_NOT_BELONG_YOU_PRIMARY_ERROR.name(), dsDO.getId()));
         }
 
-        List<RdpResAuthDO> parentAndSelfAuth = this.rdpResAuthMapper.queryByPathLike(dsId, uid, AuthKind.DataSource, Collections.singletonList(path));
-        List<RdpResAuthDO> subAuth = this.rdpResAuthMapper.queryByLikePath(dsId, uid, AuthKind.DataSource, path);
+        List<DmResAuthDO> parentAndSelfAuth = this.resAuthMapper.queryByPathLike(dsId, uid, AuthKind.DataSource, Collections.singletonList(path));
+        List<DmResAuthDO> subAuth = this.resAuthMapper.queryByLikePath(dsId, uid, AuthKind.DataSource, path);
 
         parentAndSelfAuth = parentAndSelfAuth.stream().filter(r -> r.getAuthLabels().contains(dataAuthLabel)).collect(Collectors.toList());
         subAuth = subAuth.stream().filter(r -> r.getAuthLabels().contains(dataAuthLabel)).collect(Collectors.toList());

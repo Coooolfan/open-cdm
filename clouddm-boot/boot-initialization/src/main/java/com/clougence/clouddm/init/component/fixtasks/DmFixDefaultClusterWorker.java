@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.init.component.fixtasks;
 
 import org.springframework.stereotype.Component;
@@ -22,16 +37,16 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class DmFixDefaultClusterWorker {
 
-    private static final String ALONE_APP_MODE = "embedded";
+    private static final String  ALONE_APP_MODE       = "embedded";
 
-    private static final String DEFAULT_CLUSTER_NAME = "cluster1aw2byj490";
-    private static final String DEFAULT_CLUSTER_DESC = "Default Cluster";
-    private static final String DEFAULT_REGION = "customer";
-    private static final String DEFAULT_WORKER_NAME = "workers8c4qs80l26";
-    private static final String DEFAULT_WORKER_WSN = "wsn582nm54ca045p014288w6e919ec6294m430h427619v64g0pyqzcjb5040q3f";
-    private static final String DEFAULT_WORKER_IP = "172.31.239.4";
-    private static final String DEFAULT_CONSOLE_IP = "172.31.239.3";
-    private static final String DEFAULT_EXTERNAL_IP = "183.134.161.226";
+    private static final String  DEFAULT_CLUSTER_NAME = "cluster1aw2byj490";
+    private static final String  DEFAULT_CLUSTER_DESC = "Default Cluster";
+    private static final String  DEFAULT_REGION       = "customer";
+    private static final String  DEFAULT_WORKER_NAME  = "workers8c4qs80l26";
+    private static final String  DEFAULT_WORKER_WSN   = "wsn582nm54ca045p014288w6e919ec6294m430h427619v64g0pyqzcjb5040q3f";
+    private static final String  DEFAULT_WORKER_IP    = "172.31.239.4";
+    private static final String  DEFAULT_CONSOLE_IP   = "172.31.239.3";
+    private static final String  DEFAULT_EXTERNAL_IP  = "183.134.161.226";
 
     @Resource
     private DmClusterMapper      clusterMapper;
@@ -120,7 +135,5 @@ public class DmFixDefaultClusterWorker {
         workerStatusMapper.insert(status);
     }
 
-    private boolean isAloneMode() {
-        return ALONE_APP_MODE.equals(System.getProperty("app.mode"));
-    }
+    private boolean isAloneMode() { return ALONE_APP_MODE.equals(System.getProperty("app.mode")); }
 }

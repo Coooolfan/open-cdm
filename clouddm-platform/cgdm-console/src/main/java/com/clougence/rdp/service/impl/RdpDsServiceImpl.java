@@ -1,11 +1,26 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-
+import com.clougence.clouddm.console.web.dal.mapper.DmResAuthMapper;
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +34,19 @@ import com.clougence.clouddm.base.metadata.ds.DataSourceType;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.SecurityFileType;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.SecurityType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType;
+import com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState;
+import com.clougence.clouddm.console.web.dal.enumeration.SecurityFileStoreType;
+import com.clougence.clouddm.console.web.model.fo.UpdateSecurityInfoFO;
+import com.clougence.clouddm.console.web.model.fo.datasource.AddDsFO;
+import com.clougence.clouddm.console.web.model.fo.datasource.UpsertDsKvConfigFO;
+import com.clougence.clouddm.console.web.model.lo.UpdateDsConfigLO;
+import com.clougence.clouddm.console.web.model.lo.UpdateDsDescLO;
+import com.clougence.clouddm.console.web.model.lo.UpdatePriHostLO;
+import com.clougence.clouddm.console.web.model.lo.UpdatePubHostLO;
+import com.clougence.clouddm.console.web.model.vo.DefaultDsKvConfigVO;
+import com.clougence.clouddm.console.web.model.vo.RdpDsKvConfigVO;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
 import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
@@ -26,30 +54,21 @@ import com.clougence.rdp.component.dskvconfig.RdpDsConfigService;
 import com.clougence.rdp.component.dskvconfig.util.PropsCryptUtil;
 import com.clougence.rdp.constant.ConsoleErrorCode;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.fo.AddDsFO;
-import com.clougence.rdp.controller.model.fo.UpdateSecurityInfoFO;
-import com.clougence.rdp.controller.model.fo.UpsertDsKvConfigFO;
-import com.clougence.rdp.controller.model.lo.UpdateDsConfigLO;
-import com.clougence.rdp.controller.model.lo.UpdateDsDescLO;
-import com.clougence.rdp.controller.model.lo.UpdatePriHostLO;
-import com.clougence.rdp.controller.model.lo.UpdatePubHostLO;
-import com.clougence.rdp.controller.model.vo.DefaultDsKvConfigVO;
-import com.clougence.rdp.controller.model.vo.DsKvConfigVO;
-import com.clougence.rdp.dal.enumeration.*;
-import com.clougence.rdp.dal.mapper.*;
-import com.clougence.rdp.dal.model.*;
-import com.clougence.rdp.dal.model.queryobj.DsQueryParam;
+import com.clougence.clouddm.console.web.dal.mapper.*;
+import com.clougence.clouddm.console.web.dal.model.*;
+import com.clougence.clouddm.console.web.dal.model.queryobj.DsQueryParam;
 import com.clougence.rdp.global.exception.ConsoleRuntimeException;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.*;
-import com.clougence.rdp.util.RandomStrUtils;
-import com.clougence.rdp.util.RdpAuthUtils;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RandomStrUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -62,7 +81,7 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
     @Resource
     private RdpUserService          rdpUserService;
     @Resource
-    private RdpResAuthMapper        rdpDsAuthMapper;
+    private DmResAuthMapper         rdpDsAuthMapper;
     @Resource
     private RdpAuthServiceForManage rdpAuthServiceForManager;
     @Resource
@@ -262,16 +281,6 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
 
     @Transactional(rollbackFor = Throwable.class, propagation = Propagation.REQUIRED)
     @Override
-    public void updateAliyunRdsAkSk(String puid, Long dataSourceId, String accessKey, String secretKey) {
-        RdpDataSourceDO dataSourceDO = this.fetchAndCheckById(dataSourceId);
-
-        String encSecretKey = CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(secretKey);
-        this.rdpDsMapper.updateAliyunRdsAkAndSk(dataSourceDO.getId(), accessKey, encSecretKey);
-        this.notifyServices.forEach(s -> s.onDsUpdate(dataSourceId));
-    }
-
-    @Transactional(rollbackFor = Throwable.class, propagation = Propagation.REQUIRED)
-    @Override
     public UpdatePubHostLO updateDataSourcePublicHost(String puid, Long dataSourceId, String publicHost) {
         this.fetchAndCheckById(dataSourceId);
         RdpDataSourceDO rdpDataSourceDO = this.rdpDsMapper.queryDsIdentityById(dataSourceId);
@@ -393,7 +402,7 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
     }
 
     @Override
-    public List<DsKvConfigVO> queryDsConfigs(Long dataSourceId) {
+    public List<RdpDsKvConfigVO> queryDsConfigs(Long dataSourceId) {
         if (dataSourceId == null) {
             return new ArrayList<>();
         }
@@ -411,15 +420,15 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
 
         List<RdpDsKvBaseConfigDO> defaultConfigs = this.rdpDsConfigService.fetchDefaultConfig(ds.getId(), ds.getDataSourceType());
 
-        List<DsKvConfigVO> resultConfigs = new ArrayList<>();
+        List<RdpDsKvConfigVO> resultConfigs = new ArrayList<>();
         for (RdpDsKvBaseConfigDO configDO : defaultConfigs) {
             RdpDsKvBaseConfigDO config = configMap.get(configDO.getConfigName());
             if (config == null) {
-                DsKvConfigVO v = RdpConvertUtils.convertToDsKvConfigVO(configDO);
+                RdpDsKvConfigVO v = RdpConvertUtils.convertToDsKvConfigVO(configDO);
                 v.setNeedCreated(true);
                 resultConfigs.add(v);
             } else {
-                DsKvConfigVO v = RdpConvertUtils.convertToDsKvConfigVO(config);
+                RdpDsKvConfigVO v = RdpConvertUtils.convertToDsKvConfigVO(config);
                 resultConfigs.add(v);
             }
         }
@@ -428,7 +437,7 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
     }
 
     @Override
-    public DsKvConfigVO queryDsConfig(Long dataSourceId, String configName) {
+    public RdpDsKvConfigVO queryDsConfig(Long dataSourceId, String configName) {
         if (dataSourceId == null) {
             return null;
         }
@@ -496,7 +505,7 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
         dsManageLabels.addAll(dataOperateLabels);
 
         RdpDataSourceDO dataSourceDO = rdpDsMapper.queryDsIdentityById(dsId);
-        RdpResAuthDO selfAudit = new RdpResAuthDO();
+        DmResAuthDO selfAudit = new DmResAuthDO();
         selfAudit.setOwnerUid(uid);
         selfAudit.setKindType(AuthKind.DataSource);
         selfAudit.setResId(dsId);
@@ -696,26 +705,6 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
         }
     }
 
-    protected void fillParentDsId(AddDsFO addDsFO, String uid, RdpDataSourceDO entity) {
-        if (addDsFO.getParentDsId() != null) {
-            RdpDataSourceDO parentDs = this.fetchAndCheckById(addDsFO.getParentDsId());
-
-            if (!parentDs.getUid().equals(uid)) {
-                throw new IllegalArgumentException("parent datasource (" + addDsFO.getParentDsId() + ") is not belong to user:" + uid);
-            }
-
-            entity.setParentDsId(addDsFO.getParentDsId());
-        }
-    }
-
-    protected void fillHost(AddDsFO addDsFO, RdpDataSourceDO entity) {
-        if (addDsFO.getHostType() == HostType.PUBLIC) {
-            entity.setHost(addDsFO.getPublicHost());
-        } else {
-            entity.setHost(addDsFO.getPrivateHost());
-        }
-    }
-
     protected void fillInstanceIdAndDesc(AddDsFO addDsFO, RdpDataSourceDO entity) {
         if (addDsFO.getInstanceId() == null) {
             entity.setInstanceId(genInstanceId(addDsFO.getType()));
@@ -727,82 +716,6 @@ public class RdpDsServiceImpl implements RdpDsService, UnifiedPostConstruct {
             entity.setInstanceDesc(addDsFO.getInstanceDesc());
         } else {
             entity.setInstanceDesc(addDsFO.getInstanceId());
-        }
-    }
-
-    protected void fillAliyunSecurityInfo(AddDsFO addDsFO, RdpDataSourceDO entity) {
-        if (entity.getSecurityType() == null) {
-            entity.setSecurityType(SecurityType.USER_PASSWD);
-            entity.setPublicSecurityType(SecurityType.USER_PASSWD);
-        }
-
-        if (StringUtils.isNotBlank(addDsFO.getAccount())) {
-            entity.setAccount(addDsFO.getAccount());
-        }
-
-        if (StringUtils.isNotBlank(addDsFO.getPassword())) {
-            entity.setPassword(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(addDsFO.getPassword()));
-        }
-
-        if (StringUtils.isNotBlank(addDsFO.getAccessKey()) && StringUtils.isNotBlank(addDsFO.getSecretKey())) {
-            entity.setAccessKey(addDsFO.getAccessKey());
-            entity.setSecretKey(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(addDsFO.getSecretKey()));
-        }
-    }
-
-    protected void fillFileBaseSecurityInfo(AddDsFO addDsFO, RdpDataSourceDO entity) {
-        if (addDsFO.getSecurityType() == SecurityType.USER_PASSWD_WITH_TLS) {
-            // for aliyun kafka , different network type have different security type.NEED TO BE REFLECT
-            if (entity.getDataSourceType() == DataSourceType.Kafka && StringUtils.isNotBlank(addDsFO.getPrivateHost()) && StringUtils.isNotBlank(addDsFO.getPublicHost())) {
-                entity.setSecurityType(SecurityType.NONE);
-                entity.setPublicSecurityType(SecurityType.USER_PASSWD_WITH_TLS);
-            }
-
-            entity.setSecurityFileStoreType(SecurityFileStoreType.META_DB);
-            String sslTrustStoreFileName = UUID.randomUUID() + "-" + addDsFO.getSecurityFile().getOriginalFilename();
-            String sslTrustStoreFilePath = this.rdpSecurityService.genSecurityFileRelatePath(entity.getInstanceId(), sslTrustStoreFileName);
-            entity.setSecurityFileUrl(sslTrustStoreFilePath);
-            if (StringUtils.isNotBlank(addDsFO.getClientTrustStorePassword())) {
-                // ClientTrustStorePassword is only used in Kafka, and now TLS authentication has switched to using trustStore/keyStore - securityFile/clientSecurityFile
-                entity.setClientTrustStorePassword(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(addDsFO.getClientTrustStorePassword()));
-            }
-            if (StringUtils.isNotBlank(addDsFO.getSecurityFilePassword())) {
-                // trustStore file password
-                entity.setSecurityFilePassword(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(addDsFO.getSecurityFilePassword()));
-            }
-            saveDsSecurityFile(addDsFO.getSecurityFile(), entity, SecurityFileType.ssl_truststore_file);
-            if (addDsFO.getClientSecurityFile() != null) {
-                // keystore file
-                String keystoreFileName = UUID.randomUUID() + "-" + addDsFO.getClientSecurityFile().getOriginalFilename();
-                String clientSecurityFileUrl = this.rdpSecurityService.genSecurityFileRelatePath(entity.getInstanceId(), keystoreFileName);
-                entity.setClientSecurityFileUrl(clientSecurityFileUrl);
-                saveDsSecurityFile(addDsFO.getClientSecurityFile(), entity, SecurityFileType.ssl_keystore_file);
-            }
-            if (StringUtils.isNotBlank(addDsFO.getClientSecurityFilePassword())) {
-                // keystore file password
-                entity.setClientSecurityFilePassword(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(addDsFO.getClientSecurityFilePassword()));
-            }
-        } else if (addDsFO.getSecurityType() == SecurityType.CA_CERTIFICATE) {
-            entity.setSecurityFileStoreType(SecurityFileStoreType.META_DB);
-            String caCertificateFileName = UUID.randomUUID() + "-" + addDsFO.getSecurityFile().getOriginalFilename();
-            String securityFileUrl = this.rdpSecurityService.genSecurityFileRelatePath(entity.getInstanceId(), caCertificateFileName);
-            entity.setSecurityFileUrl(securityFileUrl);
-            saveDsSecurityFile(addDsFO.getSecurityFile(), entity, SecurityFileType.ca_certificate_file);
-            if (addDsFO.getClientSecurityFile() != null) {
-                String clientSecurityFileName = UUID.randomUUID() + "-" + addDsFO.getClientSecurityFile().getOriginalFilename();
-                String clientSecurityFileUrl = this.rdpSecurityService.genSecurityFileRelatePath(entity.getInstanceId(), clientSecurityFileName);
-                entity.setClientSecurityFileUrl(clientSecurityFileUrl);
-                saveDsSecurityFile(addDsFO.getClientSecurityFile(), entity, SecurityFileType.client_certificate_file);
-            }
-            if (addDsFO.getSecretFile() != null) {
-                String secretFileName = UUID.randomUUID() + "-" + addDsFO.getSecretFile().getOriginalFilename();
-                String secretFileUrl = this.rdpSecurityService.genSecurityFileRelatePath(entity.getInstanceId(), secretFileName);
-                entity.setSecretFileUrl(secretFileUrl);
-                saveDsSecurityFile(addDsFO.getSecretFile(), entity, SecurityFileType.secret_file);
-            }
-            if (StringUtils.isNotBlank(addDsFO.getSecretFilePassword())) {
-                entity.setSecretFilePassword(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(addDsFO.getSecretFilePassword()));
-            }
         }
     }
 

@@ -1,15 +1,28 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.provider;
 
 import java.util.List;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.api.console.configs.ConfigRService;
 import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
-import com.clougence.clouddm.base.metadata.ds.ToolConfig;
 import com.clougence.clouddm.base.metadata.ds.DataSourceType;
+import com.clougence.clouddm.base.metadata.ds.ToolConfig;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.SecurityFileType;
 import com.clougence.clouddm.comm.RSocketApiClass;
@@ -18,13 +31,14 @@ import com.clougence.clouddm.console.web.component.detectrule.SecCheckerRules;
 import com.clougence.clouddm.console.web.component.detectrule.SecRulesService;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.DmToolConfigService;
-import com.clougence.clouddm.sdk.service.secrules.SensitiveConfig;
-import com.clougence.rdp.dal.mapper.RdpBlobResourceMapper;
-import com.clougence.rdp.dal.model.RdpBlobResourceDO;
-import com.clougence.clouddm.sdk.service.config.ConsoleConfigService;
 import com.clougence.clouddm.sdk.service.config.ConfigData;
+import com.clougence.clouddm.sdk.service.config.ConsoleConfigService;
+import com.clougence.clouddm.sdk.service.secrules.SensitiveConfig;
+import com.clougence.clouddm.console.web.dal.mapper.RdpBlobResourceMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpBlobResourceDO;
 import com.clougence.utils.CollectionUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -36,11 +50,11 @@ import lombok.extern.slf4j.Slf4j;
 public class ConfigRServiceProvider extends AbstractBasicProvider implements ConfigRService {
 
     @Resource
-    private DmDsConfigService       dsConfigService;
+    private DmDsConfigService     dsConfigService;
     @Resource
-    private DmToolConfigService     toolConfigService;
+    private DmToolConfigService   toolConfigService;
     @Resource
-    private SecRulesService         secRulesService;
+    private SecRulesService       secRulesService;
     @Resource
     private RdpBlobResourceMapper blobResourceMapper;
     @Resource

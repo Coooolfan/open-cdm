@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 the original author or authors.
+ * Copyright 2026 杭州开云集致科技有限公司
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,8 +12,5 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-/**
- * <p>各种类型的Provider接口工具。</p>
  */
 package com.clougence.utils.supplier;

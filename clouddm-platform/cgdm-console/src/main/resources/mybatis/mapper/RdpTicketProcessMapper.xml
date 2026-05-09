@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpTicketProcessMapper">
-    <resultMap id="ticketProcessDO" type="com.clougence.rdp.dal.model.RdpTicketProcessDO">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpTicketProcessMapper">
+    <resultMap id="ticketProcessDO" type="com.clougence.clouddm.console.web.dal.model.RdpTicketProcessDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
         <result column="ticket_id" property="ticketId"/>
-        <result column="ticket_stage" property="ticketStage" javaType="com.clougence.rdp.dal.enumeration.RdpTicketStage"/>
+        <result column="ticket_stage" property="ticketStage" javaType="com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStage"/>
         <result column="finish_time" property="finishTime"/>
         <result column="stage_context" property="stageContext"/>
-        <result column="process_status" property="processStatus" javaType="com.clougence.rdp.dal.enumeration.RdpTicketProcessStatus"/>
+        <result column="process_status" property="processStatus" javaType="com.clougence.clouddm.console.web.dal.enumeration.RdpTicketProcessStatus"/>
     </resultMap>
 
     <sql id="all_col">
@@ -31,7 +31,7 @@
             rdp_ticket_process
         WHERE
             ticket_id    = #{ticketId} and
-            ticket_stage = #{ticketStage,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStage} and
+            ticket_stage = #{ticketStage,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStage} and
             deleted      = false
     </select>
 
@@ -85,7 +85,7 @@
         set
             process_status = #{status}
         where ticket_id = #{ticketId}
-          and ticket_stage = #{stage,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStage}
+          and ticket_stage = #{stage,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStage}
     </update>
     <update id="updateProcessStatus">
         update

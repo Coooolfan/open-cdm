@@ -1,25 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpDataSourceMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpDataSourceMapper">
 
-    <resultMap id="rdpDataSourceDO" type="com.clougence.rdp.dal.model.RdpDataSourceDO">
+    <resultMap id="rdpDataSourceDO" type="com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
         <result column="uid" property="uid"/>
         <result column="owner" property="owner"/>
         <result column="deploy_type" property="deployType"
-                javaType="com.clougence.rdp.dal.enumeration.DeployEnvType"/>
+                javaType="com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType"/>
         <result column="info_fetch_type" property="infoFetchType"
-                javaType="com.clougence.rdp.dal.enumeration.DeployEnvInfoFetchType"/>
+                javaType="com.clougence.clouddm.console.web.dal.enumeration.DeployEnvInfoFetchType"/>
         <result column="data_source_type" property="dataSourceType"
                 javaType="com.clougence.clouddm.base.metadata.ds.DataSourceType"/>
         <result column="host" property="host"/>
         <result column="private_host" property="privateHost"/>
         <result column="public_host" property="publicHost"/>
         <result column="host_type" property="hostType"
-                javaType="com.clougence.rdp.dal.enumeration.HostType"/>
+                javaType="com.clougence.clouddm.console.web.dal.enumeration.HostType"/>
         <result column="instance_desc" property="instanceDesc"/>
         <result column="version" property="version"/>
         <result column="driver" property="driver"/>
@@ -35,14 +35,14 @@
         <result column="secret_file_password" property="secretFilePassword"/>
         <result column="secret_file_url" property="secretFileUrl"/>
         <result column="security_file_store_type" property="securityFileStoreType"
-                javaType="com.clougence.rdp.dal.enumeration.SecurityFileStoreType"/>
+                javaType="com.clougence.clouddm.console.web.dal.enumeration.SecurityFileStoreType"/>
         <result column="security_type" property="securityType"
                 javaType="com.clougence.clouddm.base.metadata.rdp.enumeration.SecurityType"/>
         <result column="public_security_type" property="publicSecurityType"
                 javaType="com.clougence.clouddm.base.metadata.rdp.enumeration.SecurityType"/>
         <result column="client_trust_store_password" property="clientTrustStorePassword"/>
         <result column="life_cycle_state" property="lifeCycleState"
-                javaType="com.clougence.rdp.dal.enumeration.LifeCycleState"/>
+                javaType="com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState"/>
         <result column="console_job_id" property="consoleJobId"/>
         <result column="parent_ds_id" property="parentDsId"/>
         <result column="connect_type" property="connectType"/>
@@ -190,13 +190,13 @@
 <!--                AND data_source_type = #{dataSourceType,javaType=com.clougence.clouddm.base.metadata.ds.DataSourceType}-->
 <!--            </if>-->
 <!--            <if test="deployEnvType != null">-->
-<!--                AND deploy_env_type = #{deployEnvType,javaType=com.clougence.rdp.dal.enumeration.DeployEnvType}-->
+<!--                AND deploy_env_type = #{deployEnvType,javaType=com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType}-->
 <!--            </if>-->
 <!--            <if test="dsEnvId != null">-->
 <!--                AND ds_env_id = #{dsEnvId}-->
 <!--            </if>-->
 <!--            <if test="lifeCycleState != null">-->
-<!--                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.rdp.dal.enumeration.LifeCycleState}-->
+<!--                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState}-->
 <!--            </if>-->
 <!--            <if test="lifeCycleState == null">-->
 <!--                AND life_cycle_state != 'DELETED'-->
@@ -249,15 +249,15 @@
 <!--                AND data_source_type = #{dataSourceType,javaType=com.clougence.clouddm.base.metadata.ds.DataSourceType}-->
 <!--            </if>-->
 <!--            <if test="deployType != null">-->
-<!--                AND deploy_type = #{deployType,javaType=com.clougence.rdp.dal.enumeration.DeployEnvType}-->
+<!--                AND deploy_type = #{deployType,javaType=com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType}-->
 <!--            </if>-->
 <!--            <if test="lifeCycleState != null">-->
-<!--                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.rdp.dal.enumeration.LifeCycleState}-->
+<!--                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState}-->
 <!--            </if>-->
 <!--        ORDER BY gmt_create DESC-->
 <!--    </select>-->
 
-    <select id="listByCondition" resultMap="rdpDataSourceDO" parameterType="com.clougence.rdp.dal.model.queryobj.DsQueryParam">
+    <select id="listByCondition" resultMap="rdpDataSourceDO" parameterType="com.clougence.clouddm.console.web.dal.model.queryobj.DsQueryParam">
         SELECT
             <include refid="rdpDataSource"/>
         FROM
@@ -268,10 +268,10 @@
                 AND data_source_type = #{dataSourceType,javaType=com.clougence.clouddm.base.metadata.ds.DataSourceType}
             </if>
             <if test="deployType != null">
-                AND deploy_type = #{deployType,javaType=com.clougence.rdp.dal.enumeration.DeployEnvType}
+                AND deploy_type = #{deployType,javaType=com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType}
             </if>
             <if test="lifeCycleState != null">
-                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.rdp.dal.enumeration.LifeCycleState}
+                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState}
             </if>
             <if test="dataSourceIds != null and dataSourceIds.size > 0">
                 AND id IN <foreach collection="dataSourceIds" item="item" separator="," open="(" close=")">#{item}</foreach>
@@ -300,10 +300,10 @@
 <!--                AND data_source_type = #{dataSourceType,javaType=com.clougence.clouddm.base.metadata.ds.DataSourceType}-->
 <!--            </if>-->
 <!--            <if test="deployType != null">-->
-<!--                AND deploy_type = #{deployType,javaType=com.clougence.rdp.dal.enumeration.DeployEnvType}-->
+<!--                AND deploy_type = #{deployType,javaType=com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType}-->
 <!--            </if>-->
 <!--            <if test="lifeCycleState != null">-->
-<!--                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.rdp.dal.enumeration.LifeCycleState}-->
+<!--                AND life_cycle_state = #{lifeCycleState,javaType=com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState}-->
 <!--            </if>-->
 <!--        ORDER BY gmt_create DESC-->
 <!--    </select>-->
@@ -318,7 +318,7 @@
         AND
             id IN <foreach collection="ids" item="item" separator="," open="(" close=")">#{item}</foreach>
             <if test="deployType != null">
-                AND deploy_type = #{deployType,javaType=com.clougence.rdp.dal.enumeration.DeployEnvType}
+                AND deploy_type = #{deployType,javaType=com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType}
             </if>
     </select>
 
@@ -440,7 +440,7 @@
             access_key = #{accessKey},
             secret_key = #{secretKey}
             <if test="storeType != null">
-                ,security_file_store_type = #{storeType,javaType=com.clougence.rdp.dal.enumeration.SecurityFileStoreType}
+                ,security_file_store_type = #{storeType,javaType=com.clougence.clouddm.console.web.dal.enumeration.SecurityFileStoreType}
             </if>
             <if test="securityFileUrl != null">
                 ,security_file_url = #{securityFileUrl}
@@ -525,7 +525,7 @@
         UPDATE
             rdp_data_source
         SET
-            life_cycle_state = #{lifeCycleState,javaType=com.clougence.rdp.dal.enumeration.LifeCycleState}
+            life_cycle_state = #{lifeCycleState,javaType=com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState}
         WHERE
             id = #{id}
     </update>

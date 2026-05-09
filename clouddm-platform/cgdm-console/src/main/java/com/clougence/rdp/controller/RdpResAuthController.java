@@ -1,8 +1,23 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.controller;
 
+import static com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy.Ignore;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.RDP_AUTH_MANAGE;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.RDP_AUTH_READ;
-import static com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy.Ignore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,10 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-
+import com.clougence.clouddm.console.web.model.fo.security.*;
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -23,31 +36,31 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
 import com.clougence.clouddm.base.metadata.ds.DataSourceType;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
-import com.clougence.rdp.component.ticket.RdpTicketService;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.SecurityLevel;
-import com.clougence.rdp.constant.operation.AuditType;
-import com.clougence.rdp.controller.model.fo.BrowseAuthTreeFO;
-import com.clougence.rdp.controller.model.fo.ListUserAuthResFO;
-import com.clougence.rdp.controller.model.fo.security.*;
-import com.clougence.rdp.controller.model.fo.ticket.RdpTicketBasicVO;
-import com.clougence.rdp.controller.model.http.RdpControllerUrlPrefix;
-import com.clougence.rdp.controller.model.vo.RdpAuthObjectVO;
-import com.clougence.rdp.controller.model.vo.ResAuthVO;
-import com.clougence.rdp.controller.model.vo.RoleAuthTreeVO;
-import com.clougence.rdp.dal.model.RdpResAuthDO;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel;
 import com.clougence.clouddm.sdk.security.auth.AuthElementType;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
+import com.clougence.rdp.component.ticket.RdpTicketService;
+import com.clougence.rdp.constant.operation.AuditType;
+import com.clougence.clouddm.console.web.model.fo.BrowseAuthTreeFO;
+import com.clougence.clouddm.console.web.model.fo.ListUserAuthResFO;
+import com.clougence.clouddm.console.web.model.fo.ticket.RdpTicketBasicVO;
+import com.clougence.rdp.constant.RdpControllerUrlPrefix;
+import com.clougence.clouddm.console.web.model.vo.RdpAuthObjectVO;
+import com.clougence.clouddm.console.web.model.vo.ResAuthVO;
+import com.clougence.clouddm.console.web.model.vo.role.RoleAuthTreeVO;
 import com.clougence.rdp.service.RdpAuthServiceForBiz;
 import com.clougence.rdp.service.RdpAuthServiceForManage;
 import com.clougence.rdp.service.RdpOpAuditService;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
-import com.clougence.rdp.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpConvertUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -111,11 +124,11 @@ public class RdpResAuthController {
             sameResId.get(resId).add(authFO);
         }
 
-        List<RdpResAuthDO> authList = new ArrayList<>();
+        List<DmResAuthDO> authList = new ArrayList<>();
         for (Long resId : sameResId.keySet()) {
             List<ListAuthOfResGroupFO> batch = sameResId.get(resId);
             List<String> authPrefixList = batch.stream().map(authFO -> RdpAuthUtils.genResPathByList(authFO.getResPaths()).getResPath()).collect(Collectors.toList());
-            List<RdpResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthByRes(fo.getTargetUid(), resId, authPrefixList, fo.getAuthKind());
+            List<DmResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthByRes(fo.getTargetUid(), resId, authPrefixList, fo.getAuthKind());
             authList.addAll(data);
         }
 
@@ -133,7 +146,7 @@ public class RdpResAuthController {
 
         rdpAuthServiceForBiz.checkOperateOtherUserAuth(uid, fo.getTargetUid());
 
-        List<RdpResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthWithoutLabels(fo.getTargetUid(), fo.getAuthKind());
+        List<DmResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthWithoutLabels(fo.getTargetUid(), fo.getAuthKind());
 
         List<ResAuthVO> collect = data.stream().map(RdpConvertUtils::convertToResAuthVO).collect(Collectors.toList());
         return ResWebDataUtils.buildSuccess(collect);
@@ -145,10 +158,6 @@ public class RdpResAuthController {
     @RequestAuth(checkOpPassword = true, value = RDP_AUTH_MANAGE)
     @RequestMapping(value = "/modifyUserAuth", method = RequestMethod.POST)
     public ResWebData<?> modifyUserAuth(@Valid @RequestBody ModifyUserAuthFO fo, HttpServletRequest request) {
-        if (GlobalDeployMode.inCloud()) {
-            throw new UnsupportedOperationException("This operation not supported in CLOUD mode.");
-        }
-
         String uid = (String) request.getAttribute(RdpUserService.UID);
         String puid = (String) request.getAttribute(RdpUserService.PUID);
 
@@ -180,11 +189,11 @@ public class RdpResAuthController {
             sameResId.get(resId).add(authFO);
         }
 
-        List<RdpResAuthDO> authList = new ArrayList<>();
+        List<DmResAuthDO> authList = new ArrayList<>();
         for (Long resId : sameResId.keySet()) {
             List<ListAuthOfResGroupFO> batch = sameResId.get(resId);
             List<String> authPrefixList = batch.stream().map(authFO -> RdpAuthUtils.genResPathByList(authFO.getResPaths()).getResPath()).collect(Collectors.toList());
-            List<RdpResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthByRes(uid, resId, authPrefixList, fo.getAuthKind());
+            List<DmResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthByRes(uid, resId, authPrefixList, fo.getAuthKind());
             authList.addAll(data);
         }
 
@@ -200,7 +209,7 @@ public class RdpResAuthController {
     public ResWebData<List<ResAuthVO>> listMyAuthRes(@Valid @RequestBody ListMyAuthResFO fo, HttpServletRequest request) {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
-        List<RdpResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthWithoutLabels(uid, fo.getAuthKind());
+        List<DmResAuthDO> data = this.rdpAuthServiceForManage.listUserAuthWithoutLabels(uid, fo.getAuthKind());
         List<ResAuthVO> collect = data.stream().map(RdpConvertUtils::convertToResAuthVO).collect(Collectors.toList());
         return ResWebDataUtils.buildSuccess(collect);
     }

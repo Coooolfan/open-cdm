@@ -1,6 +1,21 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
 
-import static com.clougence.rdp.controller.model.enumeration.VerifyType.SMS_VERIFY_CODE;
+import static com.clougence.clouddm.console.web.constants.VerifyType.SMS_VERIFY_CODE;
 
 import java.time.Duration;
 import java.util.Calendar;
@@ -9,8 +24,6 @@ import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,32 +34,32 @@ import com.clougence.clouddm.api.common.boot.UnifiedPostConstruct;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.AlarmLevel;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeploySite;
-import com.clougence.rdp.component.alert.model.SendMsgResult;
+import com.clougence.clouddm.console.web.component.alert.model.SendMsgResult;
+import com.clougence.clouddm.console.web.constants.VerifyCodeType;
+import com.clougence.clouddm.console.web.constants.VerifyType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.enumeration.AreaCode;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.model.fo.VerifyMO;
+import com.clougence.clouddm.console.web.util.NamedThreadFactory;
+import com.clougence.clouddm.console.web.util.RandomStrUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.rdp.constant.ConsoleErrorCode;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.enumeration.VerifyCodeType;
-import com.clougence.rdp.controller.model.enumeration.VerifyType;
-import com.clougence.rdp.controller.model.fo.VerifyMO;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.enumeration.AreaCode;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.mapper.RdpVerifyMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpVerifyDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpVerifyMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpVerifyDO;
 import com.clougence.rdp.global.exception.ConsoleRuntimeException;
 import com.clougence.rdp.service.RdpUserAlertService;
 import com.clougence.rdp.service.RdpVerifyService;
 import com.clougence.rdp.service.model.CheckVerifyMO;
 import com.clougence.rdp.service.model.MailDTO;
-import com.clougence.rdp.util.NamedThreadFactory;
-import com.clougence.rdp.util.RandomStrUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -57,7 +70,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpVerifyServiceImpl implements RdpVerifyService, UnifiedPostConstruct {
 
     @Autowired
-    private RdpConsoleConfig    rdpConfig;
+    private DmConsoleConfig     rdpConfig;
     @Resource
     private RdpVerifyMapper     rdpVerifyMapper;
     @Resource
@@ -378,19 +391,15 @@ public class RdpVerifyServiceImpl implements RdpVerifyService, UnifiedPostConstr
     }
 
     protected void handleSendResult(SendMsgResult r) {
-        if (r.isSuccess() || rdpConfig.isProductTrial()) {
+        if (r.success() || rdpConfig.isProductTrial()) {
             return;
         }
 
-        throw new RuntimeException("Send message error.msg:" + r.getErrMsg());
+        throw new RuntimeException("Send message error.msg:" + r.errMsg());
     }
 
     private String fetchEmailMsg(VerifyCodeType verifyCodeType, String code, boolean isContent) {
         String htmlTemplate = I18nRdpMsgKeys.EMAIL_CODE_HTML_CONTENT_TEMPLATE.name();
-        if (GlobalDeployMode.inCloud()) {
-            htmlTemplate = I18nRdpMsgKeys.CLOUD_EMAIL_CODE_HTML_CONTENT_TEMPLATE.name();
-        }
-
         return fetchCloudEmailMsg(verifyCodeType, code, isContent, GlobalDeploySite.rdpProductName(), htmlTemplate);
     }
 
@@ -743,8 +752,8 @@ public class RdpVerifyServiceImpl implements RdpVerifyService, UnifiedPostConstr
             .mailTo(Collections.singletonList(userDO.getEmail()))
             .build();
         SendMsgResult r1 = this.rdpUserAlertService.chooseMailAlertService().sendMail(mailDTO, userDO, Collections.singletonList(userDO.getUid()));
-        if (!r1.isSuccess()) {
-            return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.VERIFY_EMAIL_SEND_ERROR.name(), r1.getErrMsg()));
+        if (!r1.success()) {
+            return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.VERIFY_EMAIL_SEND_ERROR.name(), r1.errMsg()));
         } else {
             return ResWebDataUtils.buildSuccess();
         }
@@ -793,16 +802,16 @@ public class RdpVerifyServiceImpl implements RdpVerifyService, UnifiedPostConstr
 
         SendMsgResult r1 = this.rdpUserAlertService.chooseImAlertService(puid)
             .sendMsg(buildMsgOwner(), "[MAJOR] " + msg, null, owner, Collections.singletonList(receiver), AlarmLevel.Major, imAlertAtAll);
-        if (!r1.isSuccess()) {
+        if (!r1.success()) {
             return ResWebDataUtils
-                .buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.VERIFY_IM_SEND_ERROR.name(), GlobalDeploySite.rdpProductName(), "[Major Level] " + r1.getErrMsg()));
+                .buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.VERIFY_IM_SEND_ERROR.name(), GlobalDeploySite.rdpProductName(), "[Major Level] " + r1.errMsg()));
         }
 
         SendMsgResult r2 = this.rdpUserAlertService.chooseImAlertService(puid)
             .sendMsg(buildMsgOwner(), "[CRITICAL] " + msg, null, owner, Collections.singletonList(receiver), AlarmLevel.Critical, imAlertAtAll);
-        if (!r2.isSuccess()) {
+        if (!r2.success()) {
             return ResWebDataUtils
-                .buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.VERIFY_IM_SEND_ERROR.name(), GlobalDeploySite.rdpProductName(), "[Critical Level] " + r2.getErrMsg()));
+                .buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.VERIFY_IM_SEND_ERROR.name(), GlobalDeploySite.rdpProductName(), "[Critical Level] " + r2.errMsg()));
         }
 
         return ResWebDataUtils.buildSuccess();

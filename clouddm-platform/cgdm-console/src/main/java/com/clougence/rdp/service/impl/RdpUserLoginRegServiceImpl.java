@@ -1,7 +1,19 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
-
-import static com.clougence.rdp.component.sso.RdpSsoLoginRegService.OUT_OF_CHINA_DEFAULT_PHONE;
-import static com.clougence.rdp.component.sso.RdpSsoLoginRegService.OUT_OF_CHINA_DEFAULT_PHONE_AREA;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -9,55 +21,43 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-import java.util.List;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.clougence.clouddm.api.common.crypt.CryptService;
-import com.clougence.clouddm.api.common.rpc.ResWebData;
-import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeploySite;
+import com.clougence.clouddm.console.web.constants.LoginAuthType;
+import com.clougence.clouddm.console.web.constants.MfaPreActionType;
+import com.clougence.clouddm.console.web.constants.VerifyCodeType;
+import com.clougence.clouddm.console.web.constants.VerifyType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountBindType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.enumeration.AreaCode;
+import com.clougence.clouddm.console.web.dal.model.DmCsrfTokenDO;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.csrf.CsrfTokenService;
+import com.clougence.clouddm.console.web.global.jwtsession.JwtService;
+import com.clougence.clouddm.console.web.model.fo.LoginAutoRegisterFO;
+import com.clougence.clouddm.console.web.model.fo.LoginFO;
+import com.clougence.clouddm.console.web.model.vo.LoginUserVO;
+import com.clougence.clouddm.console.web.util.*;
 import com.clougence.clouddm.platform.plugin.PluginManager;
-import com.clougence.clouddm.sdk.security.auth.def.SecSysRole;
 import com.clougence.clouddm.sdk.security.login.LoginProvider;
 import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
 import com.clougence.clouddm.sdk.security.login.LoginRequest;
 import com.clougence.clouddm.sdk.security.login.LoginResponse;
 import com.clougence.clouddm.sdk.service.config.UserData;
-import com.clougence.rdp.component.csrf.RdpCsrfTokenService;
-import com.clougence.rdp.component.jwtsession.RdpJwtService;
-import com.clougence.rdp.component.jwtsession.RdpWebUtils;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.enumeration.LoginAuthType;
-import com.clougence.rdp.controller.model.enumeration.MfaPreActionType;
-import com.clougence.rdp.controller.model.enumeration.VerifyCodeType;
-import com.clougence.rdp.controller.model.enumeration.VerifyType;
-import com.clougence.rdp.controller.model.fo.LoginAutoRegisterFO;
-import com.clougence.rdp.controller.model.fo.LoginFO;
-import com.clougence.rdp.controller.model.fo.RegisterFO;
-import com.clougence.rdp.controller.model.vo.LoginUserVO;
-import com.clougence.rdp.dal.enumeration.AccountBindType;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.enumeration.AreaCode;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpCsrfTokenDO;
-import com.clougence.rdp.dal.model.RdpRoleDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.rdp.service.*;
+import com.clougence.rdp.service.RdpUserConfigService;
+import com.clougence.rdp.service.RdpUserLoginRegService;
+import com.clougence.rdp.service.RdpUserService;
+import com.clougence.rdp.service.RdpVerifyService;
 import com.clougence.rdp.service.model.AddSubAccountMO;
 import com.clougence.rdp.service.model.CheckVerifyMO;
 import com.clougence.rdp.service.model.LoginMO;
-import com.clougence.rdp.util.RdpAuthUtils;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
-import com.clougence.rdp.util.Sm2Utils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
@@ -73,37 +73,19 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpUserLoginRegServiceImpl implements RdpUserLoginRegService {
 
     @Resource
-    private RdpConsoleConfig     rdpConfig;
-
-    @Resource
-    private RdpNamingService     rdpNamingService;
-
+    private DmConsoleConfig      rdpConfig;
     @Resource
     private RdpUserMapper        rdpUserMapper;
-
     @Resource
     private RdpUserService       rdpUserService;
-
     @Resource
-    private RdpRoleService       rdpRoleService;
-
-    @Resource
-    private RdpJwtService        rdpJwtService;
-
+    private JwtService           jwtService;
     @Resource
     private RdpVerifyService     rdpVerifyService;
-
     @Resource
     private RdpUserConfigService rdpUserConfigService;
-
     @Resource
-    private RdpSysConfigService  rdpSysConfigService;
-
-    @Resource
-    private RdpDsEnvService      rdpDsEnvService;
-
-    @Resource
-    private RdpCsrfTokenService  csrfTokenService;
+    private CsrfTokenService     csrfTokenService;
 
     @Override
     public LoginMO login(LoginFO loginFO) {
@@ -136,17 +118,9 @@ public class RdpUserLoginRegServiceImpl implements RdpUserLoginRegService {
                 break;
             }
             case PASSWORD: {
-                if (GlobalDeployMode.inPrivate()) {
-                    user = this.rdpUserMapper.queryPrimaryByEmail(loginFO.getAccount());
-                    if (user == null) {
-                        user = this.rdpUserMapper.queryPrimaryByPhone(loginFO.getAccount());
-                    }
-                } else {
-                    if (GlobalDeploySite.china == GlobalDeploySite.currDeploySite) {
-                        user = this.rdpUserMapper.queryPrimaryByPhone(loginFO.getAccount());
-                    } else {
-                        user = this.rdpUserMapper.queryPrimaryByEmail(loginFO.getAccount());
-                    }
+                user = this.rdpUserMapper.queryPrimaryByEmail(loginFO.getAccount());
+                if (user == null) {
+                    user = this.rdpUserMapper.queryPrimaryByPhone(loginFO.getAccount());
                 }
                 break;
             }
@@ -322,7 +296,7 @@ public class RdpUserLoginRegServiceImpl implements RdpUserLoginRegService {
         request.setLoginVerifyCode(loginFO.getVerifyCode());
         request.setAccessToken(loginFO.getAccessToken());
         if (StringUtils.isNotBlank(loginFO.getToken())) {
-            RdpCsrfTokenDO csrfTokenDO = this.csrfTokenService.pullToken(loginFO.getToken());
+            DmCsrfTokenDO csrfTokenDO = this.csrfTokenService.pullToken(loginFO.getToken());
             if (csrfTokenDO != null) {
                 request.setAccessToken(csrfTokenDO.getSecretToken());
             }
@@ -393,7 +367,7 @@ public class RdpUserLoginRegServiceImpl implements RdpUserLoginRegService {
         re.setUid(user.getUid());
         re.setUsername(user.getUsername());
 
-        String jwtToken = this.rdpJwtService.genJwtToken(user);
+        String jwtToken = this.jwtService.genJwtToken(user);
         re.setToken(jwtToken);
         if (user.getParentId() != null) {
             RdpUserDO rdpUserDO = rdpUserMapper.queryById(user.getParentId());
@@ -402,9 +376,9 @@ public class RdpUserLoginRegServiceImpl implements RdpUserLoginRegService {
             }
         }
 
-        if (GlobalDeployMode.inPrivate() && user.isUseMfa()) {
+        if (user.isUseMfa()) {
             re.setNeedMfa(true);
-            re.setMfaPreActionToken(this.rdpJwtService.genMfaActionToken(user.getUid(), MfaPreActionType.LOGIN, jwtToken));
+            re.setMfaPreActionToken(this.jwtService.genMfaActionToken(user.getUid(), MfaPreActionType.LOGIN, jwtToken));
         }
 
         return re;
@@ -517,172 +491,13 @@ public class RdpUserLoginRegServiceImpl implements RdpUserLoginRegService {
     //
 
     @Override
-    public ResWebData<Boolean> register(RegisterFO registerFO) {
-        dataTruncation(registerFO);
-
-        // check form
-        if (validRegisterMode(registerFO)) {
-            return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_NEED_PHONE_ERROR.name()));
-        }
-
-        // check conflict
-        RdpUserDO checkUser;
-        if (GlobalDeployMode.inPrivate()) {
-            checkUser = this.rdpUserMapper.queryPrimaryByEmail(registerFO.getEmail());
-            if (checkUser != null) {
-                return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_EMAIL_EXIST_ERROR.name(), registerFO.getEmail()));
-            }
-
-            checkUser = this.rdpUserMapper.queryPrimaryByPhone(registerFO.getPhone());
-            if (checkUser != null) {
-                return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_PHONE_EXIST_ERROR.name(), registerFO.getPhone()));
-            }
-        } else {
-            if (GlobalDeploySite.china == GlobalDeploySite.currDeploySite) {
-                checkUser = this.rdpUserMapper.queryPrimaryByPhone(registerFO.getPhone());
-                if (checkUser != null) {
-                    return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_PHONE_EXIST_ERROR.name(), registerFO.getPhone()));
-                }
-            } else {
-                checkUser = this.rdpUserMapper.queryPrimaryByEmail(registerFO.getEmail());
-                if (checkUser != null) {
-                    return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_EMAIL_EXIST_ERROR.name(), registerFO.getEmail()));
-                }
-            }
-        }
-
-        if (registerFO.getPhoneAreaCode() == null) {
-            registerFO.setPhoneAreaCode(AreaCode.CHINA);
-        }
-
-        if (GlobalDeploySite.outChina() && registerFO.getPhone() == null) {
-            registerFO.setPhone(OUT_OF_CHINA_DEFAULT_PHONE);
-            registerFO.setPhoneAreaCode(OUT_OF_CHINA_DEFAULT_PHONE_AREA);
-        }
-
-        // check verify
-        CheckVerifyMO verifyData;
-        switch (registerFO.getVerifyType()) {
-            case SMS_VERIFY_CODE:
-                verifyData = new CheckVerifyMO();
-                verifyData.setPhoneNumber(registerFO.getPhone());
-                verifyData.setPhoneAreaCode(registerFO.getPhoneAreaCode());
-                verifyData.setVerifyCode(registerFO.getVerifyCode());
-                verifyData.setVerifyType(VerifyType.SMS_VERIFY_CODE);
-                verifyData.setVerifyCodeType(VerifyCodeType.REGISTER);
-                break;
-            case EMAIL_VERIFY_CODE:
-                if (GlobalDeploySite.currDeploySite == GlobalDeploySite.china) {
-                    return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_UNSUPPORTED_BY_EMAIL_ERROR.name()));
-                }
-
-                verifyData = new CheckVerifyMO();
-                verifyData.setEmail(registerFO.getEmail());
-                verifyData.setVerifyCode(registerFO.getVerifyCode());
-                verifyData.setVerifyType(VerifyType.EMAIL_VERIFY_CODE);
-                verifyData.setVerifyCodeType(VerifyCodeType.REGISTER);
-                break;
-            default:
-                return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(I18nRdpMsgKeys.REGISTER_INNER_UNSUPPORTED_TYPE_ERROR.name()));
-        }
-
-        this.rdpVerifyService.checkVerifyCode(verifyData);
-
-        // init user and role
-        try {
-            return this.initUserAndRole(registerFO);
-        } catch (Exception e) {
-            return ResWebDataUtils.buildError(RdpI18nUtils.getMessage(e.getMessage()));
-        }
-    }
-
-    private void dataTruncation(RegisterFO signinFO) {
-        if (signinFO.getKeyword() != null) {
-            if (signinFO.getKeyword().length() >= RdpWebViewLogService.KEY_WORD_CONTENT_LENGTH) {
-                signinFO.setKeyword(signinFO.getKeyword().substring(0, RdpWebViewLogService.KEY_WORD_CONTENT_LENGTH));
-            }
-        }
-
-        if (signinFO.getSrc() != null) {
-            if (signinFO.getSrc().length() >= RdpWebViewLogService.SRC_CONTENT_LENGTH) {
-                signinFO.setSrc(signinFO.getSrc().substring(0, RdpWebViewLogService.SRC_CONTENT_LENGTH));
-            }
-        }
-    }
-
-    private boolean validRegisterMode(RegisterFO signinFO) {
-        if (GlobalDeploySite.currDeploySite == GlobalDeploySite.china) {
-            if (signinFO.getVerifyType() == VerifyType.EMAIL_VERIFY_CODE) {
-                return true;
-            } else
-                return StringUtils.isBlank(signinFO.getPhone());
-        } else {
-            return false;
-        }
-    }
-
-    @Transactional(rollbackFor = Throwable.class, propagation = Propagation.REQUIRED)
-    public ResWebData<Boolean> initUserAndRole(RegisterFO registerFO) {
-        RdpUserDO newUser = registerInner(registerFO);
-        this.initInnerRole(newUser);
-
-        return ResWebDataUtils.buildSuccess();
-    }
-
-    private RdpUserDO registerInner(RegisterFO userInfo) {
-        String uid = this.rdpNamingService.genUid();
-
-        String domain;
-        if (StringUtils.isNotBlank(rdpConfig.getUserDomainSuffix())) {
-            domain = uid + "." + rdpConfig.getUserDomainSuffix();
-        } else {
-            domain = uid + "." + RdpUserService.DEFAULT_USER_DOMAIN_SUFFIX;
-        }
-
-        RdpUserDO userDO = new RdpUserDO();
-        userDO.setUid(uid);
-        userDO.setPassword(CryptService.INSTANCE.encryptForOneWay(userInfo.getPassword()).getEncryptPassword());
-        userDO.setCompany(userInfo.getCompany());
-        userDO.setEmail(userInfo.getEmail());
-        userDO.setPhoneAreaCode(userInfo.getPhoneAreaCode());
-        userDO.setPhone(userInfo.getPhone());
-        userDO.setUsername(userInfo.getUserName());
-        userDO.setContactMe(userInfo.isContactMe());
-        userDO.setSrc(userInfo.getSrc());
-        userDO.setKeyword(userInfo.getKeyword());
-        userDO.setClientId(userInfo.getClientId());
-        userDO.setAccessKey(this.rdpNamingService.genAccessKey());
-        userDO.setAccountType(AccountType.PRIMARY_ACCOUNT);
-        userDO.setUserDomain(domain);
-        userDO.setSecretKey(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(this.rdpNamingService.genSecretKey()));
-        this.rdpUserMapper.insert(userDO);
-        return userDO;
-    }
-
-    private void initInnerRole(RdpUserDO newUser) {
-        this.rdpRoleService.repairRoleForUser(newUser.getUid());
-
-        List<RdpRoleDO> roles = this.rdpRoleService.listRoleByUID(newUser.getUid());
-        RdpRoleDO adminRole = roles.stream().filter(roleDO -> StringUtils.equals(roleDO.getRoleName(), SecSysRole.ADMIN_ROLE_NAME)).findFirst().orElse(null);
-
-        if (adminRole == null) {
-            throw new IllegalStateException(I18nRdpMsgKeys.REGISTER_INNER_INIT_ROLE_TYPE_ERROR.name());
-        }
-
-        this.rdpUserMapper.updateRoleById(newUser.getId(), adminRole.getId());
-        this.rdpUserConfigService.initUserConfigs(newUser.getUid());
-        this.rdpSysConfigService.initUserSystemEnv(newUser.getUid());
-        this.rdpDsEnvService.initPrimaryUserDefaultEnv(newUser.getUid(), newUser.getUid());
-    }
-
-    @Override
     public boolean isLogoutUsingJump(String uid) {
         RdpUserDO user = this.rdpUserMapper.queryByUid(uid);
         if (user.getAccountType() == AccountType.PRIMARY_ACCOUNT) {
             return false;
         }
 
-        return user.getBindType() != AccountBindType.INTERNAL && user.getBindType() != AccountBindType.MANAGED;
+        return user.getBindType() != AccountBindType.INTERNAL;
     }
 
     @Override

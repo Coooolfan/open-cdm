@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpApprovalPersonMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpApprovalPersonMapper">
 
-    <resultMap id="rdpApprovalPersonDO" type="com.clougence.rdp.dal.model.RdpApprovalPersonDO">
+    <resultMap id="rdpApprovalPersonDO" type="com.clougence.clouddm.console.web.dal.model.RdpApprovalPersonDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
@@ -39,7 +39,7 @@
             ticket_bz_id = #{ticketBzId}
     </delete>
 
-    <select id="queryByTicketBzId" resultType="com.clougence.rdp.dal.model.RdpApprovalPersonDO">
+    <select id="queryByTicketBzId" resultType="com.clougence.clouddm.console.web.dal.model.RdpApprovalPersonDO">
         select
             <include refid="rdpApprovalPersonList"/>
         from

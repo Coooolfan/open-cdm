@@ -1,11 +1,24 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.dskvconfig.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 
@@ -16,14 +29,14 @@ import com.clougence.rdp.component.dskvconfig.RdpDsConfigService;
 import com.clougence.rdp.component.dskvconfig.RdpDsExtraConfGen;
 import com.clougence.rdp.component.dskvconfig.RdpDsKvConfigHelper;
 import com.clougence.rdp.component.dskvconfig.RdpDsResourceService;
-import com.clougence.rdp.controller.model.fo.InitDsKvBaseConfigFO;
-import com.clougence.rdp.controller.model.vo.DsKvConfigVO;
-import com.clougence.rdp.dal.mapper.RdpDsKvBaseConfigMapper;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpDsKvBaseConfigDO;
-import com.clougence.rdp.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.model.fo.InitDsKvBaseConfigFO;
+import com.clougence.clouddm.console.web.dal.mapper.RdpDsKvBaseConfigMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDsKvBaseConfigDO;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
+
+import jakarta.annotation.Resource;
 
 /**
  * @author bucketli 2022/8/10 09:52:22
@@ -41,37 +54,9 @@ public class RdpDsConfigServiceImpl implements RdpDsConfigService {
     private RdpDsResourceService    rdpDsResourceService;
 
     @Override
-    public List<DsKvConfigVO> getAllConfig(long dataSourceId) {
-        List<RdpDsKvBaseConfigDO> configs = this.rdpDsKvBaseConfigMapper.listByDsId(dataSourceId);
-        for (RdpDsKvBaseConfigDO configDO : configs) {
-            if (configDO.isSecret() && StringUtils.isNotBlank(configDO.getConfigValue())) {
-                String val = CryptService.INSTANCE.decryptUseDefaultKeyAndSalt(configDO.getConfigValue());
-                configDO.setConfigValue(val);
-            }
-        }
-
-        List<DsKvConfigVO> dsKvConfigs = new ArrayList<>();
-        for (RdpDsKvBaseConfigDO config : configs) {
-            dsKvConfigs.add(RdpConvertUtils.convertToDsKvConfigVO(config));
-        }
-        return dsKvConfigs;
-    }
-
-    @Override
     public void persistDsConfig(RdpDataSourceDO dataSourceDO, List<InitDsKvBaseConfigFO> kvConfigs) {
         List<RdpDsKvBaseConfigDO> configs = collectConfig(dataSourceDO, kvConfigs);
         for (RdpDsKvBaseConfigDO config : configs) {
-            if (config.isSecret()) {
-                config.setConfigValue(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(config.getConfigValue()));
-            }
-
-            this.rdpDsKvBaseConfigMapper.insert(config);
-        }
-    }
-
-    @Override
-    public void persistInnerDsConfig(RdpDataSourceDO dataSourceDO, List<RdpDsKvBaseConfigDO> kvConfigs) {
-        for (RdpDsKvBaseConfigDO config : kvConfigs) {
             if (config.isSecret()) {
                 config.setConfigValue(CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(config.getConfigValue()));
             }

@@ -1,20 +1,31 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.controller;
 
+import static com.clougence.clouddm.console.web.global.jwtsession.JwtService.jwtTokenName;
+import static com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy.Ignore;
+import static com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy.RefAnyOnes;
+import static com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel.HIGH;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.*;
-import static com.clougence.rdp.component.jwtsession.RdpJwtService.jwtTokenName;
-import static com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy.Ignore;
-import static com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy.RefAnyOnes;
-import static com.clougence.rdp.constant.auth.SecurityLevel.HIGH;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
-
+import com.clougence.clouddm.console.web.model.fo.*;
+import com.clougence.clouddm.console.web.model.fo.user.ResetSubAccountPwdFO;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,40 +34,42 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeploySite;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
-import com.clougence.rdp.component.jwtsession.RdpJwtService;
-import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.SecurityLevel;
-import com.clougence.rdp.constant.operation.AuditType;
-import com.clougence.rdp.controller.model.enumeration.VerifyCodeType;
-import com.clougence.rdp.controller.model.fo.*;
-import com.clougence.rdp.controller.model.http.RdpControllerUrlPrefix;
-import com.clougence.rdp.controller.model.vo.LoginUserVO;
-import com.clougence.rdp.controller.model.vo.PwdValidateExprVO;
-import com.clougence.rdp.controller.model.vo.RdpUserAkSkVO;
-import com.clougence.rdp.controller.model.vo.ResourceSummaryVO;
-import com.clougence.rdp.dal.enumeration.AreaCode;
-import com.clougence.rdp.dal.mapper.RdpResAuthMapper;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpRoleDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.jwtsession.JwtService;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
+import com.clougence.rdp.constant.I18nRdpMsgKeys;
+import com.clougence.rdp.constant.operation.AuditType;
+import com.clougence.clouddm.console.web.constants.VerifyCodeType;
+import com.clougence.rdp.constant.RdpControllerUrlPrefix;
+import com.clougence.clouddm.console.web.model.vo.LoginUserVO;
+import com.clougence.clouddm.console.web.model.vo.PwdValidateExprVO;
+import com.clougence.clouddm.console.web.model.vo.RdpUserAkSkVO;
+import com.clougence.clouddm.console.web.model.vo.ResourceSummaryVO;
+import com.clougence.clouddm.console.web.dal.enumeration.AreaCode;
+import com.clougence.clouddm.console.web.dal.mapper.DmResAuthMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpRoleDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.rdp.service.*;
 import com.clougence.rdp.service.enumeration.OpVerifyErrType;
 import com.clougence.rdp.service.model.CheckVerifyMO;
 import com.clougence.rdp.service.model.OpPasswdVerifyMO;
 import com.clougence.rdp.service.model.UpdateUserInfoMO;
 import com.clougence.rdp.service.model.ValidateResultMO;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
-import com.clougence.rdp.util.Sm2Utils;
+import com.clougence.clouddm.console.web.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.Sm2Utils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.format.DateFormatType;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -71,7 +84,7 @@ public class RdpUserController {
     private RdpUserMapper          rdpUserMapper;
 
     @Resource
-    private RdpResAuthMapper       rdpDsAuthMapper;
+    private DmResAuthMapper rdpDsAuthMapper;
 
     @Resource
     private RdpUserService         rdpUserService;
@@ -79,7 +92,7 @@ public class RdpUserController {
     private RdpRoleService         rdpRoleService;
 
     @Resource
-    private RdpJwtService          rdpJwtService;
+    private JwtService             jwtService;
 
     @Resource
     private RdpVerifyService       rdpVerifyService;
@@ -94,7 +107,7 @@ public class RdpUserController {
     private RdpOpAuditService      rdpOpAuditService;
 
     @Resource
-    private RdpConsoleConfig       rdpConfig;
+    private DmConsoleConfig        rdpConfig;
 
     // --------------------------------
     //      for User Info
@@ -329,14 +342,6 @@ public class RdpUserController {
     @RequestAuth(strategy = Ignore)
     @RequestMapping(value = "/updateUserEmail", method = RequestMethod.POST)
     public ResWebData<?> updateUserEmail(@RequestBody @Valid UpdateUserEmailFO fo, HttpServletRequest request, HttpServletResponse response) {
-        if (!GlobalDeployMode.inCloud()) {
-            throw new RuntimeException("ON_PREMISE deployment can not update user email by verified code.");
-        }
-
-        if (GlobalDeploySite.outChina()) {
-            throw new RuntimeException("Out of china deployment can not update user email by verified code.");
-        }
-
         String puid = (String) request.getAttribute(RdpUserService.PUID);
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
@@ -422,32 +427,6 @@ public class RdpUserController {
         this.rdpOpAuditService.logAndAddOperationAudit(puid, uid, request.getRequestURI(), request.getRemoteAddr(), uid, res
             .getConfigLO(), SecurityLevel.HIGH, AuditType.UPDATE_ACCOUNT_EMAIL, ResourceType.ACCOUNT);
 
-        return ResWebDataUtils.buildSuccess();
-    }
-
-    @RequestAuth(level = HIGH, value = RDP_PRI_USER_THIRD_PARTY_CONF_W)
-    @RequestMapping(value = "/updateAliyunAkSk", method = RequestMethod.POST)
-    public ResWebData<?> updateAliyunAkSk(@RequestBody @Valid UpdateAliyunAkSkFO fo, HttpServletRequest request) {
-        String puid = (String) request.getAttribute(RdpUserService.PUID);
-        String uid = (String) request.getAttribute(RdpUserService.UID);
-
-        this.rdpUserService.updateAliyunAkSk(puid, fo.getAliyunAk(), fo.getAliyunSk());
-
-        rdpOpAuditService.logAndAddOperationAudit(puid, uid, request.getRequestURI(), request
-            .getRemoteAddr(), uid, "", SecurityLevel.HIGH, AuditType.AUTHORIZE_ACCESS_TO_ALIYUN, ResourceType.ACCOUNT);
-        return ResWebDataUtils.buildSuccess();
-    }
-
-    @RequestAuth(level = HIGH, value = RDP_PRI_USER_THIRD_PARTY_CONF_W)
-    @RequestMapping(value = "/cleanAliyunAkSk", method = RequestMethod.POST)
-    public ResWebData<?> cleanAliyunAkSk(HttpServletRequest request) {
-        String puid = (String) request.getAttribute(RdpUserService.PUID);
-        String uid = (String) request.getAttribute(RdpUserService.UID);
-
-        this.rdpUserService.cleanAliyunAkSk(puid);
-
-        rdpOpAuditService.logAndAddOperationAudit(puid, uid, request.getRequestURI(), request
-            .getRemoteAddr(), uid, "", SecurityLevel.HIGH, AuditType.REVOKE_ACCESS_TO_ALIYUN, ResourceType.ACCOUNT);
         return ResWebDataUtils.buildSuccess();
     }
 
@@ -559,7 +538,7 @@ public class RdpUserController {
             throw new IllegalArgumentException("user not exist.");
         }
 
-        Cookie cookie = new Cookie(RdpJwtService.opPwdToken, this.rdpJwtService.genOpPwdToken(userDO));
+        Cookie cookie = new Cookie(JwtService.opPwdToken, this.jwtService.genOpPwdToken(userDO));
         // let fronted to extract jwt token as csrf token
         cookie.setHttpOnly(false);
         cookie.setMaxAge((int) (RdpUserService.OP_PASSWD_TOEKN_EXPIRE_MS / 1000));

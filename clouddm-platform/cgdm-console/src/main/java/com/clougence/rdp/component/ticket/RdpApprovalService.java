@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.ticket;
 
 import java.util.Arrays;
@@ -7,10 +22,10 @@ import java.util.Map;
 
 import com.clougence.clouddm.sdk.approval.ApprovalProvider;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.vo.RdpApproTemplateVO;
-import com.clougence.rdp.dal.enumeration.RdpApprovalType;
-import com.clougence.rdp.dal.model.RdpCacheApproTemplateDO;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.model.vo.RdpApproTemplateVO;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalType;
+import com.clougence.clouddm.console.web.dal.model.RdpCacheApproTemplateDO;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 
 /**
  * @author Ekko
@@ -22,7 +37,7 @@ public interface RdpApprovalService {
             ApprovalProvider.DingTalk,  //
             ApprovalProvider.Feishu,    //
             ApprovalProvider.Wechat);
-    String                        INNER_TEMPLATE_ID = "PROC-SELFMAKE-000000001";
+    String                 INNER_TEMPLATE_ID = "PROC-SELFMAKE-000000001";
 
     static RdpApproTemplateVO innerTemplate() {
         RdpApproTemplateVO innerTemplate = new RdpApproTemplateVO();

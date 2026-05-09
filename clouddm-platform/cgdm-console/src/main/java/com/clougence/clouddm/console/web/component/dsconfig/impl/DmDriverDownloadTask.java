@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.dsconfig.impl;
 
 import java.io.File;
@@ -14,12 +29,12 @@ import com.clougence.clouddm.comm.model.RSocketSendDTO;
 import com.clougence.clouddm.comm.model.RSocketSendType;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerStatusMapper;
 import com.clougence.clouddm.console.web.dal.model.DmWorkerStatusDO;
+import com.clougence.clouddm.console.web.model.vo.DriverVersionStatusVO;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.drivers.DriverFile;
 import com.clougence.drivers.DriverPrepareProgress;
 import com.clougence.drivers.DriverVersion;
 import com.clougence.drivers.def.ResDef;
-import com.clougence.rdp.controller.model.vo.DriverVersionStatusVO;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.HostUtil;
 import com.clougence.utils.StringUtils;

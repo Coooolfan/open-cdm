@@ -1,53 +1,70 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.controller;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.Map;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import com.clougence.clouddm.sdk.security.login.*;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
+import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
+import com.clougence.clouddm.console.web.constants.EventType;
+import com.clougence.clouddm.console.web.constants.LoginAuthType;
+import com.clougence.clouddm.console.web.dal.model.DmCsrfTokenDO;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.csrf.CsrfTokenService;
+import com.clougence.clouddm.console.web.global.jwtsession.JwtService;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel;
+import com.clougence.clouddm.console.web.model.fo.LoginFO;
+import com.clougence.clouddm.console.web.util.RdpWebUtils;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.approval.ApprovalCallbackSpi;
 import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
-import com.clougence.rdp.component.csrf.RdpCsrfTokenService;
-import com.clougence.rdp.component.jwtsession.RdpJwtService;
-import com.clougence.rdp.component.jwtsession.RdpWebUtils;
+import com.clougence.clouddm.sdk.security.login.LoginProvider;
+import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
+import com.clougence.clouddm.sdk.security.login.LoginRequest;
+import com.clougence.clouddm.sdk.security.login.LoginResponse;
+import com.clougence.clouddm.sdk.service.config.UserData;
 import com.clougence.rdp.component.sso.RdpSubLoginService;
 import com.clougence.rdp.component.ticket.RdpApprovalService;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.SecurityLevel;
 import com.clougence.rdp.constant.operation.AuditType;
-import com.clougence.rdp.controller.model.enumeration.EventType;
-import com.clougence.rdp.controller.model.enumeration.LoginAuthType;
-import com.clougence.rdp.controller.model.fo.LoginFO;
-import com.clougence.rdp.dal.enumeration.AccountBindType;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.enumeration.RdpApprovalType;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpCsrfTokenDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountBindType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalType;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.clouddm.sdk.service.config.UserData;
 import com.clougence.rdp.service.RdpOpAuditService;
 import com.clougence.rdp.service.RdpUserLoginRegService;
 import com.clougence.rdp.service.model.LoginMO;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.io.IOUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -65,11 +82,11 @@ public class RdpCallbackController {
     @Resource
     private RdpUserLoginRegService rdpUserLoginRegService;
     @Resource
-    private RdpConsoleConfig       rdpConfig;
+    private DmConsoleConfig        rdpConfig;
     @Resource
     private RdpOpAuditService      rdpOpAuditService;
     @Resource
-    private RdpCsrfTokenService    csrfTokenService;
+    private CsrfTokenService       csrfTokenService;
 
     @RequestMapping(value = "/event", method = { RequestMethod.POST, RequestMethod.GET })
     @RequestAuth(strategy = RequestAuth.AuthStrategy.Ignore)
@@ -122,7 +139,7 @@ public class RdpCallbackController {
         String error_description = params.getOrDefault("error_description", null);
 
         // for args
-        RdpCsrfTokenDO tokenDO = this.csrfTokenService.pullToken(state);
+        DmCsrfTokenDO tokenDO = this.csrfTokenService.pullToken(state);
         if (tokenDO == null) {
             String message = RdpI18nUtils.getMessage(I18nRdpMsgKeys.LOGIN_INVALID_TOKEN_ERROR.name());
             return this.redirectToFailed(request, response, I18nRdpMsgKeys.LOGIN_SSO_ARGS_ERROR.name(), message);
@@ -274,8 +291,8 @@ public class RdpCallbackController {
     }
 
     protected Object redirectToHome(HttpServletRequest request, HttpServletResponse response, LoginMO login) throws IOException {
-        int cookieAge = Math.max(RdpJwtService.minLoginExpireSec, this.rdpConfig.getLoginExpireTimeSec());
-        Cookie cookie = RdpWebUtils.newCookie(RdpJwtService.jwtTokenName, login.getToken(), false, cookieAge);
+        int cookieAge = Math.max(JwtService.minLoginExpireSec, this.rdpConfig.getLoginExpireTimeSec());
+        Cookie cookie = RdpWebUtils.newCookie(JwtService.jwtTokenName, login.getToken(), false, cookieAge);
 
         response.addCookie(cookie);
         if (StringUtils.isNotBlank(this.rdpConfig.getDeployContextPath())) {
@@ -296,7 +313,7 @@ public class RdpCallbackController {
         String provider = params.getOrDefault("provider", null);
 
         // for args
-        RdpCsrfTokenDO tokenDO = this.csrfTokenService.pullToken(state);
+        DmCsrfTokenDO tokenDO = this.csrfTokenService.pullToken(state);
         if (tokenDO == null) {
             return this.redirectOrDone(request, response, "/");
         }

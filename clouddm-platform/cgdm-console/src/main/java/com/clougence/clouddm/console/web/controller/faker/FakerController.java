@@ -1,27 +1,39 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.faker;
 
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.DM_QUERY_CONSOLE;
 
 import java.util.List;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.clougence.clouddm.base.metadata.ds.tools.FakerPluginConfig;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
+import com.clougence.clouddm.base.metadata.ds.tools.FakerPluginConfig;
 import com.clougence.clouddm.console.web.component.auth.BizResOwnerCacheService;
 import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.constants.I18nDmMsgKeys;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.faker.*;
 import com.clougence.clouddm.console.web.model.vo.faker.FakerDefVO;
 import com.clougence.clouddm.console.web.model.vo.faker.FakerLogVO;
@@ -29,15 +41,17 @@ import com.clougence.clouddm.console.web.model.vo.faker.FakerPreviewVO;
 import com.clougence.clouddm.console.web.service.asyntask.AsyncTaskService;
 import com.clougence.clouddm.console.web.service.faker.FakerService;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
-import com.clougence.clouddm.sdk.ui.faker.FakerUiData;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPathObj;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.clouddm.sdk.ui.faker.FakerUiData;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.utils.CollectionUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
@@ -73,8 +87,8 @@ public class FakerController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.checkOwnDataSourceAndReturnDsLevels(puid, fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
-        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTable());
+        Long dsID = levels.dsDO().getId();
+        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTable());
         this.dmAuthServiceForBiz.checkResPath(puid, uid, dsID, AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_DML);
 
         FakerUiData vo = this.fakerService.loadColumnSeed(puid, uid, fo);
@@ -168,7 +182,7 @@ public class FakerController {
         }
         // the object
         DsLevels dsLevels = this.dmDsConfigService.parseLevels(levels);
-        this.ownerCacheService.ownDataSource(puid, dsLevels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, dsLevels.dsDO().getId());
         return dsLevels;
     }
 }

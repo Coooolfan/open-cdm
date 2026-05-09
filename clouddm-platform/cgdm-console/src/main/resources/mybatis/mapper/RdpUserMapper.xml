@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpUserMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper">
 
-    <resultMap id="rdpUserDO" type="com.clougence.rdp.dal.model.RdpUserDO">
+    <resultMap id="rdpUserDO" type="com.clougence.clouddm.console.web.dal.model.RdpUserDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
@@ -12,7 +12,7 @@
         <result column="username" property="username"/>
         <result column="company" property="company"/>
         <result column="phone" property="phone"/>
-        <result column="phone_area_code" property="phoneAreaCode" javaType="com.clougence.rdp.dal.enumeration.AreaCode"/>
+        <result column="phone_area_code" property="phoneAreaCode" javaType="com.clougence.clouddm.console.web.dal.enumeration.AreaCode"/>
         <result column="sub_account" property="subAccount"/>
         <result column="password" property="password"/>
         <result column="op_password" property="opPassword"/>
@@ -25,13 +25,13 @@
         <result column="last_try_op_verify_time" property="lastTryOpVerifyTime"/>
         <result column="op_verify_fail_count" property="opVerifyFailCount"/>
         <result column="op_locked" property="opLocked"/>
-        <result column="account_type" property="accountType" javaType="com.clougence.rdp.dal.enumeration.AccountType"/>
-        <result column="bind_type" property="bindType" typeHandler="com.clougence.rdp.dal.handler.AccountBindTypeTypeHandler"/>
+        <result column="account_type" property="accountType" javaType="com.clougence.clouddm.console.web.dal.enumeration.AccountType"/>
+        <result column="bind_type" property="bindType" typeHandler="com.clougence.clouddm.console.web.dal.handler.AccountBindTypeTypeHandler"/>
         <result column="bind_account" property="bindAccount"/>
         <result column="disable" property="disable"/>
         <result column="user_domain" property="userDomain"/>
         <result column="parent_id" property="parentId"/>
-        <result column="user_status" property="userStatus" javaType="com.clougence.rdp.dal.enumeration.UserStatus"/>
+        <result column="user_status" property="userStatus" javaType="com.clougence.clouddm.console.web.dal.enumeration.UserStatus"/>
         <result column="contact_me" property="contactMe"/>
         <result column="src" property="src"/>
         <result column="keyword" property="keyword"/>
@@ -101,7 +101,7 @@
         rdp_user.use_mfa use_mfa
     </sql>
 
-    <resultMap id="approvalPersonDO" type="com.clougence.rdp.dal.model.RdpTicketApproPersonDO">
+    <resultMap id="approvalPersonDO" type="com.clougence.clouddm.console.web.dal.model.RdpTicketApproPersonDO">
         <result column="uid" property="uid"/>
         <result column="username" property="username"/>
         <result column="role_auth_labels" property="roleAuthLabels" typeHandler="com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler"/>
@@ -109,7 +109,7 @@
         <result column="res_id" property="resId"/>
     </resultMap>
 
-    <resultMap id="rdpUserInfoDO" type="com.clougence.rdp.dal.model.RdpUserInfoDO">
+    <resultMap id="rdpUserInfoDO" type="com.clougence.clouddm.console.web.dal.model.RdpUserInfoDO">
         <result column="uid" property="uid"/>
         <result column="username" property="username"/>
     </resultMap>
@@ -142,7 +142,7 @@
             rdp_user
         WHERE
             phone = #{phone}
-            AND phone_area_code = #{areaCode,javaType=com.clougence.rdp.dal.enumeration.AreaCode}
+            AND phone_area_code = #{areaCode,javaType=com.clougence.clouddm.console.web.dal.enumeration.AreaCode}
             AND account_type = 'PRIMARY_ACCOUNT'
         limit 1
     </select>
@@ -260,7 +260,7 @@
         and
             bind_account = #{bindAccount}
         and
-            bind_type = #{bindType,javaType=com.clougence.rdp.dal.enumeration.AccountBindType}
+            bind_type = #{bindType,javaType=com.clougence.clouddm.console.web.dal.enumeration.AccountBindType}
     </select>
 
     <select id="queryById" resultMap="rdpUserDO">
@@ -486,7 +486,7 @@
             disable      = 0
     </select>
 
-    <select id="listByIds" resultType="com.clougence.rdp.dal.model.RdpUserDO">
+    <select id="listByIds" resultType="com.clougence.clouddm.console.web.dal.model.RdpUserDO">
         SELECT
             <include refid="rdpUser"/>
         FROM
@@ -545,7 +545,7 @@
     <update id="updateUserStatus">
         UPDATE
             rdp_user
-        SET user_status = #{userStatus,javaType=com.clougence.rdp.dal.enumeration.UserStatus}
+        SET user_status = #{userStatus,javaType=com.clougence.clouddm.console.web.dal.enumeration.UserStatus}
         WHERE uid = #{uid}
     </update>
 
@@ -672,7 +672,7 @@
             id = #{id}
     </update>
 
-    <select id="listSubAccountByPidAndAuth" resultType="com.clougence.rdp.dal.model.RdpUserDO">
+    <select id="listSubAccountByPidAndAuth" resultType="com.clougence.clouddm.console.web.dal.model.RdpUserDO">
         SELECT
             <include refid="rdpUser"/>
         FROM rdp_user left join rdp_role
@@ -694,7 +694,7 @@
         FROM rdp_user
         WHERE uid = #{targetUid}
     </select>
-    <select id="listSubResourceManagersByPrimaryUId" resultType="com.clougence.rdp.dal.model.RdpUserDO">
+    <select id="listSubResourceManagersByPrimaryUId" resultType="com.clougence.clouddm.console.web.dal.model.RdpUserDO">
         SELECT
             <include refid="rdpUser"/>
         FROM rdp_user
@@ -706,7 +706,7 @@
             )
     </select>
 
-    <select id="listSubResourceManagersByPrimaryId" resultType="com.clougence.rdp.dal.model.RdpUserDO">
+    <select id="listSubResourceManagersByPrimaryId" resultType="com.clougence.clouddm.console.web.dal.model.RdpUserDO">
         SELECT
             <include refid="rdpUser"/>
         FROM rdp_user

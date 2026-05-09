@@ -1,10 +1,26 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.global.rsocket;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import jakarta.annotation.PreDestroy;
 
 import org.slf4j.MDC;
 import org.springframework.messaging.rsocket.RSocketRequester;
@@ -16,7 +32,10 @@ import com.clougence.clouddm.comm.component.server.ServerSideRegistry;
 import com.clougence.clouddm.comm.constants.rsocket.RSocketLogNames;
 import com.clougence.clouddm.comm.constants.rsocket.RSocketRouteNames;
 import com.clougence.clouddm.comm.constants.worker.WorkerConnStatus;
-import com.clougence.clouddm.comm.model.*;
+import com.clougence.clouddm.comm.model.RSocketDirectionType;
+import com.clougence.clouddm.comm.model.RSocketParam;
+import com.clougence.clouddm.comm.model.RSocketRequestWrapperDTO;
+import com.clougence.clouddm.comm.model.RSocketRespDTO;
 import com.clougence.clouddm.comm.model.auth.WorkerIdentity;
 import com.clougence.clouddm.comm.model.rsocket.AsyncRequestFuture;
 import com.clougence.clouddm.comm.util.RSocketRespUtil;
@@ -33,6 +52,7 @@ import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.utils.*;
 import com.google.common.base.Stopwatch;
 
+import jakarta.annotation.PreDestroy;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -223,8 +243,8 @@ public class DmServerSender implements RSocketServerSender {
             }
 
             if (CollectionUtils.isNotEmpty(fallbackStatus)) {
-                log.warn("query worker status by clusterId returned empty, fallback to worker wsn lookup. clusterId={}, workerCount={}, connectedCount={}", clusterId,
-                    workerDOs.size(), fallbackStatus.size());
+                log.warn("query worker status by clusterId returned empty, fallback to worker wsn lookup. clusterId={}, workerCount={}, connectedCount={}", clusterId, workerDOs
+                    .size(), fallbackStatus.size());
                 return fallbackStatus;
             }
         }
@@ -254,8 +274,8 @@ public class DmServerSender implements RSocketServerSender {
     }
 
     private String buildRemoteForwardDisabledMessage(String apiMethodName, String workerSeqNumber, String consoleIp) {
-        return String.format("remote console forwarding is disabled, worker must be registered on the local console. route=%s, wsn=%s, consoleIp=%s",
-            apiMethodName, workerSeqNumber, consoleIp);
+        return String
+            .format("remote console forwarding is disabled, worker must be registered on the local console. route=%s, wsn=%s, consoleIp=%s", apiMethodName, workerSeqNumber, consoleIp);
     }
 
     @Override

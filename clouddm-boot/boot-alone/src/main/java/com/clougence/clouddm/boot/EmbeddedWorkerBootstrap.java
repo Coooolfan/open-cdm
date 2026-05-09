@@ -1,9 +1,22 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.boot;
 
 import java.util.Date;
 import java.util.List;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +26,7 @@ import com.clougence.clouddm.api.console.status.WorkerState;
 import com.clougence.clouddm.comm.constants.worker.WorkerConnStatus;
 import com.clougence.clouddm.console.web.constants.CloudOrIdcName;
 import com.clougence.clouddm.console.web.constants.DeployStatus;
+import com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState;
 import com.clougence.clouddm.console.web.dal.mapper.DmClusterMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerStatusMapper;
@@ -26,13 +40,13 @@ import com.clougence.clouddm.console.web.model.vo.cluster.WorkerDeployConfigVO;
 import com.clougence.clouddm.console.web.service.cluster.ClusterService;
 import com.clougence.clouddm.console.web.service.cluster.WorkerService;
 import com.clougence.clouddm.console.web.service.system.NamingService;
-import com.clougence.rdp.dal.enumeration.LifeCycleState;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.HostUtil;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

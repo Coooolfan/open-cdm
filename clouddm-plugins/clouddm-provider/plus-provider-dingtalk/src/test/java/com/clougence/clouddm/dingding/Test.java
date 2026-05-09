@@ -1,19 +1,15 @@
-//package com.clougence.clouddm.dingding;
-//
-//import com.clougence.rdp.sdk.approval.model.ApprovalInfoMO;
-//
-//public class Test {
-//    @org.junit.jupiter.api.Test
-//    void testCancel() throws Exception {
-//        DingApproApi dingApproApi = new DingApproApi();
-//        ApprovalInfoMO approAuthInfoMO = ApprovalInfoMO.builder()
-//                //
-//                //                .approType(ApprovalType.DINGDING)
-////                .agentId(3285786501L)
-//                .accessKey("dingfur8gzrfvyrvc5eo")
-//                .secretKey("PE5WKu9WwygPCVUBC6Sd0WoMTyizsy6cuS4TVc7NienkiyAb6qVNEIy-eeh9-nzl")
-//                .build();
-//        String apiToken = dingApproApi.getApiToken(approAuthInfoMO);
-//        dingApproApi.cancelApproval(apiToken,"02556408693319900416","e1tBbfDsT-OIKH01MEO5ZA08131730871281");
-//    }
-//}
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */

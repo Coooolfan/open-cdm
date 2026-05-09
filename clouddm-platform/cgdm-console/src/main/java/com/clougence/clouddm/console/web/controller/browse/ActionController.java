@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.browse;
 
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.DM_QUERY_CONSOLE;
@@ -5,10 +20,6 @@ import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.RDP_D
 
 import java.util.List;
 import java.util.Map;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,26 +35,28 @@ import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.constants.I18nDmMsgKeys;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.browse.*;
 import com.clougence.clouddm.console.web.model.fo.object.ObjectEditorDefFO;
 import com.clougence.clouddm.console.web.model.vo.browse.BrowseGenSqlVO;
-import com.clougence.clouddm.console.web.model.vo.browse.BrowseGenSqlVO2;
 import com.clougence.clouddm.console.web.model.vo.editor.table.TableEditorFieldForm;
 import com.clougence.clouddm.console.web.service.browse.ActionService;
 import com.clougence.clouddm.console.web.service.browse.model.ActionTargetMO;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
+import com.clougence.clouddm.sdk.model.analysis.resource.DsResPathObj;
 import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
-import com.clougence.rdp.constant.auth.RequestAuth;
 import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.clouddm.sdk.model.analysis.resource.DsResPathObj;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -74,13 +87,13 @@ public class ActionController {
         }
 
         DsLevels levels = this.checkOwnDataSourceAndReturnDsLevels(puid, fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
+        Long dsID = levels.dsDO().getId();
         String dataAuthLabel = mo.getActionType().getDataAuth();
-        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), mo.getTargetName());
+        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), mo.getTargetName());
         boolean checkAuth = this.dmAuthServiceForBiz.checkResPathWithoutError(puid, uid, dsID, AuthKind.DataSource, dsResource, dataAuthLabel);
 
         List<String> result = this.actionService.genAction(levels, mo);
-        BrowseGenSqlVO2 vo = new BrowseGenSqlVO2();
+        BrowseGenSqlVO vo = new BrowseGenSqlVO();
         vo.setDanger(mo.getActionType().isDanger());
         vo.setSql(StringUtils.join(result.toArray(), System.lineSeparator() + System.lineSeparator()));
         if (checkAuth) {
@@ -103,9 +116,9 @@ public class ActionController {
         }
 
         DsLevels levels = this.checkOwnDataSourceAndReturnDsLevels(puid, fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
+        Long dsID = levels.dsDO().getId();
         String dataAuthLabel = mo.getActionType().getDataAuth();
-        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), mo.getTargetName());
+        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), mo.getTargetName());
         this.dmAuthServiceForBiz.checkResPath(puid, uid, dsID, AuthKind.DataSource, dsResource, dataAuthLabel);
         List<String> result = this.actionService.doAction(puid, uid, levels, mo, request.getRemoteAddr());
         BrowseGenSqlVO vo = new BrowseGenSqlVO();
@@ -121,7 +134,7 @@ public class ActionController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         List<TableEditorFieldForm> form = this.actionService.loadObjectEditorDef(puid, uid, levels, fo);
         return ResWebDataUtils.buildSuccess(form);
@@ -134,8 +147,8 @@ public class ActionController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.checkOwnDataSourceAndReturnDsLevels(puid, fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
-        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTargetName());
+        Long dsID = levels.dsDO().getId();
+        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTargetName());
         this.dmAuthServiceForBiz.checkResPath(puid, uid, dsID, AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         ActionTargetMO mo = DmConvertUtils.convertToActionTargetMO(fo);
@@ -153,8 +166,8 @@ public class ActionController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.checkOwnDataSourceAndReturnDsLevels(puid, fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
-        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTargetName());
+        Long dsID = levels.dsDO().getId();
+        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTargetName());
         this.dmAuthServiceForBiz.checkResPath(puid, uid, dsID, AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         ActionTargetMO mo = DmConvertUtils.convertToActionTargetMO(fo);
@@ -172,8 +185,8 @@ public class ActionController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.checkOwnDataSourceAndReturnDsLevels(puid, fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
-        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getSourceTableName());
+        Long dsID = levels.dsDO().getId();
+        DsResPathObj dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getSourceTableName());
         this.dmAuthServiceForBiz.checkResPath(puid, uid, dsID, AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         ActionTargetMO mo = DmConvertUtils.convertToActionTargetMO(fo);
@@ -227,7 +240,7 @@ public class ActionController {
         }
         // the object
         DsLevels dsLevels = this.dmDsConfigService.parseLevels(levels);
-        this.ownerCacheService.ownDataSource(puid, dsLevels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, dsLevels.dsDO().getId());
         return dsLevels;
     }
 }

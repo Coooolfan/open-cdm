@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.editor.query;
 
 import java.util.ArrayList;
@@ -5,9 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,17 +31,19 @@ import com.clougence.clouddm.api.common.boot.UnifiedPostConstruct;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.global.events.DmGlobalEventBus;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.editor.query.QueryResultFO;
 import com.clougence.clouddm.console.web.model.fo.editor.query.WsQueryFO;
 import com.clougence.clouddm.console.web.model.vo.editor.query.*;
 import com.clougence.clouddm.console.web.service.editor.query.ConsoleQueryApi;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.Sm2Utils;
+import com.clougence.clouddm.console.web.util.Sm2Utils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
@@ -42,7 +56,7 @@ public class TestController implements UnifiedPostConstruct {
     private final Map<String, Boolean>        checkMap = new ConcurrentHashMap<>();
 
     @Resource
-    private RdpConsoleConfig                  rdbConfig;
+    private DmConsoleConfig                   rdbConfig;
 
     @Resource
     private ConsoleQueryApi                   queryServiceApi;
@@ -131,21 +145,17 @@ public class TestController implements UnifiedPostConstruct {
         List<WsResMsg> wsResMsgs = map.remove(sessionId);
 
         for (WsResMsg wsResMsg : wsResMsgs) {
-            if (wsResMsg instanceof WsInfoResMsg) {
-                WsInfoResMsg wsInfoResMsg = (WsInfoResMsg) wsResMsg;
+            if (wsResMsg instanceof WsInfoResMsg wsInfoResMsg) {
                 for (WsInfoEntity entity : wsInfoResMsg.getEntities()) {
                     if (entity.getMode() == MessageMode.Console) {
                         queryResultVO.getWsInfoResMsgList().add(wsInfoResMsg);
                     }
                 }
-            } else if (wsResMsg instanceof WsResultSetResMsg) {
-                WsResultSetResMsg wsResultSetResMsg = (WsResultSetResMsg) wsResMsg;
+            } else if (wsResMsg instanceof WsResultSetResMsg wsResultSetResMsg) {
                 queryResultVO.getResultSetResMsgList().add(wsResultSetResMsg);
-            } else if (wsResMsg instanceof WsStatusResMsg) {
-                WsStatusResMsg wsStatusResMsg = (WsStatusResMsg) wsResMsg;
+            } else if (wsResMsg instanceof WsStatusResMsg wsStatusResMsg) {
                 queryResultVO.getStatusResMsgList().add(wsStatusResMsg);
-            } else if (wsResMsg instanceof WsRuleResMsg) {
-                WsRuleResMsg wsRuleResMsg = (WsRuleResMsg) wsResMsg;
+            } else if (wsResMsg instanceof WsRuleResMsg wsRuleResMsg) {
                 queryResultVO.getWsRuleResMsgList().add(wsRuleResMsg);
             }
         }

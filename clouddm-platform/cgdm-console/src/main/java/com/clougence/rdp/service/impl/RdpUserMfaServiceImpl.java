@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
 
 import static com.clougence.rdp.constant.I18nRdpMsgKeys.MFA_CODE_IS_INVALID;
@@ -5,22 +20,20 @@ import static com.clougence.rdp.constant.I18nRdpMsgKeys.MFA_CODE_IS_INVALID;
 import java.io.ByteArrayOutputStream;
 import java.text.MessageFormat;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.clougence.clouddm.api.common.crypt.CryptService;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeploySite;
-import com.clougence.rdp.dal.enumeration.mfa.MfaStatus;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.mapper.RdpUserMfaMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpUserMfaDO;
+import com.clougence.clouddm.console.web.dal.enumeration.MfaStatus;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMfaMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserMfaDO;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpUserMfaService;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 import com.google.zxing.BarcodeFormat;
@@ -29,6 +42,7 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Service

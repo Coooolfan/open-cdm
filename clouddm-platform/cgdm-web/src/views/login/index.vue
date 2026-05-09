@@ -209,7 +209,6 @@
               <div v-if="globalSettings.features.ENABLE_REGISTER">
                 <!--                {{ $t('mei-you-zhang-hao-qu') }}<span style="margin-left: 4px" @click="goRegister">{{ $t('zhu-ce') }}</span>-->
               </div>
-              <!--              <div v-if="globalSettings.deployMode !== 'CLOUD_PRIVATE'" @click="goResetPassword">{{ $t('wang-ji-mi-ma') }}</div>-->
               <a
                 class="absolute right-[80px]"
                 v-if="jumpLoginType.includes(selectDomainData.loginType) && loginCallbackData.token"

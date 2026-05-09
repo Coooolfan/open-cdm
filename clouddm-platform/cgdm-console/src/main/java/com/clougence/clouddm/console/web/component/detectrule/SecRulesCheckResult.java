@@ -1,10 +1,25 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.detectrule;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.clougence.clouddm.sdk.service.secrules.RuleLevel;
 import com.clougence.clouddm.sdk.analysis.split.SplitScript;
+import com.clougence.clouddm.sdk.service.secrules.RuleLevel;
 import com.clougence.utils.CollectionUtils;
 
 import lombok.Getter;
@@ -24,9 +39,7 @@ public class SecRulesCheckResult {
     private Map<String, Object>             result     = new LinkedHashMap<>();
     private Map<String, Set<Integer>>       scriptMap  = new LinkedHashMap<>();
 
-    public boolean isAllSuccess() {
-        return this.checked == null || this.checked.isEmpty();
-    }
+    public boolean isAllSuccess() { return this.checked == null || this.checked.isEmpty(); }
 
     public boolean hasAnyTarget(RuleLevel[] test) {
         if (this.checked == null || this.checked.isEmpty()) {

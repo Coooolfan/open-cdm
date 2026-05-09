@@ -1,11 +1,25 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.autoexec.impl;
 
 import java.util.Date;
 import java.util.List;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -25,7 +39,6 @@ import com.clougence.clouddm.console.web.dal.model.exec.AutoExecJobConfig;
 import com.clougence.clouddm.console.web.dal.model.exec.DmAutoExecJobDO;
 import com.clougence.clouddm.console.web.dal.model.exec.DmAutoExecTaskDO;
 import com.clougence.clouddm.console.web.dal.model.exec.DmBizLogDO;
-import org.springframework.transaction.annotation.Transactional;
 import com.clougence.clouddm.console.web.model.fo.ticket.DmAutoExecConfigFO;
 import com.clougence.clouddm.console.web.model.vo.ticket.DmAutoExecJobVO;
 import com.clougence.clouddm.console.web.model.vo.ticket.DmAutoExecTaskVO;
@@ -34,13 +47,14 @@ import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.console.web.util.DmTeamUtils;
 import com.clougence.clouddm.sdk.analysis.split.SplitScript;
 import com.clougence.clouddm.sdk.security.auth.SecQueryType;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.rdp.util.RdpPageDO;
-import com.clougence.rdp.util.RdpPageUtil;
+import com.clougence.clouddm.console.web.util.RdpPageDO;
+import com.clougence.clouddm.console.web.util.RdpPageUtil;
 import com.clougence.utils.format.DateFormatType;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -273,9 +287,9 @@ public class AutoExecServiceImpl implements AutoExecService {
 
         RdpUserDO confirmUser = this.rdpUserMapper.queryByUid(execUser);
         DmAutoExecJobDO job = new DmAutoExecJobDO();
-        job.setLevels(dsLevels.getDbLevels());
+        job.setLevels(dsLevels.dbLevels());
         job.setDependOnBizType(bizType);
-        job.setDataSourceId(dsLevels.getDsDO().getId());
+        job.setDataSourceId(dsLevels.dsDO().getId());
         job.setDependOnBizId(bizId);
         job.setUid(confirmUser.getUid());
         job.setBizId(DmTeamUtils.nextExecJobBizId(bizType));

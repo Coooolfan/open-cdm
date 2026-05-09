@@ -1,13 +1,26 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.ticket;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import jakarta.annotation.Resource;
-
-import com.clougence.clouddm.sdk.approval.ApprovalProviderSpi;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.clougence.clouddm.console.web.component.project.ImMessageType;
 import com.clougence.clouddm.console.web.component.project.ImSenderService;
@@ -24,30 +37,31 @@ import com.clougence.clouddm.console.web.dal.model.DmProjectChangeDO;
 import com.clougence.clouddm.console.web.dal.model.DmProjectChangeItemDO;
 import com.clougence.clouddm.console.web.dal.model.DmProjectDO;
 import com.clougence.clouddm.console.web.dal.model.DmTicketDO;
-import org.springframework.transaction.annotation.Transactional;
+import com.clougence.clouddm.console.web.model.vo.PrimaryUserVO;
 import com.clougence.clouddm.console.web.service.ticket.model.TicketInfo;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.approval.ApprovalActivity;
 import com.clougence.clouddm.sdk.approval.ApprovalCreateInstanceResult;
+import com.clougence.clouddm.sdk.approval.ApprovalProviderSpi;
 import com.clougence.clouddm.sdk.approval.form.ChangeForm;
 import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
 import com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel;
 import com.clougence.rdp.component.ticket.RdpTicketHelper;
 import com.clougence.rdp.component.ticket.RdpTicketLifeCycle;
-import com.clougence.rdp.controller.model.vo.PrimaryUserVO;
-import com.clougence.rdp.dal.enumeration.*;
-import com.clougence.rdp.dal.mapper.RdpTicketMapper;
-import com.clougence.rdp.dal.mapper.RdpTicketProcessActivityMapper;
-import com.clougence.rdp.dal.mapper.RdpTicketProcessMapper;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.*;
+import com.clougence.clouddm.console.web.dal.enumeration.*;
+import com.clougence.clouddm.console.web.dal.mapper.RdpTicketMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpTicketProcessActivityMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpTicketProcessMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.*;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.i18n.I18nUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

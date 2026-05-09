@@ -1,21 +1,36 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service;
 
 import java.util.List;
 
-import com.clougence.clouddm.base.metadata.ds.DataSourceType;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
-import com.clougence.rdp.controller.model.fo.AddDsFO;
-import com.clougence.rdp.controller.model.fo.UpdateSecurityInfoFO;
-import com.clougence.rdp.controller.model.fo.UpsertDsKvConfigFO;
-import com.clougence.rdp.controller.model.lo.UpdateDsConfigLO;
-import com.clougence.rdp.controller.model.lo.UpdateDsDescLO;
-import com.clougence.rdp.controller.model.lo.UpdatePriHostLO;
-import com.clougence.rdp.controller.model.lo.UpdatePubHostLO;
-import com.clougence.rdp.controller.model.vo.DefaultDsKvConfigVO;
-import com.clougence.rdp.controller.model.vo.DsKvConfigVO;
-import com.clougence.rdp.dal.enumeration.DeployEnvType;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.queryobj.DsQueryParam;
+import com.clougence.clouddm.base.metadata.ds.DataSourceType;
+import com.clougence.clouddm.console.web.dal.enumeration.DeployEnvType;
+import com.clougence.clouddm.console.web.model.fo.UpdateSecurityInfoFO;
+import com.clougence.clouddm.console.web.model.fo.datasource.AddDsFO;
+import com.clougence.clouddm.console.web.model.fo.datasource.UpsertDsKvConfigFO;
+import com.clougence.clouddm.console.web.model.lo.UpdateDsConfigLO;
+import com.clougence.clouddm.console.web.model.lo.UpdateDsDescLO;
+import com.clougence.clouddm.console.web.model.lo.UpdatePriHostLO;
+import com.clougence.clouddm.console.web.model.lo.UpdatePubHostLO;
+import com.clougence.clouddm.console.web.model.vo.DefaultDsKvConfigVO;
+import com.clougence.clouddm.console.web.model.vo.RdpDsKvConfigVO;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.queryobj.DsQueryParam;
 
 /**
  * @author bucketli 2023/11/24 10:24:16
@@ -26,9 +41,9 @@ public interface RdpDsService {
 
     ResWebData<Long> delDataSource(String puid, long dsId);
 
-    List<DsKvConfigVO> queryDsConfigs(Long dataSourceId);
+    List<RdpDsKvConfigVO> queryDsConfigs(Long dataSourceId);
 
-    DsKvConfigVO queryDsConfig(Long dataSourceId, String configName);
+    RdpDsKvConfigVO queryDsConfig(Long dataSourceId, String configName);
 
     RdpDataSourceDO queryById(Long dataSourceId);
 
@@ -49,8 +64,6 @@ public interface RdpDsService {
     List<UpdateDsConfigLO> upsertDsConfigs(String puid, UpsertDsKvConfigFO fo);
 
     UpdateDsDescLO updateDataSourceDesc(String puid, Long dataSourceId, String instanceDesc);
-
-    void updateAliyunRdsAkSk(String puid, Long dataSourceId, String accessKey, String secretKey);
 
     UpdatePubHostLO updateDataSourcePublicHost(String puid, Long dataSourceId, String publicHost);
 

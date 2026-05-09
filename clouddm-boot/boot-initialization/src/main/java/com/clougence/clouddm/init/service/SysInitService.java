@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.init.service;
 
 import java.io.IOException;
@@ -20,18 +35,14 @@ import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.api.common.GlobalConfUtils;
 import com.clougence.clouddm.init.InitTaskApplication;
-import com.clougence.clouddm.init.component.fixtasks.DmFixDmDsConfig;
-import com.clougence.clouddm.init.component.fixtasks.DmFixDefaultClusterWorker;
-import com.clougence.clouddm.init.component.fixtasks.DmFixSecRules;
-import com.clougence.clouddm.init.component.fixtasks.InitConsolePluginLoader;
-import com.clougence.clouddm.init.component.fixtasks.RdpFixUserRole;
+import com.clougence.clouddm.init.component.fixtasks.*;
 import com.clougence.clouddm.init.component.flyway.DmFlywayInit;
 import com.clougence.clouddm.init.component.log.InstallUpgradeLogBus;
 import com.clougence.clouddm.init.constant.I18nInitFieldKeys;
 import com.clougence.clouddm.init.constant.InitSeedConstants;
 import com.clougence.clouddm.init.model.InitFieldDef;
 import com.clougence.clouddm.init.model.TestDbResult;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.io.IOUtils;
 
@@ -217,10 +228,9 @@ public class SysInitService {
         String jdbcUrl = resolveConfigValue(userConfig, props, "spring.datasource.jdbcurl");
         String dbUser = resolveConfigValue(userConfig, props, "spring.datasource.username");
         String dbPass = resolveConfigValue(userConfig, props, "spring.datasource.password");
-        boolean createIfMissing = userConfig != null && userConfig.containsKey(INIT_DB_CREATE_IF_MISSING)
-            && Boolean.parseBoolean(userConfig.get(INIT_DB_CREATE_IF_MISSING));
+        boolean createIfMissing = userConfig != null && userConfig.containsKey(INIT_DB_CREATE_IF_MISSING) && Boolean.parseBoolean(userConfig.get(INIT_DB_CREATE_IF_MISSING));
         boolean rebuildIfNotEmpty = userConfig != null && userConfig.containsKey(INIT_DB_REBUILD_IF_NOT_EMPTY)
-            && Boolean.parseBoolean(userConfig.get(INIT_DB_REBUILD_IF_NOT_EMPTY));
+                                    && Boolean.parseBoolean(userConfig.get(INIT_DB_REBUILD_IF_NOT_EMPTY));
 
         InstallUpgradeLogBus.start("upgrade", jdbcUrl);
         try {

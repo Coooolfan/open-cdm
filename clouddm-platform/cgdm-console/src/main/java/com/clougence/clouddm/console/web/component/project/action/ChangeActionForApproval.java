@@ -1,10 +1,24 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.project.action;
 
 import java.util.*;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
@@ -18,7 +32,6 @@ import com.clougence.clouddm.console.web.dal.enumeration.*;
 import com.clougence.clouddm.console.web.dal.mapper.DmProjectChangeItemMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmTicketMapper;
 import com.clougence.clouddm.console.web.dal.model.*;
-import org.springframework.transaction.annotation.Transactional;
 import com.clougence.clouddm.console.web.model.vo.ticket.CheckedVO;
 import com.clougence.clouddm.console.web.service.system.NamingService;
 import com.clougence.clouddm.console.web.service.ticket.model.TicketInfo;
@@ -27,22 +40,23 @@ import com.clougence.clouddm.sdk.model.env.EnvParamKeys;
 import com.clougence.rdp.component.ticket.RdpApprovalService;
 import com.clougence.rdp.component.ticket.RdpTicketProcessService;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.dal.enumeration.RdpApprovalBiz;
-import com.clougence.rdp.dal.enumeration.RdpApprovalType;
-import com.clougence.rdp.dal.enumeration.RdpTicketStatus;
-import com.clougence.rdp.dal.mapper.RdpApprovalPersonMapper;
-import com.clougence.rdp.dal.mapper.RdpDsEnvMapper;
-import com.clougence.rdp.dal.mapper.RdpEnvParamMapper;
-import com.clougence.rdp.dal.mapper.RdpTicketMapper;
-import com.clougence.rdp.dal.model.*;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalBiz;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalType;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus;
+import com.clougence.clouddm.console.web.dal.mapper.RdpApprovalPersonMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpDsEnvMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpEnvParamMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpTicketMapper;
+import com.clougence.clouddm.console.web.dal.model.*;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.model.EnvTicketMO;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.format.WellKnowFormat;
 import com.clougence.utils.i18n.I18nUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -152,13 +166,13 @@ public class ChangeActionForApproval extends AbstractChangeAction {
     @Transactional(rollbackFor = Throwable.class)
     public RdpTicketDO createTicket(DmProjectChangeDO change, DsLevels dsLevels, String sqlContent, Locale locale) {
         DmProjectDO projectDO = this.dmProjectMapper.queryByOwnerAndId(change.getOwnerUid(), change.getRefProjectId());
-        RdpDataSourceDO dsDO = dsLevels.getDsDO();
-        RdpDsEnvDO envDO = this.rdpEnvMapper.queryByEnvID(change.getOwnerUid(), Long.valueOf(dsLevels.getEnvId()));
+        RdpDataSourceDO dsDO = dsLevels.dsDO();
+        RdpDsEnvDO envDO = this.rdpEnvMapper.queryByEnvID(change.getOwnerUid(), Long.valueOf(dsLevels.envId()));
 
         // targetInfo
-        String targetInfo = "/" + dsLevels.getDsDO().getInstanceId();
-        Map<UmiTypes, Object> levelsParam = dsLevels.getLevelsParam();
-        if (dsLevels.getLevelsDef().contains(UmiTypes.Catalog)) {
+        String targetInfo = "/" + dsLevels.dsDO().getInstanceId();
+        Map<UmiTypes, Object> levelsParam = dsLevels.levelsParam();
+        if (dsLevels.levelsDef().contains(UmiTypes.Catalog)) {
             targetInfo += String.format("/%s/%s", levelsParam.get(UmiTypes.Catalog), levelsParam.get(UmiTypes.Schema));
         } else {
             targetInfo += String.format("/%s", levelsParam.get(UmiTypes.Schema));
@@ -227,7 +241,7 @@ public class ChangeActionForApproval extends AbstractChangeAction {
         ticketInfo.setChangeOwnerUid(change.getOwnerUid());
         ticketInfo.setChangeId(change.getId());
         dmTicketDO.setTicketInfo(JsonUtils.toJson(ticketInfo));
-        dmTicketDO.setLevels(dsLevels.getDbLevels());
+        dmTicketDO.setLevels(dsLevels.dbLevels());
         dmTicketDO.setRollBackSql("");
         dmTicketDO.setCheckedInfo(JsonUtils.toJson(checkMap.values()));
 

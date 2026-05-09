@@ -1,40 +1,54 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.ticket.impl;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-
-import com.clougence.clouddm.sdk.approval.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalType;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpTicketProcessStatus;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStage;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus;
+import com.clougence.clouddm.console.web.model.vo.RdpApproTemplateVO;
+import com.clougence.clouddm.console.web.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.clouddm.platform.plugin.PluginManager;
-import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiErrorType;
-import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
-import com.clougence.rdp.component.ticket.RdpApprovalService;
-import com.clougence.rdp.component.ticket.RdpTicketHelperService;
-import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.vo.RdpApproTemplateVO;
-import com.clougence.rdp.dal.enumeration.RdpApprovalType;
-import com.clougence.rdp.dal.enumeration.RdpTicketProcessStatus;
-import com.clougence.rdp.dal.enumeration.RdpTicketStage;
-import com.clougence.rdp.dal.enumeration.RdpTicketStatus;
-import com.clougence.rdp.dal.mapper.*;
-import com.clougence.rdp.dal.model.*;
-import com.clougence.rdp.global.config.user.UserDefinedConfig;
-import com.clougence.rdp.global.exception.ErrorMessageException;
-import com.clougence.clouddm.sdk.service.approval.RdpApprovalActivityInfo;
 import com.clougence.clouddm.sdk.LifeSpiRequest;
 import com.clougence.clouddm.sdk.LifeSpiResponse;
 import com.clougence.clouddm.sdk.LifeSpiStatus;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.sdk.approval.*;
+import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiErrorType;
+import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
+import com.clougence.clouddm.sdk.service.approval.RdpApprovalActivityInfo;
+import com.clougence.rdp.component.ticket.RdpApprovalService;
+import com.clougence.rdp.component.ticket.RdpTicketHelperService;
+import com.clougence.rdp.constant.I18nRdpMsgKeys;
+import com.clougence.clouddm.console.web.dal.mapper.*;
+import com.clougence.clouddm.console.web.dal.model.*;
+import com.clougence.rdp.global.config.user.UserDefinedConfig;
+import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**

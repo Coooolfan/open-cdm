@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.ticket;
 
 import java.util.ArrayList;
@@ -7,8 +22,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,17 +30,18 @@ import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
 import com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel;
 import com.clougence.rdp.component.ticket.model.RdpExecStageContextMO;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.vo.PrimaryUserVO;
-import com.clougence.rdp.dal.enumeration.*;
-import com.clougence.rdp.dal.mapper.*;
-import com.clougence.rdp.dal.model.*;
+import com.clougence.clouddm.console.web.model.vo.PrimaryUserVO;
+import com.clougence.clouddm.console.web.dal.enumeration.*;
+import com.clougence.clouddm.console.web.dal.mapper.*;
+import com.clougence.clouddm.console.web.dal.model.*;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.NumberUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**

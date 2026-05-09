@@ -1,16 +1,29 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import com.clougence.rdp.component.alert.RdpImAlertService;
-import com.clougence.rdp.component.alert.RdpMailAlertService;
-import com.clougence.rdp.component.alert.RdpSmsAlertService;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.component.alert.RdpImAlertService;
+import com.clougence.clouddm.console.web.component.alert.RdpMailAlertService;
+import com.clougence.clouddm.console.web.component.alert.RdpSmsAlertService;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.service.RdpUserAlertService;
 import com.clougence.rdp.service.RdpUserConfigService;
@@ -19,6 +32,7 @@ import com.clougence.rdp.service.enumeration.AlertSmsType;
 import com.clougence.rdp.service.enumeration.AlertVoiceType;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -79,7 +93,7 @@ public class RdpUserAlertServiceImpl implements RdpUserAlertService {
     protected RdpUserConfigService rdpUserConfigService;
 
     @Resource
-    private RdpConsoleConfig       rdpConfig;
+    private DmConsoleConfig        rdpConfig;
 
     @Override
     public RdpImAlertService chooseImAlertService(String uid) {

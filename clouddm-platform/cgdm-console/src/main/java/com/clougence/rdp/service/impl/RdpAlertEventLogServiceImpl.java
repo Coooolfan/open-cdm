@@ -1,19 +1,34 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
 
 import java.util.Date;
 import java.util.List;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.stereotype.Service;
 
-import com.clougence.rdp.dal.mapper.RdpAlertEventLogMapper;
-import com.clougence.rdp.dal.model.RdpAlertEventLogDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.dal.mapper.RdpAlertEventLogMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpAlertEventLogDO;
 import com.clougence.rdp.service.RdpAlertEventLogService;
 import com.clougence.rdp.service.enumeration.AlertEventStatus;
 import com.clougence.rdp.service.enumeration.AlertMediaType;
 import com.clougence.utils.CollectionUtils;
+
+import jakarta.annotation.Resource;
 
 @Service
 public class RdpAlertEventLogServiceImpl implements RdpAlertEventLogService {
@@ -22,7 +37,7 @@ public class RdpAlertEventLogServiceImpl implements RdpAlertEventLogService {
     private RdpAlertEventLogMapper rdpAlertEventLogMapper;
 
     @Resource
-    private RdpConsoleConfig       rdpConfig;
+    private DmConsoleConfig        rdpConfig;
 
     @Override
     public List<RdpAlertEventLogDO> listAlertEventLogs(Long startTimeMillis, Long endTimeMillis, AlertEventStatus status, String uid, long startId, int pageSize) {

@@ -1,15 +1,26 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.controller;
 
+import static com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy.Ignore;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.RDP_ROLE_MANAGE;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.RDP_ROLE_READ;
-import static com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy.Ignore;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,28 +30,31 @@ import org.springframework.web.bind.annotation.RestController;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
-import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.SecurityLevel;
-import com.clougence.rdp.constant.operation.AuditType;
-import com.clougence.rdp.controller.model.fo.role.CreateRoleFO;
-import com.clougence.rdp.controller.model.fo.role.DeleteRoleFO;
-import com.clougence.rdp.controller.model.fo.role.FetchRoleFO;
-import com.clougence.rdp.controller.model.fo.role.UpdateRoleFO;
-import com.clougence.rdp.controller.model.http.RdpControllerUrlPrefix;
-import com.clougence.rdp.controller.model.vo.RoleAuthTreeVO;
-import com.clougence.rdp.controller.model.vo.RoleVO;
-import com.clougence.rdp.dal.model.RdpRoleDO;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
+import com.clougence.rdp.constant.I18nRdpMsgKeys;
+import com.clougence.rdp.constant.operation.AuditType;
+import com.clougence.clouddm.console.web.model.fo.role.CreateRoleFO;
+import com.clougence.clouddm.console.web.model.fo.role.DeleteRoleFO;
+import com.clougence.clouddm.console.web.model.fo.role.FetchRoleFO;
+import com.clougence.clouddm.console.web.model.fo.role.UpdateRoleFO;
+import com.clougence.rdp.constant.RdpControllerUrlPrefix;
+import com.clougence.clouddm.console.web.model.vo.role.RoleAuthTreeVO;
+import com.clougence.clouddm.console.web.model.vo.role.RoleVO;
+import com.clougence.clouddm.console.web.dal.model.RdpRoleDO;
 import com.clougence.rdp.service.RdpAuthServiceForManage;
 import com.clougence.rdp.service.RdpOpAuditService;
 import com.clougence.rdp.service.RdpRoleService;
 import com.clougence.rdp.service.RdpUserService;
 import com.clougence.rdp.service.model.AddRoleMO;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**

@@ -218,7 +218,7 @@
         UPDATE
             dm_worker
         SET
-            life_cycle_state = #{lifeCycleState,javaType=com.clougence.rdp.dal.enumeration.LifeCycleState}
+            life_cycle_state = #{lifeCycleState,javaType=com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState}
         WHERE
             id = #{workerId}
     </update>

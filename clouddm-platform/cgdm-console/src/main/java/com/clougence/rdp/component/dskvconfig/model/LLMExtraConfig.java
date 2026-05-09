@@ -1,10 +1,25 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.dskvconfig.model;
 
 import java.util.Map;
 
+import com.clougence.clouddm.base.metadata.ds.DsExtraConfig;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.llm.LLMChatConfig;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.llm.LLMEmbeddingConfig;
-import com.clougence.clouddm.base.metadata.ds.DsExtraConfig;
 import com.clougence.rdp.constant.DsConfigDef;
 import com.clougence.rdp.constant.DsUseActualValueAsDefault;
 import com.clougence.rdp.constant.I18nDsConfigMsgKeys;
@@ -47,8 +62,7 @@ public class LLMExtraConfig extends DsExtraConfig {
     public void deserialize() {
         if (StringUtils.isNotBlank(llmEmbedding)) {
             try {
-                llmEmbeddingConfigs = new ObjectMapper().readValue(llmEmbedding, new TypeReference<Map<String, LLMEmbeddingConfig>>() {
-                });
+                llmEmbeddingConfigs = new ObjectMapper().readValue(llmEmbedding, new TypeReference<Map<String, LLMEmbeddingConfig>>() {});
             } catch (Exception e) {
                 throw new RuntimeException("Process llm embedding config error.msg:" + ExceptionUtils.getRootCauseMessage(e), e);
             }
@@ -56,8 +70,7 @@ public class LLMExtraConfig extends DsExtraConfig {
 
         if (StringUtils.isNotBlank(llmChat)) {
             try {
-                llmChatConfigs = new ObjectMapper().readValue(llmChat, new TypeReference<Map<String, LLMChatConfig>>() {
-                });
+                llmChatConfigs = new ObjectMapper().readValue(llmChat, new TypeReference<Map<String, LLMChatConfig>>() {});
             } catch (Exception e) {
                 throw new RuntimeException("Process llm chat config error.msg:" + ExceptionUtils.getRootCauseMessage(e), e);
             }

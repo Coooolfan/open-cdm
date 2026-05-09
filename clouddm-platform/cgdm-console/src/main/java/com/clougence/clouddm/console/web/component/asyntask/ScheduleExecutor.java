@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 the original author or authors.
+ * Copyright 2026 杭州开云集致科技有限公司
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,17 +140,7 @@ public class ScheduleExecutor implements Closeable {
         }
     }
 
-    private static class TaskWorker implements Runnable {
-
-        private final ScheduleExecutor executor;
-        private final ScheduleTask     task;
-        private final CgFuture<Object> future;
-
-        TaskWorker(ScheduleExecutor executor, ScheduleTask task, CgFuture<Object> future){
-            this.executor = executor;
-            this.task = task;
-            this.future = future;
-        }
+    private record TaskWorker(ScheduleExecutor executor, ScheduleTask task, CgFuture<Object> future) implements Runnable {
 
         @Override
         public void run() {

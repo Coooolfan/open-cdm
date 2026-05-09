@@ -1,18 +1,30 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.datasource;
 
+import static com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel.HIGH;
 import static com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel.RDP_DAUTH_DS_MANAGER;
 import static com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel.RDP_DAUTH_DS_READ;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.*;
-import static com.clougence.rdp.constant.auth.SecurityLevel.HIGH;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -32,6 +44,7 @@ import com.clougence.clouddm.console.web.dal.enumeration.DataSourceStatus;
 import com.clougence.clouddm.console.web.dal.model.DmDsConfigDO;
 import com.clougence.clouddm.console.web.dal.model.DmProjectDevopsDO;
 import com.clougence.clouddm.console.web.dal.model.DmSecSpecDO;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.checkrules.SpecListFO;
 import com.clougence.clouddm.console.web.model.fo.datasource.*;
 import com.clougence.clouddm.console.web.model.vo.DsKvConfigVO;
@@ -47,21 +60,21 @@ import com.clougence.clouddm.console.web.util.DmConvertUtils;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.controller.model.fo.ListDsFO;
-import com.clougence.rdp.dal.enumeration.HostType;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpResAuthDO;
-import com.clougence.rdp.dal.model.queryobj.DsQueryParam;
+import com.clougence.clouddm.console.web.dal.enumeration.HostType;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.queryobj.DsQueryParam;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpAuthServiceForBiz;
 import com.clougence.rdp.service.RdpDsService;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -97,12 +110,12 @@ public class DmDsController {
         String puid = (String) request.getAttribute(RdpUserService.PUID);
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
-        List<RdpResAuthDO> authList = this.dmDsAuthService.listAuthByUser(uid, AuthKind.DataSource);
+        List<DmResAuthDO> authList = this.dmDsAuthService.listAuthByUser(uid, AuthKind.DataSource);
         if (authList == null || authList.isEmpty()) {
             return ResWebDataUtils.buildSuccess(new ArrayList<>());
         }
 
-        List<Long> authedDsIds = authList.stream().map(RdpResAuthDO::getResId).distinct().collect(Collectors.toList());
+        List<Long> authedDsIds = authList.stream().map(DmResAuthDO::getResId).distinct().collect(Collectors.toList());
 
         DsQueryParam queryMO = DsQueryParam.builder()
             .dataSourceType(listDsFO.getType())
@@ -294,8 +307,8 @@ public class DmDsController {
 
         DsLevels dsLevels = this.dmDsConfigService.parseLevels(fo.getLevels());
         List<Long> dsIds = this.dmDsAuthService.listResByUser(uid, AuthKind.DataSource);
-        if (!dsIds.contains(dsLevels.getDsDO().getId())) {
-            return ResWebDataUtils.buildError(DmConvertUtils.convertToDataSourceStatusI18n(DataSourceStatus.NoAuthority, dsLevels.getDsDO().getDataSourceType()));
+        if (!dsIds.contains(dsLevels.dsDO().getId())) {
+            return ResWebDataUtils.buildError(DmConvertUtils.convertToDataSourceStatusI18n(DataSourceStatus.NoAuthority, dsLevels.dsDO().getDataSourceType()));
         } else {
             this.dmDsService.testConnect(puid, uid, dsLevels);
             return ResWebDataUtils.buildSuccess();

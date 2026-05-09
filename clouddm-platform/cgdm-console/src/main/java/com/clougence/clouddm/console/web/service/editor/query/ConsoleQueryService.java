@@ -1,11 +1,25 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.service.editor.query;
 
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -76,22 +90,22 @@ import com.clougence.clouddm.sdk.service.secrules.RuleDomain;
 import com.clougence.clouddm.sdk.service.secrules.RuleLevel;
 import com.clougence.dslpaser.antlr.AntlerSyntaxException;
 import com.clougence.dslpaser.ast.location.CodeLocation;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpResAuthDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpUserConfigService;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.HostUtil;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -353,7 +367,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
                     return false;
                 }
 
-                String enable = this.dmEnvParamService.queryParam(curOwnerUid, ctx.getLevels().getDsDO().getDsEnvId(), EnvParamKeys.DM_ALLOW_ALL_STATEMENTS);
+                String enable = this.dmEnvParamService.queryParam(curOwnerUid, ctx.getLevels().dsDO().getDsEnvId(), EnvParamKeys.DM_ALLOW_ALL_STATEMENTS);
                 if (sql.getType().getAuthKind() != SecDataAuthKind.READ && StringUtils.equalsIgnoreCase("true", enable)) {
                     String authFailedMsg = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_ONLY_QUERY_MESSAGE.name());
                     consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, authFailedMsg, MessageLevel.Error));
@@ -384,7 +398,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
         if (CollectionUtils.isNotEmpty(sqlResources)) {
             String curOwnerUid = queryDTO.getPrimaryUserId();
             String curUserUid = queryDTO.getCurrentUserId();
-            long dsId = ctx.getLevels().getDsDO().getId();
+            long dsId = ctx.getLevels().dsDO().getId();
 
             for (RuleDomain ruleDomain : sqlResources.keySet()) {
                 String authLabel = ruleDomain.getSqlType().getAuthKind().getAuthLabel();
@@ -556,7 +570,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
         // 4.10. rewrite query
         RewriteSpi rewriteSpi = PluginManager.findRewriteSpi(ctx.getDsConfig().getDataSourceType());
         if (rewriteSpi != null && this.isUsingSelectRewrite(queryDTO, ctx)) {
-            long dsId = ctx.getLevels().getDsDO().getId();
+            long dsId = ctx.getLevels().dsDO().getId();
             DsCacheEntry dsCache = this.ownerCacheService.queryByDsId(dsId);
             Map<String, String> configMap = dmDsConfigService.fetchSettingsMap(dsCache.getOwnerUid(), Arrays.asList(//
                     UserDefinedConfig.Fields.defaultColumnDisplayChars, //
@@ -634,7 +648,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
             return false;
         }
 
-        SecCheckerRules rules = this.rulesService.fetchCheckerRulesByDsId(ctx.getLevels().getDsDO().getId());
+        SecCheckerRules rules = this.rulesService.fetchCheckerRulesByDsId(ctx.getLevels().dsDO().getId());
         if (!rules.isValid() || CollectionUtils.isEmpty(rules.getSenRuleList())) {
             return false;
         }
@@ -648,9 +662,9 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
                 ContextInfo contextInfo = ContextInfo.builder()
                     .cuid(queryDTO.getCurrentUserId())
                     .puid(queryDTO.getPrimaryUserId())
-                    .dsId(ctx.getLevels().getDsDO().getId())
+                    .dsId(ctx.getLevels().dsDO().getId())
                     .dataSourceConfig(ctx.getDsConfig())
-                    .levelsParam(ctx.getLevels().getLevelsParam())
+                    .levelsParam(ctx.getLevels().levelsParam())
                     .deepParser(false)
                     .build();
 
@@ -678,14 +692,14 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
                 scriptColumnMap.put(script, selectItems);
             }
 
-            long dsId = ctx.getLevels().getDsDO().getId();
+            long dsId = ctx.getLevels().dsDO().getId();
 
             List<RealColumn> columnList = scriptColumnMap.values().stream().flatMap(List::stream).map(SelectItem::getColumns).flatMap(List::stream).collect(Collectors.toList());
             List<String> pathList = columnList.stream().map(RealColumn::toDsResPath).distinct().collect(Collectors.toList());
 
             List<String> skipDesensitizationPath = resAuthService.listAuthByUser(dsId, curUserUid, AuthKind.DataSource, pathList)
                 .stream()
-                .map(RdpResAuthDO::getResPath)
+                .map(DmResAuthDO::getResPath)
                 .collect(Collectors.toList());
 
             for (RealColumn realColumn : columnList) {
@@ -994,11 +1008,11 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
         String curUid = queryDTO.getCurrentUserId();
         String sessionId = queryDTO.getSessionId();
         DsLevels levels = this.dmDsConfigService.parseLevels(queryDTO.getLevels());
-        RdpDataSourceDO dsDO = levels.getDsDO();
+        RdpDataSourceDO dsDO = levels.dsDO();
         DataSourceConfig dsConfig = this.dmDsConfigService.fetchDsConfigFromDM(dsDO.getId(), dsDO.getDataSourceType());
 
         Map<String, Object> params = new HashMap<>();
-        levels.getLevelsParam().forEach((umiType, value) -> {
+        levels.levelsParam().forEach((umiType, value) -> {
             switch (umiType) {
                 case Catalog:
                     params.put(SessionSpi.PARAMS_DEFAULT_DB, value);
@@ -1060,7 +1074,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
     private SecRulesCheckResult rulesCheck(WsQueryFO fo, QueryCtx ctx) {
         try {
             String curOwnerUid = fo.getPrimaryUserId();
-            RdpDataSourceDO dsDO = ctx.getLevels().getDsDO();
+            RdpDataSourceDO dsDO = ctx.getLevels().dsDO();
 
             SecRulesCheckContext ruleCtx = SecRulesCheckContext.builder()//
                 .basicCodeLine(fo.getBasicCodeLine())
@@ -1100,7 +1114,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
 
         String curUid = queryDTO.getCurrentUserId();
         String curSession = queryDTO.getSessionId();
-        List<UmiTypes> levelsDef = ctx.getLevels().getLevelsDef();
+        List<UmiTypes> levelsDef = ctx.getLevels().levelsDef();
         DsLevels newLevels = this.dmDsConfigService.parseLevels(queryDTO.getLevels());
 
         // test need session but not have
@@ -1108,13 +1122,13 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
         if (!hasSession) {
             if (!queryDTO.isRdbAutoCommit()) {
                 Map<UmiTypes, String> changeTo = new HashMap<>();
-                if (newLevels.getLevelsDef().contains(UmiTypes.Catalog)) {
-                    String catalog = (String) newLevels.getLevelsParam().get(UmiTypes.Catalog);
+                if (newLevels.levelsDef().contains(UmiTypes.Catalog)) {
+                    String catalog = (String) newLevels.levelsParam().get(UmiTypes.Catalog);
                     ctx.getCtxDTO().setRdbCatalog(catalog);
                     changeTo.put(UmiTypes.Catalog, catalog);
                 }
-                if (newLevels.getLevelsDef().contains(UmiTypes.Schema)) {
-                    String schema = (String) newLevels.getLevelsParam().get(UmiTypes.Schema);
+                if (newLevels.levelsDef().contains(UmiTypes.Schema)) {
+                    String schema = (String) newLevels.levelsParam().get(UmiTypes.Schema);
                     ctx.getCtxDTO().setRdbSchema(schema);
                     changeTo.put(UmiTypes.Schema, schema);
                 }
@@ -1131,7 +1145,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
             switch (umiType) {
                 case Catalog: {
                     String oldValue = status.getCurCatalog();
-                    String newValue = (String) newLevels.getLevelsParam().get(UmiTypes.Catalog);
+                    String newValue = (String) newLevels.levelsParam().get(UmiTypes.Catalog);
                     if (!StringUtils.equals(oldValue, newValue)) {
                         keepSession = ctx.isSupportSwitchCatalog();
                         changeTo.put(UmiTypes.Catalog, newValue);
@@ -1140,7 +1154,7 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
                 }
                 case Schema: {
                     String oldValue = status.getCurSchema();
-                    String newValue = (String) newLevels.getLevelsParam().get(UmiTypes.Schema);
+                    String newValue = (String) newLevels.levelsParam().get(UmiTypes.Schema);
                     if (!StringUtils.equals(oldValue, newValue)) {
                         keepSession = ctx.isSupportSwitchSchema();
                         changeTo.put(UmiTypes.Schema, newValue);

@@ -653,7 +653,7 @@ export default {
       // window.location.reload();
     },
     handleUpdateUserInfo(type) {
-      if (this.globalSetting.deployMode === 'ON_PREMISE') {
+      if (this.globalSetting.onPremiseDeployMode) {
         if (type === 'email') {
           this.showEditEmail = true;
         } else if (type === 'phone') {

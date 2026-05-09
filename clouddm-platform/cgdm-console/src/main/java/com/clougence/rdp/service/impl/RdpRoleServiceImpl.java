@@ -1,10 +1,23 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -14,29 +27,30 @@ import com.clougence.clouddm.api.common.boot.UnifiedPostConstruct;
 import com.clougence.clouddm.api.common.boot.UnifiedPostConstructOrder;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.model.fo.role.CreateRoleFO;
+import com.clougence.clouddm.console.web.model.fo.role.DeleteRoleFO;
+import com.clougence.clouddm.console.web.model.fo.role.UpdateRoleFO;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
 import com.clougence.clouddm.sdk.security.auth.AuthInfoSpi;
 import com.clougence.clouddm.sdk.security.auth.AuthInfoType;
 import com.clougence.clouddm.sdk.security.auth.def.SecSysRole;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.fo.role.CreateRoleFO;
-import com.clougence.rdp.controller.model.fo.role.DeleteRoleFO;
-import com.clougence.rdp.controller.model.fo.role.UpdateRoleFO;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.mapper.RdpRoleMapper;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpRoleDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.mapper.RdpRoleMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpRoleDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.rdp.service.RdpAuthServiceForManage;
 import com.clougence.rdp.service.RdpRoleService;
 import com.clougence.rdp.service.model.AddRoleMO;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -48,7 +62,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpRoleServiceImpl implements RdpRoleService, UnifiedPostConstruct {
 
     @Resource
-    private RdpConsoleConfig               rdpConfig;
+    private DmConsoleConfig                rdpConfig;
     @Resource
     private RdpRoleMapper                  rdpRoleMapper;
     @Resource

@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.ticket;
 
 import java.util.Collections;
@@ -6,30 +21,29 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiErrorType;
 import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
 import com.clougence.rdp.component.ticket.impl.RdpApproServiceImpl;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.dal.enumeration.LifeCycleState;
-import com.clougence.rdp.dal.enumeration.RdpApprovalBiz;
-import com.clougence.rdp.dal.enumeration.RdpApprovalType;
-import com.clougence.rdp.dal.enumeration.RdpTicketStatus;
-import com.clougence.rdp.dal.mapper.RdpCacheApproTemplateMapper;
-import com.clougence.rdp.dal.mapper.RdpTicketMapper;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpTicketDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalBiz;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalType;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus;
+import com.clougence.clouddm.console.web.dal.mapper.RdpCacheApproTemplateMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpTicketMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpTicketDO;
 import com.clougence.rdp.global.exception.RemoteInvokeTimeoutException;
 import com.clougence.rdp.service.RdpDsService;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.ThreadUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -37,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpApprovalTaskSchedule {
 
     @Resource
-    private RdpConsoleConfig               dmConfig;
+    private DmConsoleConfig                dmConfig;
     @Resource
     private RdpTicketMapper                rdpTicketMapper;
 
@@ -66,7 +80,7 @@ public class RdpApprovalTaskSchedule {
     private Set<Long>                      taskInQueueSet;
 
     public void start() {
-        LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(this.dmConfig.getAsyncTaskQueueSize());
+        LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(this.dmConfig.getRdpAsyncTaskQueueSize());
         ThreadFactory threadFactory = ThreadUtils.daemonThreadFactory(this.getClass().getClassLoader(), "Ticket-task-%s");
         // if queue is full, ignore the latest additions
         this.threadPoolExecutor = new ThreadPoolExecutor(10, 10, 1, TimeUnit.MINUTES, queue, threadFactory, new ThreadPoolExecutor.AbortPolicy());

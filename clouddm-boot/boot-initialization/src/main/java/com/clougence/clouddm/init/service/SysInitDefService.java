@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.init.service;
 
 import java.io.IOException;
@@ -16,7 +31,7 @@ import org.springframework.stereotype.Service;
 import com.clougence.clouddm.api.common.GlobalConfUtils;
 import com.clougence.clouddm.init.constant.InitSeedConstants;
 import com.clougence.clouddm.init.model.InitFieldDef;
-import com.clougence.rdp.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.utils.HostUtil;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.ResourcesUtils;
@@ -188,7 +203,9 @@ public class SysInitDefService {
         });
     }
 
-    private boolean hasExplicitAppHome() { return StringUtils.isNotBlank(System.getProperty("app.home")); }
+    private boolean hasExplicitAppHome() {
+        return StringUtils.isNotBlank(System.getProperty("app.home"));
+    }
 
     private boolean isAloneMode() { return "embedded".equals(System.getProperty("app.mode")); }
 }

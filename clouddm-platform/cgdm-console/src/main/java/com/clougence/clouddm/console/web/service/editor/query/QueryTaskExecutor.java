@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2009 the original author or authors.
+ * Copyright 2026 杭州开云集致科技有限公司
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,15 +127,7 @@ public class QueryTaskExecutor implements Closeable {
         }
     }
 
-    private static class TaskWorker implements Runnable {
-
-        private final QueryTaskExecutor executor;
-        private final QueryTask         task;
-
-        TaskWorker(QueryTaskExecutor executor, QueryTask task){
-            this.executor = executor;
-            this.task = task;
-        }
+    private record TaskWorker(QueryTaskExecutor executor, QueryTask task) implements Runnable {
 
         @Override
         public void run() {

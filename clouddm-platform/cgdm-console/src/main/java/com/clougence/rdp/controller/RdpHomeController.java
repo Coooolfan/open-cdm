@@ -1,16 +1,28 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.controller;
 
 import static com.clougence.rdp.constant.I18nRdpMsgKeys.LOGIN_MFA_PRE_ACTION_TOKEN_ERROR;
 import static com.clougence.rdp.constant.I18nRdpMsgKeys.MFA_CODE_IS_INVALID;
 
 import java.io.IOException;
-import java.util.*;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,44 +32,46 @@ import org.springframework.web.bind.annotation.RestController;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeploySite;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
+import com.clougence.clouddm.console.web.constants.LoginAuthType;
+import com.clougence.clouddm.console.web.constants.MfaPreActionType;
+import com.clougence.clouddm.console.web.dal.enumeration.RdpProduct;
+import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.csrf.CsrfTokenService;
+import com.clougence.clouddm.console.web.global.jwtsession.JwtService;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy;
+import com.clougence.clouddm.console.web.global.jwtsession.SecurityLevel;
+import com.clougence.clouddm.console.web.model.fo.AddWebViewLogFO;
+import com.clougence.clouddm.console.web.model.fo.LoginFO;
+import com.clougence.clouddm.console.web.model.fo.RequestJumpUrlFO;
+import com.clougence.clouddm.console.web.model.fo.mfa.LoginMfaValidFO;
+import com.clougence.clouddm.console.web.model.fo.user.CheckSubAccountBindInfoFO;
+import com.clougence.clouddm.console.web.model.vo.RdpGlobalSettingsVO;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
+import com.clougence.clouddm.console.web.util.RdpWebUtils;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.model.feature.RdpFeatureIDs;
 import com.clougence.clouddm.sdk.security.login.LoginProvider;
 import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
-import com.clougence.rdp.component.csrf.RdpCsrfTokenService;
-import com.clougence.rdp.component.jwtsession.RdpJwtService;
-import com.clougence.rdp.component.jwtsession.RdpWebUtils;
 import com.clougence.rdp.component.sso.RdpSubLoginService;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy;
-import com.clougence.rdp.constant.auth.SecurityLevel;
 import com.clougence.rdp.constant.operation.AuditType;
-import com.clougence.rdp.controller.model.enumeration.LoginAuthType;
-import com.clougence.rdp.controller.model.enumeration.MfaPreActionType;
-import com.clougence.rdp.controller.model.fo.*;
-import com.clougence.rdp.controller.model.fo.mfa.LoginMfaValidFO;
-import com.clougence.rdp.controller.model.vo.RdpGlobalSettingsVO;
-import com.clougence.rdp.dal.enumeration.RdpProduct;
-import com.clougence.rdp.dal.mapper.RdpProductClusterMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.*;
 import com.clougence.rdp.service.model.CheckSubAccountMO;
 import com.clougence.rdp.service.model.LoginMO;
-import com.clougence.rdp.service.model.UpdateUserInfoMO;
-import com.clougence.rdp.service.model.ValidateResultMO;
-import com.clougence.rdp.util.RdpI18nUtils;
-import com.clougence.rdp.util.Sm2Utils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -66,37 +80,25 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpHomeController {
 
     @Resource
-    private RdpUserService          rdpUserService;
-
+    private RdpUserService         rdpUserService;
     @Resource
-    private RdpUserLoginRegService  rdpLoginService;
-
+    private RdpUserLoginRegService rdpLoginService;
     @Resource
-    private RdpUserMfaService       rdpUserMfaService;
-
+    private RdpUserMfaService      rdpUserMfaService;
     @Resource
-    private RdpSubLoginService      subLoginService;
-
+    private RdpSubLoginService     subLoginService;
     @Resource
-    private RdpCsrfTokenService     rdpCsrfTokenService;
-
+    private CsrfTokenService       csrfTokenService;
     @Resource
-    private RdpConsoleConfig        rdpConfig;
-
+    private DmConsoleConfig        rdpConfig;
     @Resource
-    private RdpProductClusterMapper rdpProductClusterMapper;
-
+    private RdpWebViewLogService   rdpWebViewLogService;
     @Resource
-    private RdpWebViewLogService    rdpWebViewLogService;
-
+    private RdpOpAuditService      rdpOpAuditService;
     @Resource
-    private RdpOpAuditService       rdpOpAuditService;
-
+    private RdpUserConfigService   rdpUserConfigService;
     @Resource
-    private RdpUserConfigService    rdpUserConfigService;
-
-    @Resource
-    private RdpJwtService           rdpJwtService;
+    private JwtService             jwtService;
 
     @RequestAuth(strategy = AuthStrategy.Ignore)
     @RequestMapping(value = "/healthcheck")
@@ -105,54 +107,9 @@ public class RdpHomeController {
     }
 
     @RequestAuth(strategy = AuthStrategy.Ignore)
-    @RequestMapping(value = "/register", method = { RequestMethod.POST })
-    public ResWebData<?> register(@Valid @RequestBody RegisterFO fo) {
-        //decrypt
-        fo.setPassword(Sm2Utils.decrypt(rdpConfig.getPrivateKey(), fo.getPassword()));
-
-        ValidateResultMO mo = validateRegisterKeyInfo(fo);
-        if (!mo.isSuccess()) {
-            return ResWebDataUtils.buildError(mo.getErrorMsg());
-        }
-
-        return this.rdpLoginService.register(fo);
-    }
-
-    protected ValidateResultMO validateRegisterKeyInfo(RegisterFO fo) {
-        if (GlobalDeployMode.inCloud()) {
-            if (StringUtils.isBlank(fo.getEmail())) {
-                return new ValidateResultMO(false, "Email can not be blank.");
-            }
-
-            ValidateResultMO em = rdpUserService.validateByExpr(RdpUserService.EMAIL_VALIDATE_REGEX, "Error format of email.", fo.getEmail());
-            if (em != null && !em.isSuccess()) {
-                return em;
-            }
-
-            if (GlobalDeploySite.currDeploySite == GlobalDeploySite.china) {
-                if (StringUtils.isBlank(fo.getPhone())) {
-                    return new ValidateResultMO(false, "Phone can not be blank.");
-                }
-
-                ValidateResultMO pm = rdpUserService.validateByExpr(RdpUserService.CHINA_PHONE_VALIDATE_REGEX, "Error format of phone.", fo.getPhone());
-                if (pm != null && !pm.isSuccess()) {
-                    return pm;
-                }
-            }
-        }
-
-        ValidateResultMO mo = rdpUserService.validatePrimaryAccountPwd(fo.getPassword());
-        if (mo != null && !mo.isSuccess()) {
-            return mo;
-        }
-
-        return new ValidateResultMO(true, null);
-    }
-
-    @RequestAuth(strategy = AuthStrategy.Ignore)
     @RequestMapping(value = "/login", method = { RequestMethod.POST })
     public ResWebData<?> login(@Valid @RequestBody LoginFO loginFO, HttpServletRequest request, HttpServletResponse response) {
-        if (GlobalDeployMode.inPrivate() && loginFO.getLoginType() == LoginAuthType.VERIFY) {
+        if (loginFO.getLoginType() == LoginAuthType.VERIFY) {
             throw new ErrorMessageException(RdpI18nUtils.getMessage(I18nRdpMsgKeys.LOGIN_FAIL_UNSUPPORTED_PRIVATE_VERIFY.name()));
         }
 
@@ -163,7 +120,7 @@ public class RdpHomeController {
     @RequestAuth(strategy = AuthStrategy.Ignore)
     @RequestMapping(value = "/loginMfaValid", method = { RequestMethod.POST })
     public ResWebData<?> loginMfaValid(@Valid @RequestBody LoginMfaValidFO validFO, HttpServletRequest request, HttpServletResponse response) {
-        DecodedJWT mfaJwt = rdpJwtService.verifyMfaActionToken(validFO.getMfaPreActionToken());
+        DecodedJWT mfaJwt = jwtService.verifyMfaActionToken(validFO.getMfaPreActionToken());
         if (mfaJwt == null) {
             throw new ErrorMessageException(RdpI18nUtils.getMessage(LOGIN_MFA_PRE_ACTION_TOKEN_ERROR.name(), RdpUserService.MFA_TOKEN_EXPIRE_SEC));
         }
@@ -172,7 +129,7 @@ public class RdpHomeController {
         String preActionTypeStr = mfaJwt.getClaim(RdpUserMfaService.MFA_PRE_ACTION_TYPE).asString();
         String jwtTokenStr = mfaJwt.getClaim(RdpUserMfaService.MFA_LOGIN_JWT_TOKEN).asString();
 
-        DecodedJWT loginJwt = rdpJwtService.verifyJwtToken(jwtTokenStr);
+        DecodedJWT loginJwt = jwtService.verifyJwtToken(jwtTokenStr);
         if (loginJwt == null || !loginJwt.getId().equals(uid)) {
             throw new IllegalArgumentException("Uid in token is in-consistent.");
         }
@@ -243,33 +200,6 @@ public class RdpHomeController {
     }
 
     @RequestAuth(strategy = AuthStrategy.Ignore)
-    @RequestMapping(value = "/resetpwdunlogin", method = { RequestMethod.POST })
-    public ResWebData<?> resetPwdUnLogin(HttpServletRequest request, HttpServletResponse response, @RequestBody @Valid ResetPasswdFO resetPwdFO) {
-        if (GlobalDeployMode.inPrivate()) {
-            throw new RuntimeException("Private deploy can not reset password in un-login state, contact primary user to reset password.");
-        }
-        //decrypt
-        resetPwdFO.setPassword(Sm2Utils.decrypt(rdpConfig.getPrivateKey(), resetPwdFO.getPassword()));
-
-        UpdateUserInfoMO mo = rdpUserService.resetPassword(resetPwdFO);
-        if (mo.isSuccess()) {
-            Cookie cookie = new Cookie("jwt_token", StringUtils.EMPTY);
-            cookie.setHttpOnly(true);
-            cookie.setMaxAge(0);
-            cookie.setPath("/");
-
-            if (StringUtils.isNotBlank(rdpConfig.getLoginCookieDomain())) {
-                cookie.setDomain(rdpConfig.getLoginCookieDomain());
-            }
-
-            response.addCookie(cookie);
-            return ResWebDataUtils.buildSuccess();
-        } else {
-            return ResWebDataUtils.buildError(mo.getErrorMsg());
-        }
-    }
-
-    @RequestAuth(strategy = AuthStrategy.Ignore)
     @RequestMapping(value = "/addviewlog", method = { RequestMethod.POST })
     public ResWebData<?> addviewlog(HttpServletRequest request, HttpServletResponse response, @RequestBody @Valid AddWebViewLogFO logFO) {
         try {
@@ -298,31 +228,17 @@ public class RdpHomeController {
         settings.setFeatures(new HashMap<>());
         settings.getFeatures().putAll(PluginManager.getFeatures());
 
-        settings.setProductTrial(this.rdpConfig.isProductTrial());
-
         settings.setAuthOpPassword(this.rdpConfig.isOppassword());
         settings.setAuthVerifyCodeEnable(this.rdpConfig.isVerifyCodeEnable());
 
-        settings.setDeployEnv(this.rdpConfig.getDeployEnv().name());
-        settings.setDeploySite(GlobalDeploySite.currDeploySite.name());
-        settings.setDeployMode(GlobalDeployMode.currDeployMode.name());
-
         settings.setEnableWaterMark(this.rdpConfig.isEnableWaterMark());
         settings.setEnableProductCluster(this.rdpConfig.isEnableProductCluster());
-        settings.setDefaultProduct(this.rdpConfig.getDefaultProduct());
 
-        if (GlobalDeployMode.inPrivate()) {
-            settings.getFeatures().put(RdpFeatureIDs.ENABLE_REGISTER, false);
-            settings.getFeatures().put(RdpFeatureIDs.ENABLE_SSO_LOGIN, false);
-        } else {
-            settings.getFeatures().put(RdpFeatureIDs.ENABLE_REGISTER, true);
-            settings.getFeatures().put(RdpFeatureIDs.ENABLE_SSO_LOGIN, true);
-        }
+        settings.getFeatures().put(RdpFeatureIDs.ENABLE_REGISTER, false);
+        settings.getFeatures().put(RdpFeatureIDs.ENABLE_SSO_LOGIN, false);
 
         List<String> strings = new ArrayList<>();
         strings.add(this.rdpConfig.getDefaultProduct().name());
-        strings.addAll(this.rdpProductClusterMapper.supportProductType());
-        settings.getFeatures().put(RdpFeatureIDs.PRODUCT_CLOUD_CANAL, strings.contains(RdpProduct.CloudCanal.name()));
         settings.getFeatures().put(RdpFeatureIDs.PRODUCT_CLOUD_DM, strings.contains(RdpProduct.CloudDM.name()));
         settings.getFeatures().put(RdpFeatureIDs.ENABLE_VALIDATE_DS_EXTRA_CONF, rdpConfig.getRdpDsConfigValidateEnable());
 
@@ -333,10 +249,6 @@ public class RdpHomeController {
     @RequestAuth(strategy = AuthStrategy.Ignore)
     @RequestMapping(value = "/primary_user_domains", method = { RequestMethod.POST })
     public ResWebData<?> primaryUserDomains(HttpServletRequest request) {
-        if (!GlobalDeployMode.inPrivate()) {
-            return ResWebDataUtils.buildSuccess(Collections.emptyList());
-        }
-
         List<Map<String, Object>> orgList = new ArrayList<>();
         for (RdpUserDO primary : this.rdpUserService.listPrimaryUser()) {
             RdpUserKvBaseConfigDO authTypeDO = this.rdpUserConfigService.getSpecifiedConfig(primary.getUid(), UserDefinedConfig.Fields.subAccountAuthType);
@@ -365,10 +277,6 @@ public class RdpHomeController {
     @RequestAuth(strategy = AuthStrategy.Ignore)
     @RequestMapping(value = "/requestJumpUrl", method = { RequestMethod.POST })
     public ResWebData<?> requestJumpUrl(HttpServletRequest request, @RequestBody @Valid RequestJumpUrlFO fo) {
-        if (!GlobalDeployMode.inPrivate()) {
-            return ResWebDataUtils.buildSuccess("");
-        }
-
         LoginAuthType authType = fo.getType();
         String primaryUid = fo.getPrimaryUid();
         if (authType == null || StringUtils.isBlank(primaryUid)) {
@@ -399,12 +307,12 @@ public class RdpHomeController {
         }
 
         try {
-            String csrfToken = this.rdpCsrfTokenService.randomTokenWithoutSave();
+            String csrfToken = this.csrfTokenService.randomTokenWithoutSave();
             String redirectURL = RdpWebUtils.getContextPath() + ("callback/auth?" + //
                                                                  "ownerUid=" + primaryUid + "&" + //
                                                                  //"state=" + csrfToken + "&" +//
                                                                  "provider=" + authType.getBindType().getProvider().name());
-            this.rdpCsrfTokenService.storeJumpUrl(csrfToken, redirectURL);
+            this.csrfTokenService.storeJumpUrl(csrfToken, redirectURL);
             LoginProviderSpi loginProviderSpi = PluginManager.findSpi(LoginProviderSpi.class, authType.getBindType().getProvider().name());
             return ResWebDataUtils.buildSuccess(loginProviderSpi.loginJumpUrl(primaryUid, csrfToken, redirectURL));
         } catch (Exception e) {
@@ -443,8 +351,8 @@ public class RdpHomeController {
     }
 
     protected void fillResponseJwtToken(String token, HttpServletResponse response) {
-        int cookieMaxAge = Math.max(RdpJwtService.minLoginExpireSec, this.rdpConfig.getLoginExpireTimeSec());
-        Cookie cookie = RdpWebUtils.newCookie(RdpJwtService.jwtTokenName, token, false, cookieMaxAge);
+        int cookieMaxAge = Math.max(JwtService.minLoginExpireSec, this.rdpConfig.getLoginExpireTimeSec());
+        Cookie cookie = RdpWebUtils.newCookie(JwtService.jwtTokenName, token, false, cookieMaxAge);
         response.addCookie(cookie);
     }
 

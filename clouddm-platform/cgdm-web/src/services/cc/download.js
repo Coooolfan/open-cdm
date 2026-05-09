@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { Modal, Spin } from 'view-ui-plus';
 import i18n from '@/i18n';
-import store from '@/store';
-import Cookies from 'js-cookie';
 import formatError from '../formatError';
 import { resolveComponent } from 'vue';
 
@@ -59,8 +57,7 @@ const instance = axios.create({
   headers: {
     'Accept-Language': i18n?.global?.locale?.value,
     Accept: 'application/json',
-    'Content-Type': 'application/json',
-    'X-Product-Code': store?.state?.selectCcProductCluster
+    'Content-Type': 'application/json'
   },
   responseType: 'blob',
   noStatus: true,
@@ -70,17 +67,6 @@ const instance = axios.create({
 
 export { instance };
 
-instance.interceptors.request.use((request) => {
-  if (request.headers['x-is-redirect']) {
-    request.headers['X-Product-Code'] = null;
-  } else {
-    request.headers['X-Product-Code'] = store?.state?.selectCcProductCluster;
-  }
-  if (request.customeHeaders && request.customeHeaders['X-Product-Code']) {
-    request.headers['X-Product-Code'] = request.customeHeaders['X-Product-Code'];
-  }
-  return request;
-});
 // 返回结果拦截器,处理默认的错误
 instance.interceptors.response.use(
   (response) => {
@@ -152,25 +138,6 @@ instance.interceptors.response.use(
         window.location.href = `${window.location.protocol}//${window.location.host}/#/login`;
         // Router.push({ name: 'Login' });
         // window.location.reload();
-      } else if (status === 307) {
-        console.log('response', error.response);
-        if (error.response.headers['x-redirect-addr']) {
-          const cookies = Cookies.get();
-          const newUrl = `${error.response.headers['x-redirect-addr']}/cloudcanal/console/api/v1/inner/${error.response.config.url}`;
-          const headers = {
-            'x-is-redirect': true
-          };
-          if (cookies.jwt_token) {
-            headers.jwt_token = cookies.jwt_token;
-          }
-          return instance.post(newUrl, error.response.config.data ? JSON.parse(error.response.config.data) : null, {
-            headers,
-            withCredentials: true,
-            credentials: 'include'
-          });
-        } else {
-          // instance.post('').then((response) => response);
-        }
       } else if (status === 406) {
         Modal.error({
           title: i18n.global.t('quan-xian-yi-chang'),

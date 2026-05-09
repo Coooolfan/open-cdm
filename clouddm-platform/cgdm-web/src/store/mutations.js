@@ -352,36 +352,22 @@ export default {
     state.contactUsUrl = 'https://www.clougence.com/about';
     state.dmDocUrlPrefix = 'https://www.clougence.com/dm-doc';
     state.bladePipeApply = 'https://www.clougence.com/dm-doc/clouddm';
-    if (globalSetting.defaultProduct) {
-      if (globalSetting.defaultProduct === 'CloudDM' && includesDM) {
-        if (state.myCatLog.includes('CAT_DM_CONSOLE')) {
-          url = '/sql';
-        } else if (state.myCatLog.includes('CAT_RDP_WORKER_ORDER')) {
-          url = '/ticket';
-        } else if (state.myCatLog.includes('CAT_DM_SYS')) {
-          if (state.myCatLog.includes('CAT_DM_WORKER')) {
-            url = '/system/dmmachine';
-          } else if (state.myCatLog.includes('CAT_DM_SECRULES')) {
-            url = '/system/dmrulelist';
-          }
-        } else if (state.myCatLog.includes('CAT_DM_PROJECT')) {
-          url = '/project';
-        }
-      } else if (includesCC) {
-        if (state.myCatLog.includes('CAT_RDP_DS')) {
-          url = '/system/ccdatasource';
-        }
+    if (state.myCatLog.includes('CAT_DM_CONSOLE')) {
+      url = '/sql';
+    } else if (state.myCatLog.includes('CAT_RDP_WORKER_ORDER')) {
+      url = '/ticket';
+    } else if (state.myCatLog.includes('CAT_DM_SYS')) {
+      if (state.myCatLog.includes('CAT_DM_WORKER')) {
+        url = '/system/dmmachine';
+      } else if (state.myCatLog.includes('CAT_DM_SECRULES')) {
+        url = '/system/dmrulelist';
       }
+    } else if (state.myCatLog.includes('CAT_DM_PROJECT')) {
+      url = '/project';
     }
 
     if (!url) {
-      if (includesDM) {
-        url = '/sql';
-      } else if (includesCC) {
-        url = '/system/ccdatasource';
-      } else {
-        url = '/system';
-      }
+      url = includesDM ? '/sql' : '/system';
     }
 
     console.log(url);

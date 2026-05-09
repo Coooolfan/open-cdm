@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.global.rsocket;
 
 import java.text.SimpleDateFormat;
@@ -6,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.messaging.rsocket.RSocketRequester;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.clougence.clouddm.api.common.crypt.CryptService;
 import com.clougence.clouddm.comm.component.RSocketExceptionManager;
@@ -17,10 +33,9 @@ import com.clougence.clouddm.console.web.dal.mapper.DmWorkerMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerStatusMapper;
 import com.clougence.clouddm.console.web.dal.model.DmWorkerDO;
 import com.clougence.clouddm.console.web.dal.model.DmWorkerStatusDO;
-import org.springframework.transaction.annotation.Transactional;
 import com.clougence.clouddm.console.web.global.notify.DmWorkerRegisterNotify;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.HostUtil;
 

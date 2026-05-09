@@ -1,26 +1,39 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.openapi.impl;
 
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import jakarta.annotation.Resource;
-
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.clougence.clouddm.api.common.rpc.ResWebData;
+import com.clougence.clouddm.console.web.component.auth.BizResOwnerCacheService;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsDeletePrepareService;
-import com.clougence.rdp.component.cache.RdpResOwnerCacheService;
-import com.clougence.rdp.controller.model.fo.AddDsFO;
-import com.clougence.rdp.controller.model.fo.UpdateSecurityInfoFO;
-import com.clougence.rdp.controller.model.fo.UpsertDsKvConfigFO;
-import com.clougence.rdp.controller.model.vo.DsKvConfigVO;
-import com.clougence.rdp.dal.enumeration.HostType;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpResAuthDO;
-import com.clougence.rdp.dal.model.queryobj.DsQueryParam;
+import com.clougence.clouddm.console.web.dal.enumeration.HostType;
+import com.clougence.clouddm.console.web.model.fo.UpdateSecurityInfoFO;
+import com.clougence.clouddm.console.web.model.fo.datasource.AddDsFO;
+import com.clougence.clouddm.console.web.model.fo.datasource.UpsertDsKvConfigFO;
+import com.clougence.clouddm.console.web.model.vo.RdpDsKvConfigVO;
 import com.clougence.clouddm.sdk.security.auth.AuthKind;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.queryobj.DsQueryParam;
 import com.clougence.rdp.service.RdpAuthServiceForBiz;
 import com.clougence.rdp.service.RdpDsService;
 import com.clougence.rdp.service.openapi.RdpDsOpenApiService;
@@ -31,6 +44,7 @@ import com.clougence.utils.StringUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -38,13 +52,11 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
 
     @Resource
-    private RdpAuthServiceForBiz    rdpAuthServiceForBiz;
-
+    private RdpAuthServiceForBiz     rdpAuthServiceForBiz;
     @Resource
-    private RdpDsService            rdpDsService;
-
+    private RdpDsService             rdpDsService;
     @Resource
-    private RdpResOwnerCacheService rdpResOwnerCacheService;
+    private BizResOwnerCacheService  rdpResOwnerCacheService;
     @Resource
     private DmDsDeletePrepareService dmDsDeletePrepareService;
 
@@ -61,12 +73,12 @@ public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
             .instanceIdLike(fo.getInstanceIdLike())
             .build();
 
-        List<RdpResAuthDO> authList = this.rdpAuthServiceForBiz.listAuthByUser(puid, AuthKind.DataSource);
+        List<DmResAuthDO> authList = this.rdpAuthServiceForBiz.listAuthByUser(puid, AuthKind.DataSource);
         if (authList == null || authList.isEmpty()) {
             return new ArrayList<>();
         }
 
-        Set<Long> ids = authList.stream().map(RdpResAuthDO::getResId).distinct().collect(Collectors.toSet());
+        Set<Long> ids = authList.stream().map(DmResAuthDO::getResId).distinct().collect(Collectors.toSet());
 
         if (CollectionUtils.isEmpty(dsQueryParam.getDataSourceIds())) {
             dsQueryParam.setDataSourceIds(new ArrayList<>(ids));
@@ -124,8 +136,7 @@ public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
         AddDsFO addDsFO;
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            addDsFO = objectMapper.readValue(data, new TypeReference<AddDsFO>() {
-            });
+            addDsFO = objectMapper.readValue(data, new TypeReference<AddDsFO>() {});
         } catch (Exception e) {
             String msg = "deserialize add ds info error.msg:" + ExceptionUtils.getRootCauseMessage(e);
             log.error(msg, e);
@@ -166,8 +177,7 @@ public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
         UpdateSecurityInfoFO updateFO;
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            updateFO = objectMapper.readValue(data, new TypeReference<UpdateSecurityInfoFO>() {
-            });
+            updateFO = objectMapper.readValue(data, new TypeReference<UpdateSecurityInfoFO>() {});
         } catch (Exception e) {
             String msg = "deserialize updateFO ds info error.msg:" + ExceptionUtils.getRootCauseMessage(e);
             log.error(msg, e);
@@ -184,12 +194,6 @@ public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
         updateFO.setSecretFile(secretFile);
 
         rdpDsService.updateDataSourceAccount(puid, updateFO);
-    }
-
-    @Override
-    public void updateAliyunRdsAkSk(String puid, ApiUpdateAliyunRdsAkSkFO fo) {
-        rdpResOwnerCacheService.ownDataSource(puid, fo.getDataSourceId());
-        rdpDsService.updateAliyunRdsAkSk(puid, fo.getDataSourceId(), fo.getAccessKey(), fo.getSecretKey());
     }
 
     @Override
@@ -214,9 +218,9 @@ public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
     public List<ApiDsKvConfigVo> listDsKvConfs(String puid, ApiListDsKvConfigsByDsIdFO fo) {
         rdpResOwnerCacheService.ownDataSource(puid, fo.getDataSourceId());
 
-        List<DsKvConfigVO> confVos;
+        List<RdpDsKvConfigVO> confVos;
         if (StringUtils.isNotBlank(fo.getConfigName())) {
-            DsKvConfigVO vo = rdpDsService.queryDsConfig(fo.getDataSourceId(), fo.getConfigName());
+            RdpDsKvConfigVO vo = rdpDsService.queryDsConfig(fo.getDataSourceId(), fo.getConfigName());
 
             if (vo == null) {
                 return new ArrayList<>();
@@ -228,7 +232,7 @@ public class RdpDsOpenApiServiceImpl implements RdpDsOpenApiService {
         }
 
         List<ApiDsKvConfigVo> apiConfVos = new ArrayList<>();
-        for (DsKvConfigVO v : confVos) {
+        for (RdpDsKvConfigVO v : confVos) {
             ApiDsKvConfigVo c = new ApiDsKvConfigVo();
             c.convertFromDsKvConfigVO(v);
             apiConfVos.add(c);

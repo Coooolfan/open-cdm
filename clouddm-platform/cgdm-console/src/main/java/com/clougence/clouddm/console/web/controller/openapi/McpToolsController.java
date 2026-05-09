@@ -1,14 +1,25 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.openapi;
 
-import static com.clougence.rdp.component.mcp.McpConstants.*;
+import static com.clougence.clouddm.console.web.global.mcp.McpConstants.*;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
@@ -17,24 +28,27 @@ import com.clougence.clouddm.api.common.boot.UnifiedPostConstruct;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.constants.I18nDmMsgKeys;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
+import com.clougence.clouddm.console.web.global.mcp.McpApiProvider;
+import com.clougence.clouddm.console.web.global.mcp.McpI18nProxy;
+import com.clougence.clouddm.console.web.global.mcp.model.McpClientMethod;
+import com.clougence.clouddm.console.web.global.mcp.model.McpProtocolBase;
+import com.clougence.clouddm.console.web.global.mcp.model.McpTool;
+import com.clougence.clouddm.console.web.global.mcp.model.request.McpRequest;
+import com.clougence.clouddm.console.web.global.mcp.model.request.ToolCallParams;
+import com.clougence.clouddm.console.web.global.mcp.model.response.*;
+import com.clougence.clouddm.console.web.global.mcp.utils.JacksonHelper;
+import com.clougence.clouddm.console.web.global.mcp.utils.Json;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
-import com.clougence.rdp.component.mcp.McpApiProvider;
-import com.clougence.rdp.component.mcp.McpI18nProxy;
-import com.clougence.rdp.component.mcp.model.McpClientMethod;
-import com.clougence.rdp.component.mcp.model.McpProtocolBase;
-import com.clougence.rdp.component.mcp.model.McpTool;
-import com.clougence.rdp.component.mcp.model.request.McpRequest;
-import com.clougence.rdp.component.mcp.model.request.ToolCallParams;
-import com.clougence.rdp.component.mcp.model.response.*;
-import com.clougence.rdp.component.mcp.utils.JacksonHelper;
-import com.clougence.rdp.component.mcp.utils.Json;
 import com.clougence.rdp.component.openapi.OpenApiHttpClient;
-import com.clougence.rdp.constant.auth.RequestAuth;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.RdpUserService;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**

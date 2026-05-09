@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.auth.impl;
 
 import static com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel.DM_DAUTH_QUERY;
@@ -6,8 +21,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-
+import com.clougence.clouddm.console.web.dal.model.DmResAuthDO;
 import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.console.web.component.auth.BizResOwnerCacheService;
@@ -15,22 +29,22 @@ import com.clougence.clouddm.console.web.component.auth.DmResAuthService;
 import com.clougence.clouddm.console.web.component.auth.model.ResourceAccessInfo;
 import com.clougence.clouddm.console.web.component.auth.model.UserCacheEntry;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.mapper.RdpDataSourceMapper;
-import com.clougence.rdp.dal.mapper.RdpResAuthMapper;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpResAuthDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
-import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
+import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.mapper.RdpDataSourceMapper;
+import com.clougence.clouddm.console.web.dal.mapper.DmResAuthMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.rdp.service.RdpAuthServiceForBiz;
 import com.clougence.rdp.service.RdpAuthServiceForManage;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -47,11 +61,11 @@ public class DmResAuthServiceImpl implements DmResAuthService {
     @Resource
     private RdpAuthServiceForBiz      authServiceForBiz;
     @Resource
-    private RdpAuthServiceForManage   authServiceForManage;
+    private RdpAuthServiceForManage authServiceForManage;
     @Resource
-    private RdpResAuthMapper          rdpResAuthMapper;
+    private DmResAuthMapper         resAuthMapper;
     @Resource
-    private BizResOwnerCacheService   ownerCacheService;
+    private BizResOwnerCacheService ownerCacheService;
 
     private static final List<String> DM_DS_ANY_AUTH = Arrays
         .asList(DM_DAUTH_QUERY, SecDataAuthLabel.DM_DAUTH_DML, SecDataAuthLabel.DM_DAUTH_DDL, SecDataAuthLabel.DM_DAUTH_CALL, SecDataAuthLabel.DM_DAUTH_DCL, SecDataAuthLabel.DM_DAUTH_OTHER);
@@ -73,10 +87,10 @@ public class DmResAuthServiceImpl implements DmResAuthService {
                 List<RdpDataSourceDO> dsDOs = this.rdpDataSourceMapper.listByUserWithGmtOrder(cacheEntry.getUid());
                 return dsDOs.stream().map(RdpDataSourceDO::getId).collect(Collectors.toList());
             } else {
-                List<RdpResAuthDO> result = this.rdpResAuthMapper.listByKind(targetUid, AuthKind.DataSource);
+                List<DmResAuthDO> result = this.resAuthMapper.listByKind(targetUid, AuthKind.DataSource);
                 return result.stream()
                     .filter(r -> CollectionUtils.containsAny(r.getAuthLabels(), DM_DS_ANY_AUTH) && r.isEffective())
-                    .map(RdpResAuthDO::getResId)
+                    .map(DmResAuthDO::getResId)
                     .distinct()
                     .collect(Collectors.toList());
             }
@@ -97,10 +111,10 @@ public class DmResAuthServiceImpl implements DmResAuthService {
                 List<RdpDataSourceDO> dsDOs = this.rdpDataSourceMapper.listByUserWithGmtOrder(cacheEntry.getUid());
                 return dsDOs.stream().map(RdpDataSourceDO::getId).collect(Collectors.toList());
             } else {
-                List<RdpResAuthDO> result = this.rdpResAuthMapper.listByKind(targetUid, AuthKind.DataSource);
+                List<DmResAuthDO> result = this.resAuthMapper.listByKind(targetUid, AuthKind.DataSource);
                 return result.stream()
                     .filter(r -> CollectionUtils.isNotEmpty(r.getAuthLabels()) && r.isEffective())
-                    .map(RdpResAuthDO::getResId)
+                    .map(DmResAuthDO::getResId)
                     .distinct()
                     .collect(Collectors.toList());
             }
@@ -110,14 +124,14 @@ public class DmResAuthServiceImpl implements DmResAuthService {
     }
 
     @Override
-    public List<RdpResAuthDO> listAuthByUser(String targetUid, AuthKind authKind) {
+    public List<DmResAuthDO> listAuthByUser(String targetUid, AuthKind authKind) {
         return this.authServiceForBiz.listAuthByUser(targetUid, authKind);
     }
 
     @Override
-    public List<RdpResAuthDO> listAuthByUser(long dsId, String targetUid, AuthKind authKind, List<String> resPathList) {
-        List<RdpResAuthDO> rdpResAuthDOS = this.rdpResAuthMapper.queryByPathLike(dsId, targetUid, authKind, resPathList);
-        return rdpResAuthDOS.stream().filter(authDO -> {
+    public List<DmResAuthDO> listAuthByUser(long dsId, String targetUid, AuthKind authKind, List<String> resPathList) {
+        List<DmResAuthDO> resAuthDOList = this.resAuthMapper.queryByPathLike(dsId, targetUid, authKind, resPathList);
+        return resAuthDOList.stream().filter(authDO -> {
             return authDO.isEffective() && authDO.getAuthLabels().contains(SecDataAuthLabel.DM_DAUTH_SENSITIVE);
         }).collect(Collectors.toList());
     }
@@ -132,8 +146,8 @@ public class DmResAuthServiceImpl implements DmResAuthService {
         // filter resAuth in dsObjs
         List<Predicate<String>> authedPathNames = new ArrayList<>();
         List<String> queryPathList = dsResource.stream().map(DsResPath::getResPath).collect(Collectors.toList());
-        List<RdpResAuthDO> dsAuthDOList = this.rdpResAuthMapper.queryByPathLike(dsId, uid, AuthKind.DataSource, queryPathList);
-        for (RdpResAuthDO dsAuthDO : dsAuthDOList) {
+        List<DmResAuthDO> dsAuthDOList = this.resAuthMapper.queryByPathLike(dsId, uid, AuthKind.DataSource, queryPathList);
+        for (DmResAuthDO dsAuthDO : dsAuthDOList) {
             // filter resAuth
             if (dsAuthDO.getAuthLabels() == null || !dsAuthDO.getAuthLabels().contains(resAuth)) {
                 continue;
@@ -161,10 +175,10 @@ public class DmResAuthServiceImpl implements DmResAuthService {
             return new ResourceAccessInfo(true);
         }
 
-        Long dsId = levels.getDsDO().getId();
+        Long dsId = levels.dsDO().getId();
         String path = levels.asResPath().getResPath();
-        List<RdpResAuthDO> parentAndSelfAuth = this.rdpResAuthMapper.queryByPathLike(dsId, uid, AuthKind.DataSource, Collections.singletonList(path));
-        List<RdpResAuthDO> subAuth = this.rdpResAuthMapper.queryByLikePath(dsId, uid, AuthKind.DataSource, path);
+        List<DmResAuthDO> parentAndSelfAuth = this.resAuthMapper.queryByPathLike(dsId, uid, AuthKind.DataSource, Collections.singletonList(path));
+        List<DmResAuthDO> subAuth = this.resAuthMapper.queryByLikePath(dsId, uid, AuthKind.DataSource, path);
 
         parentAndSelfAuth = parentAndSelfAuth.stream().filter(auth -> {
             return auth.getAuthLabels().contains(DM_DAUTH_QUERY) && auth.isEffective();
@@ -179,24 +193,24 @@ public class DmResAuthServiceImpl implements DmResAuthService {
         }
 
         Set<String> allowQueryList = new HashSet<>();
-        int size = levels.getLevels().size() - 1;
-        for (RdpResAuthDO rdpResAuthDO : subAuth) {
+        int size = levels.levels().size() - 1;
+        for (DmResAuthDO resAuthDO : subAuth) {
             switch (size) {
                 case 1: {
-                    if (rdpResAuthDO.getLevelOne() != null) {
-                        allowQueryList.add(rdpResAuthDO.getLevelOne());
+                    if (resAuthDO.getLevelOne() != null) {
+                        allowQueryList.add(resAuthDO.getLevelOne());
                     }
                     break;
                 }
                 case 2: {
-                    if (rdpResAuthDO.getLevelTwo() != null) {
-                        allowQueryList.add(rdpResAuthDO.getLevelTwo());
+                    if (resAuthDO.getLevelTwo() != null) {
+                        allowQueryList.add(resAuthDO.getLevelTwo());
                     }
                     break;
                 }
                 case 3: {
-                    if (rdpResAuthDO.getLevelThree() != null) {
-                        allowQueryList.add(rdpResAuthDO.getLevelThree());
+                    if (resAuthDO.getLevelThree() != null) {
+                        allowQueryList.add(resAuthDO.getLevelThree());
                     }
                     break;
                 }

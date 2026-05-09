@@ -1,12 +1,23 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.editor.table;
 
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.DM_QUERY_CONSOLE;
 
 import java.util.List;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,18 +31,21 @@ import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.editor.table.*;
 import com.clougence.clouddm.console.web.model.vo.editor.table.TableEditorForm;
 import com.clougence.clouddm.console.web.service.editor.DsTableEditorService;
 import com.clougence.clouddm.console.web.service.editor.model.ResultSetDTO;
-import com.clougence.clouddm.sdk.ui.editor.table.TableEditorUiData;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.clouddm.sdk.ui.editor.table.TableEditorUiData;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -58,7 +72,7 @@ public class TableEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         TableEditorForm form = this.tableEditorService.loadTableEditorDef(puid, uid, levels, fo);
         return ResWebDataUtils.buildSuccess(form);
@@ -71,9 +85,9 @@ public class TableEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTable());
-        this.dmAuthServiceForBiz.checkResPath(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTable());
+        this.dmAuthServiceForBiz.checkResPath(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         TableEditorUiData uiData = this.tableEditorService.loadTableEditorData(puid, uid, levels, fo);
         return ResWebDataUtils.buildSuccess(uiData);
@@ -86,11 +100,11 @@ public class TableEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        Long dsID = levels.getDsDO().getId();
+        Long dsID = levels.dsDO().getId();
         String dataAuthLabel = SecDataAuthLabel.DM_DAUTH_DDL;
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTable());
-        boolean checkAuth = this.dmAuthServiceForBiz.checkResPathWithoutError(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, dataAuthLabel);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTable());
+        boolean checkAuth = this.dmAuthServiceForBiz.checkResPathWithoutError(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, dataAuthLabel);
 
         List<ResultSetDTO> dtoList = this.tableEditorService.tableEditorGenerate(puid, uid, levels, fo);
         if (checkAuth) {
@@ -109,9 +123,9 @@ public class TableEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTable());
-        this.dmAuthServiceForBiz.checkResPath(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_DDL);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTable());
+        this.dmAuthServiceForBiz.checkResPath(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_DDL);
 
         List<ResultSetDTO> dtoList = this.tableEditorService.tableEditorSave(puid, uid, levels, fo, request.getRemoteAddr());
         return ResWebDataUtils.buildSuccess(dtoList);
@@ -124,9 +138,9 @@ public class TableEditorController {
         String uid = (String) request.getAttribute(RdpUserService.UID);
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTable());
-        this.dmAuthServiceForBiz.checkResPath(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_DDL);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTable());
+        this.dmAuthServiceForBiz.checkResPath(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_DDL);
 
         List<String> dtoList = this.tableEditorService.fetchReferencedColumns(puid, uid, levels, fo);
         return ResWebDataUtils.buildSuccess(dtoList);

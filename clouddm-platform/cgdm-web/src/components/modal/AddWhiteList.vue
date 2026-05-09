@@ -110,7 +110,7 @@ export default {
       this.getAllClusterAndWorkers(data);
     },
     getAllClusterAndWorkers(data) {
-      this.$services.ccClusterListWithWorkerNets({ data: {}, headers: { 'X-Product-Code': data } }).then((res) => {
+      this.$services.ccClusterListWithWorkerNets({ data: {} }).then((res) => {
         if (res.success) {
           this.workerClusterList = res.data;
           this.workerClusterList.map((item) => {

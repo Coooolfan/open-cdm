@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpCacheApproTemplateMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpCacheApproTemplateMapper">
 
-    <resultMap id="cacheApproTemplateDO" type="com.clougence.rdp.dal.model.RdpCacheApproTemplateDO">
+    <resultMap id="cacheApproTemplateDO" type="com.clougence.clouddm.console.web.dal.model.RdpCacheApproTemplateDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
         <result column="primary_uid" property="primaryUid"/>
-        <result column="approval_type" property="approvalType" typeHandler="com.clougence.rdp.dal.handler.RdpApprovalTypeHandler"/>
+        <result column="approval_type" property="approvalType" typeHandler="com.clougence.clouddm.console.web.dal.handler.RdpApprovalTypeHandler"/>
         <result column="template_name" property="templateName"/>
         <result column="template_identity" property="templateIdentity"/>
         <result column="appro_url" property="approUrl"/>
@@ -71,14 +71,14 @@
             rdp_cache_appro_template
         WHERE
             primary_uid = #{primaryUid}
-            and approval_type = #{type, typeHandler=com.clougence.rdp.dal.handler.RdpApprovalTypeHandler}
+            and approval_type = #{type, typeHandler=com.clougence.clouddm.console.web.dal.handler.RdpApprovalTypeHandler}
     </select>
 
     <delete id="deleteByPrimaryUid">
         DELETE
         FROM rdp_cache_appro_template
         WHERE primary_uid = #{primaryUid}
-        AND approval_type = #{approvalType, typeHandler=com.clougence.rdp.dal.handler.RdpApprovalTypeHandler}
+        AND approval_type = #{approvalType, typeHandler=com.clougence.clouddm.console.web.dal.handler.RdpApprovalTypeHandler}
     </delete>
 
     <insert id="insertTemplateBatch">
@@ -88,7 +88,7 @@
         <foreach collection="cacheList" item="item" separator=",">
             (
                 #{item.primaryUid},
-                #{item.approvalType, typeHandler=com.clougence.rdp.dal.handler.RdpApprovalTypeHandler},
+                #{item.approvalType, typeHandler=com.clougence.clouddm.console.web.dal.handler.RdpApprovalTypeHandler},
                 #{item.templateName},
                 #{item.templateIdentity},
                 #{item.approUrl}

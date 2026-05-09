@@ -292,7 +292,7 @@ export default {
           this.clusterList = res.data || [];
         }
       } else {
-        const res = await this.$services.ccClusterListByCondition({ data: {}, headers: { 'X-Product-Code': this.form.clusterCode } });
+        const res = await this.$services.ccClusterListByCondition({ data: {} });
         if (res.success) {
           this.clusterList = res.data || [];
         }

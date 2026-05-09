@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.global.rsocket;
 
 import java.lang.reflect.Method;
@@ -53,10 +68,9 @@ public class DmServerRSocketApiProxy implements RSocketApiProxy {
         String methodFullName = rsocketApi.getName() + "." + method.getName();
         try {
             MDC.put("module", RSocketLogNames.RSOCKET_SEND_RECV_LOG_NAME);
-            if (args == null || args.length == 0 || !(args[0] instanceof RSocketSendDTO)) {
+            if (args == null || args.length == 0 || !(args[0] instanceof RSocketSendDTO sendDTO)) {
                 throw new UnsupportedOperationException("Api param size is 0 or first parameter type is not " + RSocketSendDTO.class.getSimpleName());
             }
-            RSocketSendDTO sendDTO = (RSocketSendDTO) args[0];
             if (sendDTO.getRSocketSendType() == null) {
                 throw new UnsupportedOperationException("RSocket server request's send type can't be null and muse be specified, please check.");
             }

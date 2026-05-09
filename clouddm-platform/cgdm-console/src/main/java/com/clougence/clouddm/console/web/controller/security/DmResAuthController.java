@@ -1,15 +1,26 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.security;
 
+import static com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy.Ignore;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.RDP_AUTH_READ;
-import static com.clougence.rdp.constant.auth.RequestAuth.AuthStrategy.Ignore;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,23 +37,26 @@ import com.clougence.clouddm.console.web.component.auth.model.ResourceAccessInfo
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.auth.ListElementsOfLevelFO;
 import com.clougence.clouddm.console.web.model.fo.auth.ListUserLeafFo;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseLeafFO;
+import com.clougence.clouddm.console.web.model.vo.RdpAuthObjectVO;
 import com.clougence.clouddm.console.web.model.vo.browse.BrowseLevelsVO;
 import com.clougence.clouddm.console.web.service.browse.BrowseService;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
 import com.clougence.clouddm.sdk.security.auth.AuthKind;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.controller.model.vo.RdpAuthObjectVO;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpDsEnvDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDsEnvDO;
 import com.clougence.rdp.service.RdpDsEnvService;
 import com.clougence.rdp.service.RdpDsService;
 import com.clougence.rdp.service.RdpUserService;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -85,7 +99,7 @@ public class DmResAuthController {
         } else {
             // ds object list
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getResPaths());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
             List<BrowseLevelsVO> vos = this.browseService.listLevels(puid, uid, levels, false);
             return ResWebDataUtils.buildSuccess(vos.stream().map(this::convertToAuthObjectVO).collect(Collectors.toList()));
         }
@@ -101,7 +115,7 @@ public class DmResAuthController {
         }
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getLeafType());
         List<BrowseLevelsVO> vos = this.browseService.listLeaf(puid, uid, levels, leafType, fo.getPattern(), false);
@@ -133,7 +147,7 @@ public class DmResAuthController {
         } else {
             // ds object list
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getResPaths());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
             List<BrowseLevelsVO> vos = this.browseService.listLevels(puid, uid, levels, false);
             // filter
             ResourceAccessInfo resourceAccessInfo = this.dmDsAuthService.getAllowBrowseInfo(levels, fo.getUid());
@@ -156,7 +170,7 @@ public class DmResAuthController {
         }
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getLeafType());
         List<BrowseLevelsVO> vos = this.browseService.listLeaf(puid, uid, levels, leafType, fo.getPattern(), false);
@@ -193,7 +207,7 @@ public class DmResAuthController {
         } else {
             // ds object list
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getResPaths());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
             List<BrowseLevelsVO> vos = this.browseService.listLevels(puid, uid, levels, false);
             // filter
             ResourceAccessInfo resourceAccessInfo = this.dmDsAuthService.getAllowBrowseInfo(levels, uid);
@@ -229,7 +243,7 @@ public class DmResAuthController {
         }
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getLeafType());
         List<BrowseLevelsVO> vos = this.browseService.listLeaf(puid, uid, levels, leafType, fo.getPattern(), false);

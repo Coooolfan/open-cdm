@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.service.impl;
 
 import java.util.*;
@@ -13,8 +28,24 @@ import com.clougence.clouddm.api.common.crypt.CryptService;
 import com.clougence.clouddm.api.common.crypt.PasswordInfo;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeploySite;
+import com.clougence.clouddm.console.web.constants.CheckSubAccountType;
+import com.clougence.clouddm.console.web.constants.VerifyCodeType;
+import com.clougence.clouddm.console.web.constants.VerifyType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountBindType;
+import com.clougence.clouddm.console.web.dal.enumeration.AccountType;
+import com.clougence.clouddm.console.web.dal.enumeration.AreaCode;
+import com.clougence.clouddm.console.web.model.fo.*;
+import com.clougence.clouddm.console.web.model.fo.role.UpdateUserRoleFO;
+import com.clougence.clouddm.console.web.model.fo.user.*;
+import com.clougence.clouddm.console.web.model.lo.UpdateUserInfoLO;
+import com.clougence.clouddm.console.web.model.lo.UpdateUserRoleLO;
+import com.clougence.clouddm.console.web.model.vo.ListUserVO;
+import com.clougence.clouddm.console.web.model.vo.PwdValidateExprVO;
+import com.clougence.clouddm.console.web.model.vo.RdpUserAkSkVO;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpConvertUtils;
+import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.model.feature.RdpFeatureIDs;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
@@ -25,36 +56,21 @@ import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
 import com.clougence.clouddm.sdk.security.login.LoginRequest;
 import com.clougence.clouddm.sdk.security.login.LoginResponse;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.controller.model.enumeration.CheckSubAccountType;
-import com.clougence.rdp.controller.model.enumeration.VerifyCodeType;
-import com.clougence.rdp.controller.model.enumeration.VerifyType;
-import com.clougence.rdp.controller.model.fo.*;
-import com.clougence.rdp.controller.model.lo.UpdateUserInfoLO;
-import com.clougence.rdp.controller.model.lo.UpdateUserRoleLO;
-import com.clougence.rdp.controller.model.vo.ListUserVO;
-import com.clougence.rdp.controller.model.vo.PwdValidateExprVO;
-import com.clougence.rdp.controller.model.vo.RdpUserAkSkVO;
-import com.clougence.rdp.dal.enumeration.AccountBindType;
-import com.clougence.rdp.dal.enumeration.AccountType;
-import com.clougence.rdp.dal.enumeration.AreaCode;
-import com.clougence.rdp.dal.enumeration.RdpProduct;
-import com.clougence.rdp.dal.mapper.*;
-import com.clougence.rdp.dal.model.RdpRoleDO;
-import com.clougence.rdp.dal.model.RdpUserDO;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
-import com.clougence.rdp.global.config.RdpConsoleConfig;
+import com.clougence.clouddm.console.web.dal.mapper.DmResAuthMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpRoleMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMfaMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpRoleDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.*;
 import com.clougence.rdp.service.enumeration.OpVerifyErrType;
 import com.clougence.rdp.service.enumeration.UserOperationType;
 import com.clougence.rdp.service.model.*;
-import com.clougence.rdp.util.RdpAuthUtils;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
-import com.clougence.utils.convert.ConverterUtils;
 
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -69,37 +85,22 @@ public class RdpUserServiceImpl implements RdpUserService {
 
     @Resource
     private RdpUserMapper           rdpUserMapper;
-
     @Resource
     private RdpRoleMapper           rdpRoleMapper;
-
     @Resource
     private RdpRoleService          rdpRoleService;
-
     @Resource
     private RdpVerifyService        rdpVerifyService;
-
     @Resource
     private RdpNamingService        rdpNamingService;
-
     @Resource
     private RdpUserConfigService    rdpUserConfigService;
-
     @Resource
     private RdpAuthServiceForManage rdpDsAuthManagerService;
-
     @Resource
-    private RdpProductClusterMapper rdpProductClusterMapper;
-
-    @Resource
-    private RdpResAuthMapper        resAuthMapper;
-
+    private DmResAuthMapper         resAuthMapper;
     @Resource
     private RdpUserMfaMapper        rdpUserMfaMapper;
-
-    @Resource
-    private RdpConsoleConfig        rdpConfig;
-
     @Resource
     private List<RdpNotifyService>  notifyServices;
 
@@ -125,20 +126,11 @@ public class RdpUserServiceImpl implements RdpUserService {
         List<AuthInfo> tmpDef = this.rdpDsAuthManagerService.getAllCategory();
         List<String> support = new ArrayList<>();
         support.add(RdpFeatureIDs.PRODUCT_CLOUD_RDP);
-        support.add(this.rdpConfig.getDefaultProduct().getFeatureID());
-        for (String productType : this.rdpProductClusterMapper.supportProductType()) {
-            RdpProduct rdpProduct = (RdpProduct) ConverterUtils.convert(productType, RdpProduct.class);
-            if (rdpProduct != null) {
-                support.add(rdpProduct.getFeatureID());
-            }
-        }
+        support.add(RdpFeatureIDs.PRODUCT_CLOUD_DM);
 
         List<AuthInfo> catTreeDef = tmpDef.stream().filter(a -> {
             return CollectionUtils.containsAny(a.getForProduct(), support);
         }).collect(Collectors.toList());
-
-        // filter some category for saas
-        filterSomeCategory(uid, catTreeDef);
 
         if (StringUtils.equals(puid, uid)) {
             return catTreeDef;
@@ -172,23 +164,6 @@ public class RdpUserServiceImpl implements RdpUserService {
 
             return useCatMap.values();
         }
-    }
-
-    public static final String DEFAULT_CLOUD_BLACK_CATEGORY = "CAT_RDP_USER,CAT_RDP_ROLE";
-
-    private void filterSomeCategory(String uid, List<AuthInfo> catTreeDef) {
-        if (isMaintainer(uid) || GlobalDeployMode.inPrivate()) {
-            return;
-        }
-
-        String cloudBlackCategory = rdpConfig.getMenuCategoryBlacklist();
-        if (StringUtils.isBlank(cloudBlackCategory)) {
-            cloudBlackCategory = DEFAULT_CLOUD_BLACK_CATEGORY;
-        }
-
-        Set<String> saasHiddenCategory = Arrays.stream(cloudBlackCategory.split(",")).collect(Collectors.toSet());
-
-        catTreeDef.removeIf(info -> saasHiddenCategory.contains(info.getKey()));
     }
 
     @Override

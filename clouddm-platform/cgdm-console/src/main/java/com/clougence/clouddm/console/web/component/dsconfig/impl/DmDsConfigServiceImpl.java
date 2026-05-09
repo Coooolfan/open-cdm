@@ -1,11 +1,24 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.dsconfig.impl;
 
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,12 +52,12 @@ import com.clougence.clouddm.sdk.ui.template.CmdTemplateSpi;
 import com.clougence.drivers.DriverLoader;
 import com.clougence.rdp.component.dskvconfig.RdpDsExtraConfGen;
 import com.clougence.rdp.component.dskvconfig.RdpDsResourceService;
-import com.clougence.rdp.dal.enumeration.HostType;
-import com.clougence.rdp.dal.enumeration.LifeCycleState;
-import com.clougence.rdp.dal.mapper.RdpDataSourceMapper;
-import com.clougence.rdp.dal.mapper.RdpDsKvBaseConfigMapper;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpDsKvBaseConfigDO;
+import com.clougence.clouddm.console.web.dal.enumeration.HostType;
+import com.clougence.clouddm.console.web.dal.enumeration.LifeCycleState;
+import com.clougence.clouddm.console.web.dal.mapper.RdpDataSourceMapper;
+import com.clougence.clouddm.console.web.dal.mapper.RdpDsKvBaseConfigMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDsKvBaseConfigDO;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
@@ -52,6 +65,7 @@ import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.ref.BeanMap;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**

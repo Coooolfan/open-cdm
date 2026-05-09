@@ -1,25 +1,39 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.sso;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Resource;
-
-import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
 import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.platform.plugin.PluginManager;
-import com.clougence.clouddm.sdk.security.login.LoginProvider;
-import com.clougence.rdp.constant.UserConfigTagType;
-import com.clougence.rdp.controller.model.enumeration.LoginAuthType;
-import com.clougence.rdp.dal.mapper.RdpUserKvBaseConfigMapper;
-import com.clougence.rdp.dal.model.RdpUserKvBaseConfigDO;
-import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.clouddm.sdk.LifeSpiRequest;
+import com.clougence.clouddm.sdk.security.login.LoginProvider;
+import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
+import com.clougence.rdp.constant.UserConfigTagType;
+import com.clougence.clouddm.console.web.constants.LoginAuthType;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserKvBaseConfigMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
+import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.service.RdpNotifyService;
 import com.clougence.rdp.service.model.UserConfigMO;
 import com.clougence.utils.StringUtils;
 
+import jakarta.annotation.Resource;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 

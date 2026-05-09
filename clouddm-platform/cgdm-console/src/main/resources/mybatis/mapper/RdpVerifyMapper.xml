@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpVerifyMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpVerifyMapper">
 
-    <resultMap id="rdpVerifyDO" type="com.clougence.rdp.dal.model.RdpVerifyDO">
+    <resultMap id="rdpVerifyDO" type="com.clougence.clouddm.console.web.dal.model.RdpVerifyDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
         <result column="account_type" property="accountType"/>
         <result column="uid" property="uid"/>
         <result column="verify_type" property="verifyType"
-                javaType="com.clougence.rdp.controller.model.enumeration.VerifyType"/>
+                javaType="com.clougence.clouddm.console.web.constants.VerifyType"/>
         <result column="email" property="email"/>
         <result column="phone" property="phone"/>
         <result column="phone" property="phone"/>
-        <result column="phone_area_code" property="phoneAreaCode" javaType="com.clougence.rdp.dal.enumeration.AreaCode"/>
+        <result column="phone_area_code" property="phoneAreaCode" javaType="com.clougence.clouddm.console.web.dal.enumeration.AreaCode"/>
         <result column="verify_code_type" property="verifyCodeType"
-                javaType="com.clougence.rdp.controller.model.enumeration.VerifyCodeType"/>
+                javaType="com.clougence.clouddm.console.web.constants.VerifyCodeType"/>
         <result column="verify_code_send_time" property="verifyCodeSendTime"/>
         <result column="fail_times" property="failTimes"/>
         <result column="last_fail_date" property="lastFailDate"/>
@@ -54,9 +54,9 @@
         FROM
             rdp_verify_code
         WHERE
-            verify_type = #{verifyType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyType}
+            verify_type = #{verifyType,javaType=com.clougence.clouddm.console.web.constants.VerifyType}
             AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyCodeType}
+            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.console.web.constants.VerifyCodeType}
             AND
             uid = #{uid}
     </select>
@@ -67,9 +67,9 @@
         FROM
             rdp_verify_code
         WHERE
-            verify_type = #{verifyType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyType}
+            verify_type = #{verifyType,javaType=com.clougence.clouddm.console.web.constants.VerifyType}
             AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyCodeType}
+            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.console.web.constants.VerifyCodeType}
             AND
             email=#{email}
             AND
@@ -82,9 +82,9 @@
         FROM
             rdp_verify_code
         WHERE
-            verify_type = #{verifyType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyType}
+            verify_type = #{verifyType,javaType=com.clougence.clouddm.console.web.constants.VerifyType}
         AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyCodeType}
+            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.console.web.constants.VerifyCodeType}
         AND
             phone=#{phone}
         AND
@@ -97,13 +97,13 @@
         FROM
             rdp_verify_code
         WHERE
-            verify_type = #{verifyType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyType}
+            verify_type = #{verifyType,javaType=com.clougence.clouddm.console.web.constants.VerifyType}
         AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyCodeType}
+            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.console.web.constants.VerifyCodeType}
         AND
             phone=#{phone}
         AND
-            phone_area_code=#{areaCode,javaType=com.clougence.rdp.dal.enumeration.AreaCode}
+            phone_area_code=#{areaCode,javaType=com.clougence.clouddm.console.web.dal.enumeration.AreaCode}
         limit 1
     </select>
 
@@ -160,9 +160,9 @@
         WHERE
         uid = #{uid}
         AND
-        verify_type = #{verifyType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyType}
+        verify_type = #{verifyType,javaType=com.clougence.clouddm.console.web.constants.VerifyType}
         AND
-        verify_code_type=#{verifyCodeType,javaType=com.clougence.rdp.controller.model.enumeration.VerifyCodeType}
+        verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.console.web.constants.VerifyCodeType}
     </update>
 
 </mapper>

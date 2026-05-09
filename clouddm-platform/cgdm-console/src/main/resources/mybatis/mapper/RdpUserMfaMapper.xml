@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpUserMfaMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpUserMfaMapper">
 
-    <resultMap id="rdpUserMfaDO" type="com.clougence.rdp.dal.model.RdpUserMfaDO">
+    <resultMap id="rdpUserMfaDO" type="com.clougence.clouddm.console.web.dal.model.RdpUserMfaDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
         <result column="user_id" property="userId"/>
         <result column="uid" property="uid"/>
-        <result column="mfa_status" property="mfaStatus" javaType="com.clougence.rdp.dal.enumeration.mfa.MfaStatus"/>
+        <result column="mfa_status" property="mfaStatus" javaType="com.clougence.clouddm.console.web.dal.enumeration.MfaStatus"/>
         <result column="mfa_key" property="mfaKey"/>
         <result column="reset_mfa_key" property="resetMfaKey"/>
     </resultMap>

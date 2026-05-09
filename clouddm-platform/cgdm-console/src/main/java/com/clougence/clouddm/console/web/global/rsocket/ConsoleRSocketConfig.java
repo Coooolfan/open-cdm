@@ -1,8 +1,21 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.global.rsocket;
 
 import java.util.List;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -26,11 +39,10 @@ import com.clougence.clouddm.console.web.dal.mapper.DmWorkerMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerStatusMapper;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.global.notify.DmWorkerRegisterNotify;
-import com.clougence.rdp.component.jwtsession.RdpJwtService;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.service.RdpUserService;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
 
 import io.rsocket.plugins.SocketAcceptorInterceptor;
+import jakarta.annotation.Resource;
 
 /**
  * @author wanshao create time is 2021/1/13
@@ -49,12 +61,6 @@ public class ConsoleRSocketConfig {
 
     @Resource
     private DmWorkerMapper               workerMapper;
-
-    @Resource
-    private RdpJwtService                jwtService;
-
-    @Resource
-    private RdpUserService               userService;
 
     @Resource
     private DmConsoleConfig              consoleConfig;
@@ -119,11 +125,7 @@ public class ConsoleRSocketConfig {
 
     @Bean
     public RSocketServerSender consoleRSocketServerSender() {
-        return new DmServerSender(consoleRSocketRequestManager(),
-            this.workerMapper,
-            this.dmWorkerStatusMapper,
-            consoleServerSideRegistry(),
-            RSocketSerializationImpl.DEFAULT);
+        return new DmServerSender(consoleRSocketRequestManager(), this.workerMapper, this.dmWorkerStatusMapper, consoleServerSideRegistry(), RSocketSerializationImpl.DEFAULT);
     }
 
     @Bean

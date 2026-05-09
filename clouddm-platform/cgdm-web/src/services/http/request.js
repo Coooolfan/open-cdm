@@ -2,8 +2,6 @@ import axios from 'axios';
 import { Message, Modal } from 'view-ui-plus';
 import { showActiveLicense } from '@/utils';
 import { addPending, cancelPending, removePending } from '@/services/http/cancelRequest';
-import store from '@/store';
-import Cookies from 'js-cookie';
 import { EVENT_BUS_NAME_LIST } from '@/utils/eventBusName';
 import Router from '@/router';
 import eventBus from '@/utils/eventBus';
@@ -85,13 +83,6 @@ instance.interceptors.request.use(
       ...config.headers
     };
 
-    if (config.url.startsWith('/cloudcanal/console') && store?.state?.selectCcProductCluster) {
-      config.headers = {
-        'X-Product-Code': store?.state?.selectCcProductCluster,
-        ...config.headers
-      };
-    }
-
     console.log(i18n?.global?.locale?.value);
 
     if (config.data && config.data.cancelPending) {
@@ -121,25 +112,6 @@ instance.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      if (error.response.status === 307) {
-        if (error.response.headers['x-redirect-addr']) {
-          const cookies = Cookies.get();
-          const newUrl = `${error.response.headers['x-redirect-addr']}${error.response.config.url}`;
-          const headers = {
-            'x-is-redirect': true
-          };
-          if (cookies.jwt_token) {
-            headers.jwt_token = cookies.jwt_token;
-          }
-          return instance.post(newUrl, error.response.config.data ? JSON.parse(error.response.config.data) : null, {
-            headers,
-            withCredentials: true,
-            credentials: 'include'
-          });
-        } else {
-          // instance.post('').then((response) => response);
-        }
-      }
       return Promise.reject(checkStatus(error.response));
     }
     if (error.code === 'ECONNABORTED' && error.message.indexOf('timeout') !== -1) {

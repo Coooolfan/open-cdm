@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpTicketMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpTicketMapper">
 
-    <resultMap id="RdpTicketDO" type="com.clougence.rdp.dal.model.RdpTicketDO">
+    <resultMap id="RdpTicketDO" type="com.clougence.clouddm.console.web.dal.model.RdpTicketDO">
         <result column="id" property="id"/>
         <result column="biz_id" property="bizId"/>
         <result column="gmt_create" property="gmtCreate"/>
@@ -11,7 +11,7 @@
         <result column="owner_uid" property="ownerUid"/>
         <result column="bind_ds_id" property="bindDsId"/>
         <result column="target_info" property="targetInfo"/>
-        <result column="appro_type" property="approType" typeHandler="com.clougence.rdp.dal.handler.RdpApprovalTypeHandler"/>
+        <result column="appro_type" property="approType" typeHandler="com.clougence.clouddm.console.web.dal.handler.RdpApprovalTypeHandler"/>
         <result column="appro_biz" property="approBiz"/>
         <result column="appro_identity" property="approIdentity"/>
         <result column="appro_template_name" property="approTemplateName"/>
@@ -98,7 +98,7 @@
     </update>
 
     <select id="listTicketByCondition" resultMap="RdpTicketDO"
-            parameterType="com.clougence.rdp.dal.model.queryobj.RdpTicketQueryObject">
+            parameterType="com.clougence.clouddm.console.web.dal.model.queryobj.RdpTicketQueryObject">
         select
             <include refid="all_ticket_col"/>
         from
@@ -111,7 +111,7 @@
             <if test="ticketId != null"><![CDATA[ AND id = #{ticketId} ]]></if>
             <if test="ticketBizId != null"><![CDATA[ AND biz_id = #{ticketBizId} ]]></if>
             <if test="ticketTitleName != null"><![CDATA[ AND ticket_title LIKE concat('%',#{ticketTitleName},'%') ]]></if>
-            <if test="ticketStatus != null"><![CDATA[ AND ticket_status =#{ticketStatus,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStatus} ]]></if>
+            <if test="ticketStatus != null"><![CDATA[ AND ticket_status =#{ticketStatus,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus} ]]></if>
             <if test="dsIds != null and dsIds.size() >0"> AND bind_ds_id in <foreach collection="dsIds" item="item" separator="," open="(" close=")">#{item}</foreach></if>
             and deleted = false
         order by
@@ -191,7 +191,7 @@
         <where>
             gmt_modified &lt; #{testDate} and ticket_status in
             <foreach collection="status" item="item" separator="," open="(" close=")">
-                #{item,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStatus}
+                #{item,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus}
             </foreach>
             and
                 deleted = false
@@ -235,7 +235,7 @@
         <if test="ticketQuery.ticketId != null"><![CDATA[ AND id = #{ticketQuery.ticketId} ]]></if>
         <if test="ticketQuery.ticketBizId != null"><![CDATA[ AND biz_id = #{ticketQuery.ticketBizId} ]]></if>
         <if test="ticketQuery.ticketTitleName != null"><![CDATA[ AND ticket_title LIKE concat('%',#{ticketQuery.ticketTitleName},'%') ]]></if>
-        <if test="ticketQuery.ticketStatus != null"><![CDATA[ AND ticket_status =#{ticketQuery.ticketStatus,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStatus} ]]></if>
+        <if test="ticketQuery.ticketStatus != null"><![CDATA[ AND ticket_status =#{ticketQuery.ticketStatus,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus} ]]></if>
         <if test="ticketQuery.dsIds != null and ticketQuery.dsIds.size() >0"> AND bind_ds_id in <foreach collection="ticketQuery.dsIds" item="item" separator="," open="(" close=")">#{item}</foreach></if>
         and primary_uid = #{puid}
         and deleted = false
@@ -278,7 +278,7 @@
         <if test="ticketQuery.ticketId != null"><![CDATA[ AND a.id = #{ticketQuery.ticketId} ]]></if>
         <if test="ticketQuery.ticketBizId != null"><![CDATA[ AND a.biz_id = #{ticketQuery.ticketBizId} ]]></if>
         <if test="ticketQuery.ticketTitleName != null"><![CDATA[ AND a.ticket_title LIKE concat('%',#{ticketQuery.ticketTitleName},'%') ]]></if>
-        <if test="ticketQuery.ticketStatus != null"><![CDATA[ AND a.ticket_status =#{ticketQuery.ticketStatus,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStatus} ]]></if>
+        <if test="ticketQuery.ticketStatus != null"><![CDATA[ AND a.ticket_status =#{ticketQuery.ticketStatus,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus} ]]></if>
         <if test="ticketQuery.approvalPersonUid != null"><![CDATA[ AND b.person_uid = #{ticketQuery.approvalPersonUid} ]]></if>
         and a.deleted = false
         and a.ticket_status in ('WAIT_CONFIRM','WAIT_APPROVAL','WAIT_EXEC')
@@ -289,7 +289,7 @@
             a.gmt_create desc
     </select>
 
-    <select id="queryByApproIdentity" resultType="com.clougence.rdp.dal.model.RdpTicketDO">
+    <select id="queryByApproIdentity" resultType="com.clougence.clouddm.console.web.dal.model.RdpTicketDO">
         select
         <include refid="all_ticket_col"/>
         from
@@ -303,7 +303,7 @@
     </select>
 
 
-    <select id="selectByIdForUpdate" resultType="com.clougence.rdp.dal.model.RdpTicketDO">
+    <select id="selectByIdForUpdate" resultType="com.clougence.clouddm.console.web.dal.model.RdpTicketDO">
         select
             <include refid="all_ticket_col"/>
         from rdp_ticket_inst
@@ -320,7 +320,7 @@
         limit 20
     </select>
 
-    <select id="listAuthTicketByConditionAndPage" resultType="com.clougence.rdp.dal.model.RdpTicketDO">
+    <select id="listAuthTicketByConditionAndPage" resultType="com.clougence.clouddm.console.web.dal.model.RdpTicketDO">
         select
         <include refid="all_ticket_col"/>
         from
@@ -330,7 +330,7 @@
             <if test="ticketQuery.startTime != null"><![CDATA[ AND gmt_create > #{ticketQuery.startTime} ]]></if>
             <if test="ticketQuery.endTime != null"><![CDATA[ AND gmt_create < #{ticketQuery.endTime} ]]></if>
             <if test="ticketQuery.ticketTitleName != null"><![CDATA[ AND ticket_title LIKE concat('%',#{ticketQuery.ticketTitleName},'%') ]]></if>
-            <if test="ticketQuery.ticketStatus != null"><![CDATA[ AND ticket_status =#{ticketQuery.ticketStatus,javaType=com.clougence.rdp.dal.enumeration.RdpTicketStatus} ]]></if>
+            <if test="ticketQuery.ticketStatus != null"><![CDATA[ AND ticket_status =#{ticketQuery.ticketStatus,javaType=com.clougence.clouddm.console.web.dal.enumeration.RdpTicketStatus} ]]></if>
             and appro_biz = 'DATA_SOURCE_AUTH'
             and deleted = false
         </where>

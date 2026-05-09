@@ -1,33 +1,29 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.dsconfig.mode;
 
 import java.util.List;
 import java.util.Map;
 
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 
-import lombok.Getter;
-
-@Getter
-public class DsLevels {
-
-    private final String                envId;
-    private final List<String>          levels;
-    private final List<String>          dbLevels;
-    private final RdpDataSourceDO       dsDO;
-    private final List<UmiTypes>        levelsDef;
-    private final Map<UmiTypes, Object> levelsParam;
-
-    public DsLevels(String envId, RdpDataSourceDO dsDO, List<String> levels, List<String> dbLevels, List<UmiTypes> levelsDef, Map<UmiTypes, Object> levelsParam){
-        this.envId = envId;
-        this.dsDO = dsDO;
-        this.levels = levels;
-        this.dbLevels = dbLevels;
-        this.levelsDef = levelsDef;
-        this.levelsParam = levelsParam;
-    }
+public record DsLevels(String envId, RdpDataSourceDO dsDO, List<String> levels, List<String> dbLevels, List<UmiTypes> levelsDef, Map<UmiTypes, Object> levelsParam) {
 
     public DsResPath asResPath() {
         return RdpAuthUtils.genResPathByList(this.dbLevels);

@@ -1,23 +1,36 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.rdp.component.sso;
 
 import java.util.List;
 
-import jakarta.annotation.Resource;
-
 import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.api.common.boot.UnifiedPostConstruct;
-import com.clougence.clouddm.base.metadata.rdp.enumeration.GlobalDeployMode;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.LifeSpiRequest;
 import com.clougence.clouddm.sdk.security.login.LoginProvider;
 import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
-import com.clougence.rdp.dal.mapper.RdpUserMapper;
-import com.clougence.rdp.dal.model.RdpUserDO;
+import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.ThreadUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -54,20 +67,13 @@ public class RdpSubLoginStarter implements UnifiedPostConstruct {
             return;
         }
 
-        if (GlobalDeployMode.inPrivate()) {
-            // start plugin for user.
-            List<RdpUserDO> users = this.rdpUserMapper.listPrimaryAccount();
-            for (RdpUserDO rdpUserDO : users) {
-                for (String serviceName : serviceNames) {
-                    LoginProvider providerType = LoginProvider.valueOfCode(serviceName);
+        // start plugin for user.
+        List<RdpUserDO> users = this.rdpUserMapper.listPrimaryAccount();
+        for (RdpUserDO rdpUserDO : users) {
+            for (String serviceName : serviceNames) {
+                LoginProvider providerType = LoginProvider.valueOfCode(serviceName);
 
-                    //except managed
-                    if (providerType == LoginProvider.MANAGED) {
-                        continue;
-                    }
-
-                    startServiceForUser(providerType, rdpUserDO.getUid());
-                }
+                startServiceForUser(providerType, rdpUserDO.getUid());
             }
         }
     }

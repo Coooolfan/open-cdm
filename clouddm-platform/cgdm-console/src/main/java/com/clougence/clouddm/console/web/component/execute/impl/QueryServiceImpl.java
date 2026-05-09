@@ -1,11 +1,24 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.component.execute.impl;
 
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-
-import jakarta.annotation.Resource;
 
 import org.springframework.stereotype.Service;
 
@@ -27,10 +40,8 @@ import com.clougence.clouddm.console.web.constants.DmErrorCode;
 import com.clougence.clouddm.console.web.constants.I18nDmMsgKeys;
 import com.clougence.clouddm.console.web.dal.enumeration.DsSessionType;
 import com.clougence.clouddm.console.web.dal.mapper.DmDsSessionMapper;
-import com.clougence.clouddm.console.web.dal.mapper.DmDsStatisticsMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmWorkerStatusMapper;
 import com.clougence.clouddm.console.web.dal.model.DmDsSessionDO;
-import com.clougence.clouddm.console.web.dal.model.DmDsStatisticsDO;
 import com.clougence.clouddm.console.web.dal.model.DmWorkerStatusDO;
 import com.clougence.clouddm.console.web.util.DmDsUtils;
 import com.clougence.clouddm.console.web.util.DmI18nUtils;
@@ -38,13 +49,14 @@ import com.clougence.clouddm.console.web.util.MessageUtils;
 import com.clougence.clouddm.sdk.execute.session.QueryRequest;
 import com.clougence.clouddm.sdk.execute.session.SessionContextDTO;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbIsolation;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.ThreadUtils;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -65,8 +77,6 @@ public class QueryServiceImpl implements QueryService {
     private ExecuteRService         sessionRService;
     @Resource
     private DmDsSessionMapper       sessionMapper;
-    @Resource
-    private DmDsStatisticsMapper    statisticsMapper;
     @Resource
     private DmDsStatusService       dmDsStatusService;
 
@@ -137,7 +147,7 @@ public class QueryServiceImpl implements QueryService {
 
     @Override
     public String createSession(String curUid, DsLevels levels, SessionContextDTO context) {
-        RdpDataSourceDO dsDO = levels.getDsDO();
+        RdpDataSourceDO dsDO = levels.dsDO();
         String sessionId = context.getSessionId();
         if (StringUtils.isBlank(sessionId)) {
             throw new ErrorMessageException(DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_NEED_SESSION_ID_ERROR.name()));
@@ -256,7 +266,7 @@ public class QueryServiceImpl implements QueryService {
         this.sessionMapper.updateSessionQueryTime(curUid, sessionId);
 
         // record Statistics
-        this.recordStatistics(sessionDO);
+        //this.recordStatistics(sessionDO);
 
         // exec query
         try {
@@ -283,7 +293,7 @@ public class QueryServiceImpl implements QueryService {
         this.sessionMapper.updateSessionQueryTime(curUid, sessionId);
 
         // record Statistics
-        this.recordStatistics(sessionDO);
+        //this.recordStatistics(sessionDO);
 
         // exec query
         try {
@@ -305,26 +315,6 @@ public class QueryServiceImpl implements QueryService {
         }
 
         return this.sessionRService.lastResultList(sendDTO, sessionId);
-    }
-
-    private void recordStatistics(DmDsSessionDO sessionDO) {
-        try {
-            Long dsID = sessionDO.getDatasourceId();
-            if (dsID != null) {
-                String dsType = StringUtils.isBlank(sessionDO.getDatasourceType()) ? "unknown" : sessionDO.getDatasourceType();
-                if (this.statisticsMapper.getByDsId(dsID) == null) {
-                    DmDsStatisticsDO statisticsDO = new DmDsStatisticsDO();
-                    statisticsDO.setDataSourceId(dsID);
-                    statisticsDO.setDataSourceType(dsType);
-                    statisticsDO.setLastTime(new Date());
-                    statisticsDO.setExecCounts(1L);
-                    this.statisticsMapper.initStatisticsDO(statisticsDO);
-                }
-                this.statisticsMapper.updateCounts(dsID, dsType);
-            }
-        } catch (Exception e) {
-            log.error("tracking statistics failed : " + e.getMessage());
-        }
     }
 
     @Override

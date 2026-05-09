@@ -1,3 +1,18 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.controller.browse;
 
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.DM_QUERY_CONSOLE;
@@ -6,10 +21,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +38,7 @@ import com.clougence.clouddm.console.web.component.dsconfig.DmDsService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
 import com.clougence.clouddm.console.web.dal.model.DmDsConfigDO;
+import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseDetailFO;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseLeafFO;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseLevelsFO;
@@ -34,17 +46,19 @@ import com.clougence.clouddm.console.web.model.vo.browse.BrowseLevelsVO;
 import com.clougence.clouddm.console.web.service.browse.BrowseService;
 import com.clougence.clouddm.console.web.service.browse.model.rdb.BrowseObjectMO;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
-import com.clougence.rdp.constant.auth.RequestAuth;
-import com.clougence.rdp.dal.model.RdpDsEnvDO;
-import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.model.analysis.resource.DsResPath;
+import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.sdk.security.auth.def.SecDataAuthLabel;
+import com.clougence.clouddm.console.web.dal.model.RdpDsEnvDO;
 import com.clougence.rdp.service.RdpDsEnvService;
 import com.clougence.rdp.service.RdpUserService;
-import com.clougence.rdp.util.RdpAuthUtils;
+import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.utils.CollectionUtils;
 
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -101,9 +115,9 @@ public class BrowseController {
         } else {
             // ds object list
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-            DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels());
-            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+            DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels());
+            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
             List<BrowseLevelsVO> vos = this.browseService.listLevels(puid, uid, levels, fo.isRefreshCache());
 
             // filter
@@ -134,16 +148,16 @@ public class BrowseController {
         } else if (fo.getLevels().size() == 2) {
             // the ds
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, levels.asResPath(), SecDataAuthLabel.DM_DAUTH_QUERY);
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, levels.asResPath(), SecDataAuthLabel.DM_DAUTH_QUERY);
 
             BrowseLevelsVO vo = this.browseService.detailDs(uid, levels);
             return ResWebDataUtils.buildSuccess(vo);
         } else {
             // the ds object
             DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-            this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, levels.asResPath(), SecDataAuthLabel.DM_DAUTH_QUERY);
+            this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+            this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, levels.asResPath(), SecDataAuthLabel.DM_DAUTH_QUERY);
 
             BrowseLevelsVO vo = this.browseService.detailLevels(puid, uid, levels);
             return ResWebDataUtils.buildSuccess(vo);
@@ -160,9 +174,9 @@ public class BrowseController {
         }
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels());
-        this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels());
+        this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getLeafType());
         List<BrowseLevelsVO> vos = this.browseService.listLeaf(puid, uid, levels, leafType, fo.getPattern(), fo.isRefreshCache());
@@ -186,9 +200,9 @@ public class BrowseController {
         }
 
         DsLevels levels = this.dmDsConfigService.parseLevels(fo.getLevels());
-        this.ownerCacheService.ownDataSource(puid, levels.getDsDO().getId());
-        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.getDbLevels(), fo.getTargetName());
-        this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.getDsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
+        this.ownerCacheService.ownDataSource(puid, levels.dsDO().getId());
+        DsResPath dsResource = RdpAuthUtils.genResPathByList(levels.dbLevels(), fo.getTargetName());
+        this.dmAuthServiceForBiz.checkBrowseAuth(puid, uid, levels.dsDO().getId(), AuthKind.DataSource, dsResource, SecDataAuthLabel.DM_DAUTH_QUERY);
 
         UmiTypes leafType = UmiTypes.valueOfCode(fo.getTargetType());
         String leafName = fo.getTargetName();

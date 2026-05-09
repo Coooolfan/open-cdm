@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.clougence.rdp.dal.mapper.RdpRoleMapper">
+<mapper namespace="com.clougence.clouddm.console.web.dal.mapper.RdpRoleMapper">
 
-    <resultMap id="rdpRoleDO" type="com.clougence.rdp.dal.model.RdpRoleDO">
+    <resultMap id="rdpRoleDO" type="com.clougence.clouddm.console.web.dal.model.RdpRoleDO">
         <result column="id" property="id"/>
         <result column="gmt_create" property="gmtCreate"/>
         <result column="gmt_modified" property="gmtModified"/>
@@ -67,7 +67,7 @@
             inner_tag = 1
     </update>
 
-    <select id="listByIds" resultType="com.clougence.rdp.dal.model.RdpRoleDO">
+    <select id="listByIds" resultType="com.clougence.clouddm.console.web.dal.model.RdpRoleDO">
         SELECT
         <include refid="rdpRole"/>
         FROM

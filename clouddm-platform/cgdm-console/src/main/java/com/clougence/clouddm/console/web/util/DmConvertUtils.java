@@ -1,9 +1,25 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.clougence.clouddm.console.web.util;
 
 import static com.clougence.schema.umi.special.rdb.RdbAttributeNames.OBJ_UI_TIPS;
 
 import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
@@ -53,7 +69,7 @@ import com.clougence.clouddm.console.web.service.browse.model.ActionInfo;
 import com.clougence.clouddm.console.web.service.browse.model.ActionTargetMO;
 import com.clougence.clouddm.console.web.service.browse.model.GenerateSqlDataAuthEnum;
 import com.clougence.clouddm.console.web.service.browse.model.rdb.*;
-import com.clougence.clouddm.console.web.service.cluster.impl.WorkerDetector;
+import com.clougence.clouddm.console.web.service.cluster.WorkerDetector;
 import com.clougence.clouddm.console.web.service.editor.model.DataResultPageVO;
 import com.clougence.clouddm.console.web.service.project.DmScmService;
 import com.clougence.clouddm.console.web.service.project.domain.DmImDef;
@@ -85,18 +101,15 @@ import com.clougence.clouddm.sdk.ui.editor.user.UserFields;
 import com.clougence.clouddm.sdk.ui.editor.view.ViewEditorFields;
 import com.clougence.clouddm.sdk.ui.menus.DsMenuType;
 import com.clougence.drivers.DriverFamily;
-import com.clougence.rdp.component.jwtsession.RdpWebUtils;
 import com.clougence.rdp.constant.I18nRdpMsgKeys;
-import com.clougence.rdp.dal.enumeration.HostType;
-import com.clougence.rdp.dal.model.RdpDataSourceDO;
-import com.clougence.rdp.dal.model.RdpDsEnvDO;
-import com.clougence.rdp.dal.model.RdpDsKvBaseConfigDO;
-import com.clougence.rdp.dal.model.RdpUserInfoDO;
+import com.clougence.clouddm.console.web.dal.enumeration.HostType;
+import com.clougence.clouddm.console.web.dal.model.RdpDataSourceDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDsEnvDO;
+import com.clougence.clouddm.console.web.dal.model.RdpDsKvBaseConfigDO;
+import com.clougence.clouddm.console.web.dal.model.RdpUserInfoDO;
 import com.clougence.rdp.global.exception.ErrorMessageException;
 import com.clougence.rdp.service.openapi.model.ApiDataSourceVO;
 import com.clougence.rdp.service.openapi.model.ApiListDsFO;
-import com.clougence.rdp.util.RdpConvertUtils;
-import com.clougence.rdp.util.RdpI18nUtils;
 import com.clougence.schema.metadata.FieldType;
 import com.clougence.schema.umi.special.rdb.*;
 import com.clougence.schema.umi.struts.UmiTypes;
@@ -119,11 +132,11 @@ public class DmConvertUtils {
     public static Map<TargetType, String> convertToResource(DsLevels dsLevels, String tableOrView) {
         Map<TargetType, String> result = new HashMap<>();
 
-        result.put(TargetType.Environment, dsLevels.getEnvId());
-        result.put(TargetType.Instance, String.valueOf(dsLevels.getDsDO().getId()));
+        result.put(TargetType.Environment, dsLevels.envId());
+        result.put(TargetType.Instance, String.valueOf(dsLevels.dsDO().getId()));
 
-        Map<UmiTypes, Object> levelsParam = dsLevels.getLevelsParam();
-        for (UmiTypes umiType : dsLevels.getLevelsDef()) {
+        Map<UmiTypes, Object> levelsParam = dsLevels.levelsParam();
+        for (UmiTypes umiType : dsLevels.levelsDef()) {
             switch (umiType) {
                 case Catalog:
                     result.put(TargetType.Catalog, (String) levelsParam.get(umiType));
@@ -256,12 +269,12 @@ public class DmConvertUtils {
 
     public static ActionInfo convertToActionInfo(DsLevels levels) {
         ActionInfo info = new ActionInfo();
-        info.setEnvId(levels.getEnvId());
-        info.setOriLevels(levels.getLevels());
-        info.setDbLevels(levels.getDbLevels());
-        info.setDsDO(levels.getDsDO());
-        info.setLevelsDef(levels.getLevelsDef());
-        info.setLevelsParam(levels.getLevelsParam());
+        info.setEnvId(levels.envId());
+        info.setOriLevels(levels.levels());
+        info.setDbLevels(levels.dbLevels());
+        info.setDsDO(levels.dsDO());
+        info.setLevelsDef(levels.levelsDef());
+        info.setLevelsParam(levels.levelsParam());
         return info;
     }
 
@@ -1258,8 +1271,7 @@ public class DmConvertUtils {
     }
 
     public static List<SecParam> jsonConvertToSecRuleParamVO(String jsonStr) {
-        return JsonUtils.toList(jsonStr, new TypeReference<List<SecParam>>() {
-        });
+        return JsonUtils.toList(jsonStr, new TypeReference<List<SecParam>>() {});
     }
 
     public static RuleVO convertToDmSecRulesVO(DmSecRuleMO defDO, boolean skipContent) {
@@ -1378,19 +1390,19 @@ public class DmConvertUtils {
 
         StringBuilder descStr = new StringBuilder();
         if (secRange.getEnvironment() != null) {
-            descStr.append("/").append(secRange.getEnvironment().getName());
+            descStr.append("/").append(secRange.getEnvironment().name());
         }
         if (secRange.getInstance() != null) {
-            descStr.append("/").append(secRange.getInstance().getName());
+            descStr.append("/").append(secRange.getInstance().name());
         }
         if (secRange.getCatalog() != null) {
-            descStr.append("/").append(secRange.getCatalog().getName());
+            descStr.append("/").append(secRange.getCatalog().name());
         }
         if (secRange.getSchema() != null) {
-            descStr.append("/").append(secRange.getSchema().getName());
+            descStr.append("/").append(secRange.getSchema().name());
         }
         if (secRange.getTable() != null) {
-            descStr.append("/").append(secRange.getTable().getName());
+            descStr.append("/").append(secRange.getTable().name());
         }
         List<SecRangeItem> nodes = secRange.getNodes();
         if (secRange.isChooseAll()) {
@@ -1403,7 +1415,7 @@ public class DmConvertUtils {
                 if (i > 0) {
                     descStr.append(", ");
                 }
-                descStr.append(nodes.get(i).getName());
+                descStr.append(nodes.get(i).name());
             }
             descStr.append(")");
         }
@@ -1421,9 +1433,9 @@ public class DmConvertUtils {
         }
 
         RangeItemVO vo = new RangeItemVO();
-        vo.setName(item.getName());
-        vo.setDesc(item.getDesc());
-        vo.setValue(item.getValue());
+        vo.setName(item.name());
+        vo.setDesc(item.desc());
+        vo.setValue(item.value());
         return vo;
     }
 
@@ -1812,7 +1824,7 @@ public class DmConvertUtils {
             return RdpWebUtils.getContextPath() + ("project/webhook/trigger?" +//
                                                    "owner=" + devopsDO.getOwnerUid() + "&" +//
                                                    "config=" + devopsDO.getId() + "&" +//
-                                                   "token=" + URLEncoder.encode(devopsDO.getTriggerToken(), "utf-8"));
+                                                   "token=" + URLEncoder.encode(devopsDO.getTriggerToken(), StandardCharsets.UTF_8));
         } catch (Exception e) {
             return "Error";
         }
