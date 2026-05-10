@@ -43,6 +43,7 @@ public class DmAloneLauncher {
     private static final String WORKER_PACKAGE_NAME = "com.clougence.clouddm.worker";
 
     public static void main(String[] args) throws Exception {
+        String action = (args != null && args.length > 0) ? args[0] : "start";
         System.setProperty("app.buildId", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         System.setProperty("app.buildVersion", "xxx.xxx.xxx(" + DateFormatType.s_yyyyMMdd.format(new Date()) + ")");
         System.setProperty("app.logPath", prepareRuntimePath("logs", "alone"));
@@ -52,6 +53,17 @@ public class DmAloneLauncher {
     }
 
     public static void main(String[] args, ClassWorld world) throws Exception {
+        String action = (args != null && args.length > 0) ? args[0] : "start";
+
+        if ("stop".equalsIgnoreCase(action)) {
+            doStop();
+            return;
+        }
+
+        if (!"start".equalsIgnoreCase(action)) {
+            throw new UnsupportedOperationException("Unsupported '" + action + "' command.");
+        }
+
         Thread.setDefaultUncaughtExceptionHandler(new PrintErrorUncaughtExcHandler());
         System.setProperty("spring.config.name", "default_alone,alone");
         System.setProperty("app.mode", "embedded");
@@ -113,6 +125,11 @@ public class DmAloneLauncher {
         Package beanPackage = pcClass.getPackage();
         String packageName = beanPackage == null ? "" : beanPackage.getName();
         return WORKER_PACKAGE_NAME.equals(packageName) || packageName.startsWith(WORKER_PACKAGE_NAME + ".");
+    }
+
+    private static void doStop() {
+        log.info("[DmAloneLauncher] Stop command acknowledged. Delegate shutdown to catalina.sh stop/kill flow.");
+        System.exit(1);
     }
 
     private static String prepareRuntimePath(String first, String... more) throws Exception {

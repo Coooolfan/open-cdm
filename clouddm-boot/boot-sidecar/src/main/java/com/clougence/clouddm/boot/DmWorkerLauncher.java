@@ -39,10 +39,6 @@ public class DmWorkerLauncher {
     public static void main(String[] args) throws Exception {
         System.setProperty("app.logPath", prepareRuntimePath("logs", "sidecar"));
 
-        if (args == null || args.length == 0) {
-            args = new String[] { "start" };
-        }
-
         main(args, null);
     }
 
@@ -51,18 +47,21 @@ public class DmWorkerLauncher {
             args = new String[] { "start" };
         }
 
-        Thread.setDefaultUncaughtExceptionHandler(new PrintErrorUncaughtExcHandler());
-        System.setProperty("spring.config.name", "default_sidecar,sidecar");
         String action = args[0];
 
         if ("start".equalsIgnoreCase(action)) {
+            Thread.setDefaultUncaughtExceptionHandler(new PrintErrorUncaughtExcHandler());
+            System.setProperty("spring.config.name", "default_sidecar,sidecar");
+
             // system loader
             ClassLoader parentClassLoader = world != null ? world.getRealm("plexus.core") : Thread.currentThread().getContextClassLoader();
             ConfigurableApplicationContext context = initSpring(args, parentClassLoader);
 
             doStart(context, parentClassLoader);
+            return;
         } else if ("stop".equalsIgnoreCase(action)) {
             doStop(args, world);
+            return;
         }
 
         throw new UnsupportedOperationException("Unsupported '" + action + "' command.");
@@ -91,6 +90,7 @@ public class DmWorkerLauncher {
     }
 
     private static void doStop(String[] args, ClassWorld world) {
+        log.info("DmWorkerStarter stop command acknowledged. Delegating shutdown to catalina.sh stop/kill flow.");
         System.exit(1);
     }
 

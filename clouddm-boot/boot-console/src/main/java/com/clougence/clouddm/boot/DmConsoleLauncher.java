@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DmConsoleLauncher {
 
     public static void main(String[] args) throws Exception {
+        String action = (args != null && args.length > 0) ? args[0] : "start";
         System.setProperty("app.buildId", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         System.setProperty("app.buildVersion", "xxx.xxx.xxx(" + DateFormatType.s_yyyyMMdd.format(new Date()) + ")");
         System.setProperty("app.logPath", prepareRuntimePath("logs", "console"));
@@ -51,6 +52,17 @@ public class DmConsoleLauncher {
     }
 
     public static void main(String[] args, ClassWorld world) throws Exception {
+        String action = (args != null && args.length > 0) ? args[0] : "start";
+
+        if ("stop".equalsIgnoreCase(action)) {
+            doStop();
+            return;
+        }
+
+        if (!"start".equalsIgnoreCase(action)) {
+            throw new UnsupportedOperationException("Unsupported '" + action + "' command.");
+        }
+
         Thread.setDefaultUncaughtExceptionHandler(new PrintErrorUncaughtExcHandler());
         System.setProperty("spring.config.name", "default_console,console");
 
@@ -85,6 +97,11 @@ public class DmConsoleLauncher {
         log.info("[DmConsoleLauncher] Console All Context Inited.");
         ShutdownHook.joinShutdown();
         UnifiedPostConstructUtils.doDestroyConstruct(context);
+    }
+
+    private static void doStop() {
+        log.info("[DmConsoleLauncher] Stop command acknowledged. Delegate shutdown to catalina.sh stop/kill flow.");
+        System.exit(1);
     }
 
     private static String prepareRuntimePath(String first, String... more) throws Exception {
