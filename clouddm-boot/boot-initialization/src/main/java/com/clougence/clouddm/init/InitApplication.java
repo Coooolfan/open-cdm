@@ -25,14 +25,18 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import com.clougence.clouddm.console.web.global.handler.StaticResourceNoCacheFilter;
 import com.clougence.clouddm.console.web.global.exception.PrintErrorUncaughtExcHandler;
 import com.clougence.clouddm.init.constant.I18nInitFieldKeys;
 import com.clougence.clouddm.console.web.util.RdpI18nUtils;
 
+import jakarta.servlet.Filter;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,6 +56,11 @@ public class InitApplication implements WebMvcConfigurer {
     @PostConstruct
     public void initI18nResources() {
         RdpI18nUtils.loadResources(I18nInitFieldKeys.class);
+    }
+
+    @Bean
+    public FilterRegistrationBean<Filter> indexHtmlNoCacheFilter() {
+        return StaticResourceNoCacheFilter.indexHtml("/");
     }
 
     public static void main(String[] args) {

@@ -18,17 +18,30 @@ package com.clougence.clouddm.boot.config;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import com.clougence.clouddm.console.web.global.handler.StaticResourceNoCacheFilter;
+import com.clougence.clouddm.init.InitApplication;
+
+import jakarta.servlet.Filter;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration(exclude = { DataSourceAutoConfiguration.class })
 @ComponentScan(value = { "com.clougence.clouddm.boot", "com.clougence.clouddm.init",//
                          "com.clougence.clouddm.console.web", "com.clougence.clouddm.console.web.*", //
                          "com.clougence.clouddm.comm.component.impl", "com.clougence.rdp.*" },//
-        excludeFilters = { @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.clougence\\.clouddm\\.init\\.boot\\..*") })
+        excludeFilters = { @ComponentScan.Filter(type = FilterType.REGEX, pattern = "com\\.clougence\\.clouddm\\.init\\.boot\\..*"),
+                           @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = InitApplication.class) })
 public class FullAppConfig implements WebMvcConfigurer {
+
+    @Bean
+    public FilterRegistrationBean<Filter> indexHtmlNoCacheFilter() {
+        return StaticResourceNoCacheFilter.indexHtml("/");
+    }
 
     @Override
     public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {

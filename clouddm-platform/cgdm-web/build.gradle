@@ -52,9 +52,12 @@ def resolveNodeBinDir = {
 def nodeBinDir = resolveNodeBinDir()
 def npmCommand = nodeBinDir ? new File(nodeBinDir, npmExecutableName).absolutePath : npmExecutableName
 def taskPath = nodeBinDir ? "${nodeBinDir.absolutePath}${File.pathSeparator}${System.getenv('PATH') ?: ''}" : (System.getenv('PATH') ?: '')
+def outputProfileEnabled = providers.gradleProperty('profile')
+        .map { it == 'output' }
+        .orElse(false)
 def frontendBuildEnabled = providers.gradleProperty('buildFrontend')
         .map { it.toBoolean() }
-        .orElse(false)
+        .orElse(outputProfileEnabled)
 
 sourceSets {
     main {
