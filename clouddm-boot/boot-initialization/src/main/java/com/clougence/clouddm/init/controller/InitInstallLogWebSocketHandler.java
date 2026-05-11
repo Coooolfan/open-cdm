@@ -52,6 +52,7 @@ public class InitInstallLogWebSocketHandler extends TextWebSocketHandler {
         InstallUpgradeLogBus.addListener(listener);
         writeEvent(decorated, InstallUpgradeLogBus.snapshotEvent());
         writeEvent(decorated, InstallUpgradeLogBus.scriptSnapshotEvent());
+        writeEvent(decorated, InstallUpgradeLogBus.noticeSnapshotEvent());
         log.info("[InitInstallLogWebSocketHandler] WebSocket connected, sessionId={}", sessionId);
     }
 

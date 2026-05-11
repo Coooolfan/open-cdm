@@ -42,6 +42,7 @@ public final class InstallUpgradeLogBus {
 
     private static String                                                      currentScript;
     private static String                                                      currentSql;
+    private static Map<String, String>                                         currentNotice;
 
     private InstallUpgradeLogBus(){
     }
@@ -52,6 +53,7 @@ public final class InstallUpgradeLogBus {
             SCRIPT_ITEMS.clear();
             currentScript = null;
             currentSql = null;
+            currentNotice = null;
         }
         publish(new InstallUpgradeLogEvent("RESET", operation));
         info("Start " + StringUtils.defaultIfBlank(operation, "install") + " flow.");
@@ -130,6 +132,18 @@ public final class InstallUpgradeLogBus {
         append("WARN", message);
     }
 
+    public static void notice(String code, String level) {
+        if (StringUtils.isBlank(code)) {
+            return;
+        }
+
+        Map<String, String> notice = Map.of("code", code, "level", StringUtils.defaultIfBlank(level, "info"));
+        synchronized (SCRIPT_LOCK) {
+            currentNotice = notice;
+        }
+        publish(new InstallUpgradeLogEvent("NOTICE", notice));
+    }
+
     public static void error(String message, Throwable throwable) {
         append("ERROR", message);
         if (throwable == null) {
@@ -159,6 +173,15 @@ public final class InstallUpgradeLogBus {
 
     public static InstallUpgradeLogEvent scriptSnapshotEvent() {
         return new InstallUpgradeLogEvent("SCRIPT_SNAPSHOT", snapshotScripts());
+    }
+
+    public static InstallUpgradeLogEvent noticeSnapshotEvent() {
+        synchronized (SCRIPT_LOCK) {
+            if (currentNotice == null || currentNotice.isEmpty()) {
+                return null;
+            }
+            return new InstallUpgradeLogEvent("NOTICE", currentNotice);
+        }
     }
 
     public static void addListener(Consumer<InstallUpgradeLogEvent> listener) {

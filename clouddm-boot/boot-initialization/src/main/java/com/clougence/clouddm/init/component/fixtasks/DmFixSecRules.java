@@ -16,6 +16,7 @@
 package com.clougence.clouddm.init.component.fixtasks;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -26,6 +27,7 @@ import com.clougence.clouddm.console.web.component.detectrule.local.SecRuleScrip
 import com.clougence.clouddm.console.web.component.detectrule.local.SecRulesScriptUtils;
 import com.clougence.clouddm.console.web.constants.DmMode;
 import com.clougence.clouddm.console.web.dal.enumeration.RuleKind;
+import com.clougence.clouddm.console.web.dal.enumeration.RuleScriptType;
 import com.clougence.clouddm.console.web.dal.mapper.DmSecRefererMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmSecRulesMapper;
 import com.clougence.clouddm.console.web.dal.mapper.DmSecSensitiveMapper;
@@ -36,6 +38,11 @@ import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.service.security.CheckRulesService;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.service.secrules.SecParam;
+import com.clougence.detectrule.domain.ParamInfo;
+import com.clougence.detectrule.parser.DetectRuleHelper;
+import com.clougence.detectrule.parser.ast.statement.StatementList;
+import com.clougence.dslpaser.antlr.DslHelper;
+import com.clougence.dslpaser.ast.StatementSet;
 import com.clougence.utils.JsonUtils;
 import com.clougence.utils.StringUtils;
 
@@ -70,8 +77,7 @@ public class DmFixSecRules {
         }
 
         if (!PluginManager.hasFeature(DsFeatureIDs.FUNC_RULE_CHECK_SUPPORT)) {
-            log.warn("rule sec plugin is not init. or not exist.");
-            return;
+            log.warn("rule sec plugin is not init. or not exist. use built-in parser fallback during initialization.");
         }
 
         for (SecRuleScriptInfo info : SecRulesScriptUtils.innerRules()) {
@@ -104,7 +110,7 @@ public class DmFixSecRules {
     }
 
     private void upgradeQueryRule(SecRuleScriptInfo info, DmSecRuleDO ruleDO) {
-        List<SecParam> params = this.checkRulesService.extractParameters(info.getScriptType(), info.getContent());
+        List<SecParam> params = extractParameters(info);
 
         if (ruleDO == null) {
             // insert new record
@@ -153,7 +159,7 @@ public class DmFixSecRules {
     }
 
     private void upgradeSensitiveRule(SecRuleScriptInfo info, DmSecSensitiveDO senDO) {
-        List<SecParam> params = this.checkRulesService.extractParameters(info.getScriptType(), info.getContent());
+        List<SecParam> params = extractParameters(info);
 
         if (senDO == null) {
             // insert new record
@@ -221,6 +227,40 @@ public class DmFixSecRules {
         if (info.isDeprecated() && senDO != null) {
             this.secSenMapper.markInnerDeprecatedById(senDO.getSenId());
             this.secRefMapper.markDeprecatedByRefId(senDO.getId(), RuleKind.SENSITIVE);
+        }
+    }
+
+    private List<SecParam> extractParameters(SecRuleScriptInfo info) {
+        if (info.getScriptType() == RuleScriptType.DetectRules && !PluginManager.hasFeature(DsFeatureIDs.FUNC_RULE_CHECK_SUPPORT)) {
+            return fallbackExtractParameters(info);
+        }
+
+        List<SecParam> params = this.checkRulesService.extractParameters(info.getScriptType(), info.getContent());
+        if (!params.isEmpty() || info.getScriptType() != RuleScriptType.DetectRules) {
+            return params;
+        }
+
+        return fallbackExtractParameters(info);
+    }
+
+    private List<SecParam> fallbackExtractParameters(SecRuleScriptInfo info) {
+        try {
+            StatementSet statementSet = DslHelper.parserDsl("DetectRule", info.getContent());
+            List<ParamInfo> paramInfos = DetectRuleHelper.extractParameters((StatementList) statementSet);
+            List<SecParam> fallbackParams = new ArrayList<>(paramInfos.size());
+            for (int i = 0; i < paramInfos.size(); i++) {
+                ParamInfo paramInfo = paramInfos.get(i);
+                SecParam secParam = new SecParam();
+                secParam.setName(paramInfo.getName());
+                secParam.setType(StringUtils.defaultIfBlank(paramInfo.getType(), "string"));
+                secParam.setDefaultValue(paramInfo.getDefaultValue());
+                secParam.setRange(paramInfo.getEnums());
+                secParam.setHint(StringUtils.defaultIfBlank(paramInfo.getHint(), "the arg" + i));
+                fallbackParams.add(secParam);
+            }
+            return fallbackParams;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse built-in rule parameters: " + info.getRuleId(), e);
         }
     }
 }

@@ -95,7 +95,7 @@
             />
           </template>
           <template v-else>
-            {{ currentFooterMessage.message }}
+            <span>{{ currentFooterMessage.message }}</span>
           </template>
         </div>
         <div class="wizard-footer-actions">
@@ -129,9 +129,38 @@ import { consumeDmBootstrapStatus, getDmSystemStatus, isDmSystemReady } from '..
 const INIT_DB_CREATE_IF_MISSING = 'clougence.init.db.createIfMissing';
 const INIT_DB_REBUILD_IF_NOT_EMPTY = 'clougence.init.db.rebuildIfNotEmpty';
 const INIT_DB_CONFIRM_DATABASE_NAME = 'clougence.init.db.confirmDatabaseName';
+const INSTALL_PHASE_NOTICE_META = {
+  DB_REBUILD: {
+    titleKey: 'initialization.noticeDbRebuildTitle',
+    level: 'info'
+  },
+  DB_INIT: {
+    titleKey: 'initialization.noticeDbInitTitle',
+    level: 'info'
+  },
+  FIX_RUNNING: {
+    titleKey: 'initialization.noticeFixTitle',
+    level: 'info'
+  },
+  DB_UPGRADE: {
+    titleKey: 'initialization.noticeDbUpgradeTitle',
+    level: 'info'
+  },
+  UPGRADE_TASK: {
+    titleKey: 'initialization.noticeUpgradeTaskTitle',
+    level: 'info'
+  }
+};
 
 function hasDbFieldChange(patch) {
   return Object.keys(patch).some((key) => key.startsWith('spring.datasource.'));
+}
+
+function normalizeInstallPhaseNotice(payload) {
+  return {
+    code: payload && typeof payload.code === 'string' ? payload.code : '',
+    level: payload && typeof payload.level === 'string' ? payload.level : ''
+  };
 }
 
 function sleep(timeoutMs) {
@@ -305,6 +334,8 @@ export default {
       testingDb: false,
       applying: false,
       restartTimedOut: false,
+      executionPhaseStatusType: '',
+      executionPhaseStatusMessage: '',
       restartStatusType: '',
       restartStatusMessage: ''
     };
@@ -358,6 +389,13 @@ export default {
       return this.stageItems.length - 1;
     },
     currentFooterMessage() {
+      if (this.isExecutionStep && this.executionPhaseStatusMessage) {
+        return {
+          type: this.executionPhaseStatusType || 'info',
+          message: this.executionPhaseStatusMessage
+        };
+      }
+
       if (this.isExecutionStep && this.restartStatusMessage) {
         return {
           type: this.restartStatusType || 'info',
@@ -444,6 +482,8 @@ export default {
   beforeUnmount() {
     this.clearTestDbRefreshTimer();
     this.disconnectInstallLogSocket();
+    this.executionPhaseStatusType = '';
+    this.executionPhaseStatusMessage = '';
   },
   async created() {
     await this.bootstrapPage();
@@ -478,9 +518,24 @@ export default {
     handleInstallLogSocketMessage(rawMessage) {
       try {
         const payload = JSON.parse(rawMessage);
+        if (!payload || typeof payload !== 'object') {
+          return;
+        }
+
         if (payload.type === 'RESET') {
           this.executionScripts = resetExecutionScriptsForRetry(this.executionScripts);
           this.operationErrorDetail = '';
+          if (this.isExecutionStep && this.applying) {
+            this.applyPendingExecutionStatus();
+          } else {
+            this.executionPhaseStatusType = '';
+            this.executionPhaseStatusMessage = '';
+          }
+          return;
+        }
+
+        if (payload.type === 'NOTICE') {
+          this.applyInstallPhaseStatus(payload.object);
           return;
         }
 
@@ -496,6 +551,30 @@ export default {
       } catch (e) {
         console.error('Failed to parse install log message', e);
       }
+    },
+
+    applyInstallPhaseStatus(rawNotice) {
+      const notice = normalizeInstallPhaseNotice(rawNotice);
+      const meta = INSTALL_PHASE_NOTICE_META[notice.code];
+      if (!meta) {
+        return;
+      }
+
+      this.executionPhaseStatusType = ['success', 'info', 'warning', 'error'].includes(notice.level) ? notice.level : meta.level;
+
+      // Handle mode-dependent title keys
+      if (notice.code === 'DB_INIT') {
+        this.executionPhaseStatusMessage = this.$t(this.isUpgradeMode ? 'initialization.noticeDbUpgradeTitle' : 'initialization.noticeDbInitTitle');
+      } else if (notice.code === 'FIX_RUNNING') {
+        this.executionPhaseStatusMessage = this.$t(this.isUpgradeMode ? 'initialization.noticeUpgradeTaskTitle' : 'initialization.noticeFixTitle');
+      } else {
+        this.executionPhaseStatusMessage = this.$t(meta.titleKey);
+      }
+    },
+
+    applyPendingExecutionStatus() {
+      this.executionPhaseStatusType = 'info';
+      this.executionPhaseStatusMessage = this.$t(this.isUpgradeMode ? 'initialization.upgrading' : 'initialization.installing');
     },
 
     async loadExecutionScriptsPreview() {
@@ -577,6 +656,8 @@ export default {
           this.executionScripts = [];
           this.operationErrorDetail = '';
           this.restartTimedOut = false;
+          this.executionPhaseStatusType = '';
+          this.executionPhaseStatusMessage = '';
           this.restartStatusType = '';
           this.restartStatusMessage = '';
           this.currentStep = 0;
@@ -737,11 +818,13 @@ export default {
     },
 
     async startExecution() {
+      this.currentStep = this.executionStepIndex;
+      this.applyPendingExecutionStatus();
+      await this.$nextTick();
+
       if (!this.executionScripts.length) {
         await this.loadExecutionScriptsPreview();
       }
-      this.currentStep = this.executionStepIndex;
-      await this.$nextTick();
 
       if (this.isUpgradeMode) {
         return this.handleUpgrade();
@@ -767,6 +850,8 @@ export default {
       }
 
       this.restartTimedOut = false;
+      this.executionPhaseStatusType = '';
+      this.executionPhaseStatusMessage = '';
       this.restartStatusType = '';
       this.restartStatusMessage = '';
       this.operationErrorDetail = '';
@@ -790,6 +875,7 @@ export default {
     async handleUpgrade(options = {}) {
       this.applying = true;
       this.restartTimedOut = false;
+      this.applyPendingExecutionStatus();
       this.restartStatusType = 'info';
       this.restartStatusMessage = this.$t('initialization.upgrading');
       this.executionScripts = resetExecutionScriptsForRetry(this.executionScripts);
@@ -799,6 +885,8 @@ export default {
       try {
         const res = await this.$services.dmInitUpgrade({ data: this.buildExecutionPayload(options), modal: false });
         if (!res.success) {
+          this.executionPhaseStatusType = '';
+          this.executionPhaseStatusMessage = '';
           this.restartStatusType = 'error';
           this.restartStatusMessage = this.$t('initialization.upgradeFailed');
           this.operationErrorDetail = res.msg || '';
@@ -808,6 +896,8 @@ export default {
         }
 
         this.disconnectInstallLogSocket();
+        this.executionPhaseStatusType = '';
+        this.executionPhaseStatusMessage = '';
         this.restartStatusType = 'success';
         this.restartStatusMessage = this.$t('initialization.upgradeSuccessRestarting');
         void this.$services.dmInitRestart({ modal: false }).catch(() => {
@@ -816,6 +906,8 @@ export default {
         await this.waitForRestart();
       } catch (e) {
         console.error('Upgrade failed', e);
+        this.executionPhaseStatusType = '';
+        this.executionPhaseStatusMessage = '';
         this.restartStatusType = 'error';
         this.restartStatusMessage = this.$t('initialization.upgradeFailed');
         this.operationErrorDetail = e && e.message ? e.message : 'Upgrade failed';
@@ -827,6 +919,7 @@ export default {
     async handleApply(options = {}) {
       this.applying = true;
       this.restartTimedOut = false;
+      this.applyPendingExecutionStatus();
       this.restartStatusType = '';
       this.restartStatusMessage = '';
       this.executionScripts = resetExecutionScriptsForRetry(this.executionScripts);
@@ -840,6 +933,8 @@ export default {
         const res = await endpoint({ data: payload, modal: false });
         if (res.success) {
           this.disconnectInstallLogSocket();
+          this.executionPhaseStatusType = '';
+          this.executionPhaseStatusMessage = '';
           this.restartStatusType = 'info';
           this.restartStatusMessage = this.$t('initialization.restarting');
           void this.$services.dmInitRestart({ modal: false }).catch(() => {
@@ -849,6 +944,8 @@ export default {
           return;
         }
 
+        this.executionPhaseStatusType = '';
+        this.executionPhaseStatusMessage = '';
         this.restartStatusType = 'error';
         this.restartStatusMessage = this.$t('initialization.installFailed');
         this.operationErrorDetail = res.msg || '';
@@ -856,6 +953,8 @@ export default {
         this.disconnectInstallLogSocket();
       } catch (e) {
         console.error('Apply config failed', e);
+        this.executionPhaseStatusType = '';
+        this.executionPhaseStatusMessage = '';
         this.restartStatusType = 'error';
         this.restartStatusMessage = this.$t('initialization.installFailed');
         this.operationErrorDetail = e && e.message ? e.message : 'Initialization failed';
@@ -1143,6 +1242,11 @@ export default {
 }
 
 .wizard-footer-message.info {
+  color: #1677ff;
+}
+
+.wizard-footer-message-secondary {
+  margin-left: 8px;
   color: #1677ff;
 }
 

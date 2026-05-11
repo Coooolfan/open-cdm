@@ -42,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 public class DmConsoleLauncher {
 
     public static void main(String[] args) throws Exception {
-        String action = (args != null && args.length > 0) ? args[0] : "start";
         System.setProperty("app.buildId", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
         System.setProperty("app.buildVersion", "xxx.xxx.xxx(" + DateFormatType.s_yyyyMMdd.format(new Date()) + ")");
         System.setProperty("app.logPath", prepareRuntimePath("logs", "console"));

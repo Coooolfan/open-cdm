@@ -312,6 +312,7 @@ public class SysInitService {
 
             setRuntimeAdminProperty(InitSeedConstants.RUNTIME_ADMIN_EMAIL_KEY, adminEmail);
             setRuntimeAdminProperty(InitSeedConstants.RUNTIME_ADMIN_PASSWORD_KEY, adminPassword);
+            InstallUpgradeLogBus.notice("DB_INIT", "info");
             InstallUpgradeLogBus.info("Starting Flyway migration task.");
 
             try (ConfigurableApplicationContext ctx = app.run()) {
@@ -335,6 +336,7 @@ public class SysInitService {
             app.setLazyInitialization(true);
             Properties props = buildTaskProperties(jdbcUrl, dbUser, dbPass);
             app.setDefaultProperties(props);
+            InstallUpgradeLogBus.notice("DB_INIT", "info");
             InstallUpgradeLogBus.info("Starting upgrade migration task.");
 
             try (ConfigurableApplicationContext ctx = app.run()) {
@@ -433,6 +435,7 @@ public class SysInitService {
     private void runFixTasks(String jdbcUrl, String dbUser, String dbPass, boolean includeDefaultClusterWorker) {
         log.info("[SysInitService] Running fix tasks with temporary Spring context...");
         InstallUpgradeLogBus.info("Running post-migration fix tasks.");
+        InstallUpgradeLogBus.notice("FIX_RUNNING", "info");
         try {
             SpringApplication app = new SpringApplication(InitTaskApplication.class);
             app.setWebApplicationType(WebApplicationType.NONE);
@@ -535,6 +538,7 @@ public class SysInitService {
 
         if (!inspection.empty && rebuildIfNotEmpty) {
             log.info("[SysInitService] Target database {} exists and will be rebuilt before Flyway initialization", inspection.databaseName);
+            InstallUpgradeLogBus.notice("DB_REBUILD", "warning");
             recreateDatabase(inspection.serverJdbcUrl, username, password, inspection.databaseName);
             return;
         }
