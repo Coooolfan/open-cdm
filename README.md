@@ -119,11 +119,11 @@ http://localhost:8222
 
 Add data source
 
-![ds-add-cn.png](.assets/ds-add-cn.png)
+<img src=".assets/ds-add-cn.png" alt="ds-add-cn.png" style="border: 1px solid #d9d9d9;" />
 
 Query data
 
-![query-cn.png](.assets/query-cn.png)
+<img src=".assets/query-cn.png" alt="query-cn.png" style="border: 1px solid #d9d9d9;" />
 
 ## License
 

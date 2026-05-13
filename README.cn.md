@@ -119,11 +119,11 @@ http://localhost:8222
 
 添加数据源
 
-![ds-add-cn.png](.assets/ds-add-cn.png)
+<img src=".assets/ds-add-cn.png" alt="ds-add-cn.png" style="border: 1px solid #d9d9d9;" />
 
 访问数据
 
-![query-cn.png](.assets/query-cn.png)
+<img src=".assets/query-cn.png" alt="query-cn.png" style="border: 1px solid #d9d9d9;" />
 
 ## 开源协议
 
