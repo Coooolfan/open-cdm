@@ -1,21 +1,23 @@
+<h1 align="center">CloudDM</h1>
+
 <p align="center">
-    <b>CloudDM</b>
-    <br>
-    一款免费且开源的数据库管理工具，适合团队化使用。它提供了访问控制、数据脱敏、SQL 审核、CI/CD 等能力，并支持跨地区部署。
+  一款免费且开源的数据库管理工具，适合团队化使用。它提供了访问控制、数据脱敏、SQL 审核、CI/CD 等能力，并支持跨地区部署。
 </p>
 
 <p align="center">
 	<a href="https://www.cdmgr.com/"><b>首页</b></a> •
 	<a href="https://www.cdmgr.com/docs/intro/product_intro"><b>文档</b></a> •
     <a href="https://www.cdmgr.com/blog"><b>Blog</b></a> •
-    <a href="https://www.cdmgr.com/blog"><b>Gitee</b></a> •
-    <a href="https://www.cdmgr.com/blog"><b>Github</b></a>
+  <a href="https://gitee.com/clougence/open-cdm"><b>Gitee</b></a> •
+  <a href="https://github.com/ClouGence/open-cdm"><b>Github</b></a>
 </p>
 
 <p align="center">
-    [<a target="_blank" href='./README.en.md'>English</a>]
     [<a target="_blank" href='./README.cn.md'>中文</a>]
+    [<a target="_blank" href='./README.en.md'>English</a>]
 </p>
+
+![pic_cn.png](.assets/pic_cn.png)
 
 ---
 
@@ -63,93 +65,51 @@
 
 ## 快速开始
 
-CloudDM 支持 **单机模式（Alone）** 和 **集群模式（Console + Sidecar）**，提供安装包、Docker、Kubernetes 三种部署方式。
+CloudDM 支持 **单机模式（Alone）** 和 **集群模式（Console + Sidecar）**，同时支持 **安装包**、**Docker**、**Kubernetes** 多种部署方式。
 
-### 安装包方式
-
-解压后直接启动，初始化程序会自动引导配置。
-
-#### 单机模式
+下面以单机模式部署来展示如何使用。如果你需要安装包部署、集群部署或 Kubernetes 部署，可使用本地打包后生成的安装包和 yml 文件继续部署。完整部署说明请参考 [DEPLOY.cn.md](./DEPLOY.cn.md)。
 
 ```bash
-tar -xzf cgdm-alone.tar.gz
-cd cgdm-alone && bin/startup.sh
+# 快速启动
+docker run -d --name cgdm-alone \
+  -p 8222:8222 \
+  bladepipe/cgdm-alone:3.0.7
+
+# 使用数据卷
+docker run -d --name cgdm-alone \
+  -p 8222:8222 \
+  -v cgdm_alone_conf:/root/cgdm/alone/conf \
+  -v cgdm_alone_logs:/root/cgdm/alone/logs \
+  -v cgdm_alone_data:/root/cgdm/alone/data \
+  bladepipe/cgdm-alone:3.0.7
+
+# 挂载到宿主机
+docker run -d --name cgdm-alone \
+  -p 8222:8222 \
+  -v /data/cgdm/conf:/root/cgdm/alone/conf \
+  -v /data/cgdm/logs:/root/cgdm/alone/logs \
+  -v /data/cgdm/data:/root/cgdm/alone/data \
+  bladepipe/cgdm-alone:3.0.7
+
+# 国内镜像加速
+# 将 bladepipe/cgdm-alone:3.0.7 替换为
+#    cloudcanal-registry.cn-shanghai.cr.aliyuncs.com/clougence/cgdm-alone:3.0.7
 ```
 
-浏览器访问 `http://localhost:8222`，按初始化向导完成配置即可使用。
+### 其他部署方式
 
-#### 集群模式
+除上面的 Alone Docker 快速体验外，CloudDM 仍然支持以下方式：
 
-```bash
-# 1. 安装 Console
-tar -xzf cgdm-console.tar.gz
-cd cgdm-console && bin/startup.sh
+- 安装包部署：`cgdm-alone.tar.gz`、`cgdm-console.tar.gz`、`cgdm-sidecar.tar.gz`
+- Docker Compose：`docker-alone-*.yml`、`docker-cluster-*.yml`
+- Kubernetes：`k8s-alone-*.yml`、`k8s-cluster-*.yml`
+- 运行模式：既支持 Alone，也支持 Console + Sidecar 集群模式
 
-# 2. 在 console 中添加机器
-# (略)
-
-# 3. 安装和配置 sidecar
-tar -xzf cgdm-sidecar.tar.gz
-cd ../cgdm-sidecar && bin/startup.sh
-```
-
----
-
-### Docker 方式
-
-使用 Compose 一键启动（当前最新版本 `3.0.7`，按需替换版本号）。
-
-#### 单机模式
-
-```bash
-# x86_64
-docker compose -f docker-alone-x86_64-3.0.7.yml up -d
-
-# arm64
-docker compose -f docker-alone-arm64-3.0.7.yml up -d
-```
-
-#### 集群模式
-
-```bash
-# x86_64
-docker compose -f docker-cluster-x86_64-3.0.7.yml up -d
-
-# arm64
-docker compose -f docker-cluster-arm64-3.0.7.yml up -d
-```
-
----
-
-### Kubernetes 方式
-
-确保镜像已推送至仓库，直接 apply 部署（当前最新版本 `3.0.7`，按需替换版本号）。
-
-#### 单机模式
-
-```bash
-# x86_64
-kubectl apply -f k8s-alone-x86_64-3.0.7.yml
-
-# arm64
-kubectl apply -f k8s-alone-arm64-3.0.7.yml
-```
-
-#### 集群模式
-
-```bash
-# x86_64
-kubectl apply -f k8s-cluster-x86_64-3.0.7.yml
-
-# arm64
-kubectl apply -f k8s-cluster-arm64-3.0.7.yml
-```
-
----
+如果你是从源码仓库本地打包，这些安装包与 yml 文件会在 `open-cdm/package/build` 目录下自动生成。
 
 ### 访问产品
 
-所有模式启动后，通过浏览器访问：
+启动后，通过浏览器访问：
 
 ```
 http://localhost:8222

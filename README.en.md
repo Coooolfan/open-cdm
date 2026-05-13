@@ -1,21 +1,23 @@
+<h1 align="center">CloudDM</h1>
+
 <p align="center">
-    <b>CloudDM</b>
-    <br>
-    A free, open-source database management tool built for teams. It provides access control, data masking, SQL auditing, CI/CD, and multi-region deployment.
+  A free, open-source database management tool built for teams. It provides access control, data masking, SQL auditing, CI/CD, and multi-region deployment.
 </p>
 
 <p align="center">
 	<a href="https://www.cdmgr.com/"><b>Home</b></a> •
 	<a href="https://www.cdmgr.com/docs/intro/product_intro"><b>Docs</b></a> •
     <a href="https://www.cdmgr.com/blog"><b>Blog</b></a> •
-    <a href="https://gitee.com/clougence/CloudDM"><b>Gitee</b></a> •
-    <a href="https://github.com/clougence/CloudDM"><b>GitHub</b></a>
+  <a href="https://gitee.com/clougence/open-cdm"><b>Gitee</b></a> •
+  <a href="https://github.com/ClouGence/open-cdm"><b>GitHub</b></a>
 </p>
 
 <p align="center">
     [<a target="_blank" href='./README.cn.md'>中文</a>]
     [<a target="_blank" href='./README.en.md'>English</a>]
 </p>
+
+![pic_en.png](.assets/pic_en.png)
 
 ---
 
@@ -63,99 +65,57 @@
 
 ## Quick Start
 
-CloudDM supports **Standalone (Alone)** and **Cluster (Console + Sidecar)** modes, with install packages, Docker, and Kubernetes deployment options.
+CloudDM supports **Standalone (Alone)** and **Cluster (Console + Sidecar)** modes, with **install package**, **Docker**, and **Kubernetes** deployment options.
 
-### Install Package
-
-Extract and launch — the initialization wizard will guide you through configuration.
-
-#### Standalone
+The quick start below uses standalone deployment as the shortest path to get started. If you need install-package deployment, cluster deployment, or Kubernetes deployment, you can continue with the generated packages and yml files after building locally. For full deployment details, see [DEPLOY.en.md](./DEPLOY.en.md).
 
 ```bash
-tar -xzf cgdm-alone.tar.gz
-cd cgdm-alone && bin/startup.sh
+# Quick start
+docker run -d --name cgdm-alone \
+  -p 8222:8222 \
+  bladepipe/cgdm-alone:3.0.7
+
+# Use Docker volumes
+docker run -d --name cgdm-alone \
+  -p 8222:8222 \
+  -v cgdm_alone_conf:/root/cgdm/alone/conf \
+  -v cgdm_alone_logs:/root/cgdm/alone/logs \
+  -v cgdm_alone_data:/root/cgdm/alone/data \
+  bladepipe/cgdm-alone:3.0.7
+
+# Mount to host directories
+docker run -d --name cgdm-alone \
+  -p 8222:8222 \
+  -v /data/cgdm/conf:/root/cgdm/alone/conf \
+  -v /data/cgdm/logs:/root/cgdm/alone/logs \
+  -v /data/cgdm/data:/root/cgdm/alone/data \
+  bladepipe/cgdm-alone:3.0.7
+
+# China registry acceleration
+# Replace bladepipe/cgdm-alone:3.0.7 with:
+#    cloudcanal-registry.cn-shanghai.cr.aliyuncs.com/clougence/cgdm-alone:3.0.7
 ```
 
-Open `http://localhost:8222` in a browser and follow the initialization wizard.
+### Other Deployment Options
 
-#### Cluster
+In addition to the standalone Docker quick start above, CloudDM still supports:
 
-```bash
-# 1. Install Console
-tar -xzf cgdm-console.tar.gz
-cd cgdm-console && bin/startup.sh
+- Install packages: `cgdm-alone.tar.gz`, `cgdm-console.tar.gz`, `cgdm-sidecar.tar.gz`
+- Docker Compose: `docker-alone-*.yml`, `docker-cluster-*.yml`
+- Kubernetes: `k8s-alone-*.yml`, `k8s-cluster-*.yml`
+- Runtime modes: both Alone and Console + Sidecar cluster mode
 
-# 2. Add machines in the console
-# (omitted)
-
-# 3. Install and configure Sidecar
-tar -xzf cgdm-sidecar.tar.gz
-cd ../cgdm-sidecar && bin/startup.sh
-```
-
----
-
-### Docker
-
-One-click startup with Compose (current latest version `3.0.7` — replace with your version).
-
-#### Standalone
-
-```bash
-# x86_64
-docker compose -f docker-alone-x86_64-3.0.7.yml up -d
-
-# arm64
-docker compose -f docker-alone-arm64-3.0.7.yml up -d
-```
-
-#### Cluster
-
-```bash
-# x86_64
-docker compose -f docker-cluster-x86_64-3.0.7.yml up -d
-
-# arm64
-docker compose -f docker-cluster-arm64-3.0.7.yml up -d
-```
-
----
-
-### Kubernetes
-
-Ensure images are pushed to a registry, then apply directly (current latest version `3.0.7` — replace with your version).
-
-#### Standalone
-
-```bash
-# x86_64
-kubectl apply -f k8s-alone-x86_64-3.0.7.yml
-
-# arm64
-kubectl apply -f k8s-alone-arm64-3.0.7.yml
-```
-
-#### Cluster
-
-```bash
-# x86_64
-kubectl apply -f k8s-cluster-x86_64-3.0.7.yml
-
-# arm64
-kubectl apply -f k8s-cluster-arm64-3.0.7.yml
-```
-
----
+If you build from source locally, these packages and yml files will be generated automatically in `open-cdm/package/build`.
 
 ### Access
 
-After starting in any mode, open:
+After startup, open:
 
 ```
 http://localhost:8222
 ```
 
-The first visit launches the initialization wizard — complete database setup and admin account creation to get started.
+The first visit launches the initialization wizard. Complete database initialization and admin account creation to get started.
 
 ## License
 

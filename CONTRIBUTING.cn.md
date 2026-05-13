@@ -53,6 +53,7 @@
 
 - **JDK 21+**
 - **Gradle 9.5.0+**
+- **Node.js 22.22.1**
 - **IntelliJ IDEA** 或 Eclipse（推荐 IntelliJ IDEA）
 - **Git**
 - **Linux / macOS** 或带 Bash 的 Windows 环境

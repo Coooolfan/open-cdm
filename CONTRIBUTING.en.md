@@ -53,6 +53,7 @@ Feature suggestions are welcome. Please submit an Issue prefixed with `[Feature]
 
 - **JDK 21+**
 - **Gradle 9.5.0+**
+- **Node.js 22.22.1**
 - **IntelliJ IDEA** or Eclipse (IntelliJ IDEA recommended)
 - **Git**
 - **Linux / macOS** or Windows with Bash
