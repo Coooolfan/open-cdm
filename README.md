@@ -65,65 +65,36 @@
 
 ## Quick Start
 
+### Install
 CloudDM supports **Standalone (Alone)** and **Cluster (Console + Sidecar)** modes, with **install package**, **Docker**, and **Kubernetes** deployment options.
 
 The quick start below uses standalone deployment as the shortest path to get started. If you need install-package deployment, cluster deployment, or Kubernetes deployment, you can continue with the generated packages and yml files after building locally. For full deployment details, see [DEPLOY.en.md](./DEPLOY.en.md).
 
 ```bash
-# Quick start
 docker run -d --name cgdm-alone \
   -p 8222:8222 \
   bladepipe/cgdm-alone:3.0.7
-
-# Use Docker volumes
-docker run -d --name cgdm-alone \
-  -p 8222:8222 \
-  -v cgdm_alone_conf:/root/cgdm/alone/conf \
-  -v cgdm_alone_logs:/root/cgdm/alone/logs \
-  -v cgdm_alone_data:/root/cgdm/alone/data \
-  bladepipe/cgdm-alone:3.0.7
-
-# Mount to host directories
-docker run -d --name cgdm-alone \
-  -p 8222:8222 \
-  -v /data/cgdm/conf:/root/cgdm/alone/conf \
-  -v /data/cgdm/logs:/root/cgdm/alone/logs \
-  -v /data/cgdm/data:/root/cgdm/alone/data \
-  bladepipe/cgdm-alone:3.0.7
-
-# China registry acceleration
-# Replace bladepipe/cgdm-alone:3.0.7 with:
-#    cloudcanal-registry.cn-shanghai.cr.aliyuncs.com/clougence/cgdm-alone:3.0.7
 ```
 
-### Other Deployment Options
-
-In addition to the standalone Docker quick start above, CloudDM still supports:
-
-- Install packages: `cgdm-alone.tar.gz`, `cgdm-console.tar.gz`, `cgdm-sidecar.tar.gz`
-- Docker Compose: `docker-alone-*.yml`, `docker-cluster-*.yml`
-- Kubernetes: `k8s-alone-*.yml`, `k8s-cluster-*.yml`
-- Runtime modes: both Alone and Console + Sidecar cluster mode
-
-If you build from source locally, these packages and yml files will be generated automatically in `open-cdm/package/build`.
-
-### Access Product
+### Init
 
 Access the product in your browser after startup.
-
-> On first access, the initialization wizard will launch. Complete database initialization and administrator account creation to get started.
 
 ```
 http://localhost:8222
 ```
 
-Add data source
+> On first access, the initialization wizard will launch. 
+>
+> **Need add an exist MySQL for metadata**.
 
-<img src=".assets/ds-add-cn.png" alt="ds-add-cn.png" style="border: 1px solid #d9d9d9;" />
+### Add data source
 
-Query data
+<img src=".assets/ds_add_en.png" alt="ds_add_en.png" style="border: 1px solid #d9d9d9;" />
 
-<img src=".assets/query-cn.png" alt="query-cn.png" style="border: 1px solid #d9d9d9;" />
+### Query data
+
+<img src=".assets/query_en.png" alt="query_en.png" style="border: 1px solid #d9d9d9;" />
 
 ## License
 

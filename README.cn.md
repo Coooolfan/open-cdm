@@ -65,6 +65,7 @@
 
 ## 快速开始
 
+### 安装
 CloudDM 支持 **单机模式（Alone）** 和 **集群模式（Console + Sidecar）**，同时支持 **安装包**、**Docker**、**Kubernetes** 多种部署方式。
 
 下面以单机模式部署来展示如何使用。如果你需要安装包部署、集群部署或 Kubernetes 部署，可使用本地打包后生成的安装包和 yml 文件继续部署。完整部署说明请参考 [DEPLOY.cn.md](./DEPLOY.cn.md)。
@@ -74,56 +75,29 @@ CloudDM 支持 **单机模式（Alone）** 和 **集群模式（Console + Sideca
 docker run -d --name cgdm-alone \
   -p 8222:8222 \
   bladepipe/cgdm-alone:3.0.7
-
-# 使用数据卷
-docker run -d --name cgdm-alone \
-  -p 8222:8222 \
-  -v cgdm_alone_conf:/root/cgdm/alone/conf \
-  -v cgdm_alone_logs:/root/cgdm/alone/logs \
-  -v cgdm_alone_data:/root/cgdm/alone/data \
-  bladepipe/cgdm-alone:3.0.7
-
-# 挂载到宿主机
-docker run -d --name cgdm-alone \
-  -p 8222:8222 \
-  -v /data/cgdm/conf:/root/cgdm/alone/conf \
-  -v /data/cgdm/logs:/root/cgdm/alone/logs \
-  -v /data/cgdm/data:/root/cgdm/alone/data \
-  bladepipe/cgdm-alone:3.0.7
-
-# 国内镜像加速
-# 将 bladepipe/cgdm-alone:3.0.7 替换为
-#    cloudcanal-registry.cn-shanghai.cr.aliyuncs.com/clougence/cgdm-alone:3.0.7
 ```
 
-### 其他部署方式
+> 镜像加速可以将 bladepipe/cgdm-alone:3.0.7 替换为 cloudcanal-registry.cn-shanghai.cr.aliyuncs.com/clougence/cgdm-alone:3.0.7
 
-除上面的 Alone Docker 快速体验外，CloudDM 仍然支持以下方式：
+### 初始化
 
-- 安装包部署：`cgdm-alone.tar.gz`、`cgdm-console.tar.gz`、`cgdm-sidecar.tar.gz`
-- Docker Compose：`docker-alone-*.yml`、`docker-cluster-*.yml`
-- Kubernetes：`k8s-alone-*.yml`、`k8s-cluster-*.yml`
-- 运行模式：既支持 Alone，也支持 Console + Sidecar 集群模式
-
-如果你是从源码仓库本地打包，这些安装包与 yml 文件会在 `open-cdm/package/build` 目录下自动生成。
-
-### 访问产品
-
-启动后，通过浏览器访问产品
-
-> 首次访问会进入初始化向导，完成数据库初始化和管理员账号创建后即可使用。
+通过浏览器访问产品
 
 ```
 http://localhost:8222
 ```
 
-添加数据源
+> 首次访问会进入初始化向导
+> 
+> **需添加已有 MySQL 作为元数据库，其他信息默认即可**
 
-<img src=".assets/ds-add-cn.png" alt="ds-add-cn.png" style="border: 1px solid #d9d9d9;" />
+### 添加数据源
 
-访问数据
+<img src=".assets/ds_add_cn.png" alt="ds_add_cn.png" style="border: 1px solid #d9d9d9;" />
 
-<img src=".assets/query-cn.png" alt="query-cn.png" style="border: 1px solid #d9d9d9;" />
+### 数据查询
+
+<img src=".assets/query_cn.png" alt="query_cn.png" style="border: 1px solid #d9d9d9;" />
 
 ## 开源协议
 
