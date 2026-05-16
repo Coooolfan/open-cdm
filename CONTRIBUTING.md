@@ -92,8 +92,6 @@ cd package && ./package.sh --docker x86_64
 
 ### Project Structure
 
-#### Top-Level Modules
-
 | Module | Description |
 |--------|-------------|
 | `clouddm-boot/` | Console, Sidecar, Alone launchers, and init/upgrade modules |
@@ -102,11 +100,16 @@ cd package && ./package.sh --docker x86_64
 | `clouddm-utils/` | Standalone modules, frameworks, and utilities |
 | `package/` | tgz packaging, Docker images, compose templates, and delivery artifacts |
 
-### Import into IDEA
+### Import into IDE
 
-1. Clone the project and open the root directory with IntelliJ IDEA
-2. IDEA will automatically detect the Gradle project and begin importing
-3. Wait for dependencies to download, then you're ready to develop
+1. Clone the project and open the root directory with IntelliJ IDEA.
+2. IDEA will automatically detect the Gradle project and begin importing.
+3. Wait for dependencies to download, then you're ready to develop.
+
+### Debugging or Running
+1. Configure the `spring.datasource` settings in the `clouddm-boot/boot-console/src/main/resources/console.properties` file, and create an empty database.
+2. Start `com.clougence.clouddm.boot.DmConsoleLauncher`.
+3. Get in the `clouddm-platform/cgdm-web` directory, run `npm i` to install frontend dependencies, wait for the installation to complete, then run `npm run serve` to start the frontend application.
 
 ## Coding Standards
 
