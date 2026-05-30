@@ -38,7 +38,7 @@ while [ $# -gt 0 ]; do
     --mirrors)  USE_MIRRORS=1; shift ;;
     -h|--help)
       cat <<'HELP'
-usage: package.sh [--build] [--docker [arm64|x86_64]] [--mirrors]
+usage: package.sh [--build] [--docker [x86_64|arm64]] [--mirrors]
 
   --build           compile and create tgz packages
   --docker          build Docker images for all platforms (requires tgz)
@@ -63,15 +63,15 @@ Usage: ./package.sh [OPTIONS]...
 
 Build modes (at least one required):
   --build               compile + tgz packaging (Gradle build)
-  --docker [ARCH]       build Docker images (requires --build first)
-                          ARCH: arm64 | x86_64 (default: all platforms)
+  --docker [ARCH]       build Docker images (requires package artifacts)
+                          ARCH: x86_64 | arm64 (default: all platforms)
   --mirrors             use built-in Ubuntu mirrors for Docker base image apt sources
 
 Examples:
   ./package.sh --build                      compile & package only
-  ./package.sh --docker                     compile → build all Docker images
+  ./package.sh --docker                     build all Docker images
   ./package.sh --build --docker             compile + all Docker images
-  ./package.sh --build --docker --mirrors   compile → build all Docker images with built-in mirrors
+  ./package.sh --build --docker --mirrors   compile + all Docker images with built-in mirrors
   ./package.sh --build --docker x86_64      compile + x86_64 Docker images only
   ./package.sh --docker arm64 --mirrors     Docker arm64 images with built-in mirrors
 
@@ -109,7 +109,7 @@ if [ "$DO_DOCKER" -eq 1 ]; then
   echo "=== Docker: starting image build ==="
   DOCKER_ARGS=()
   [ "$USE_MIRRORS" -eq 1 ] && DOCKER_ARGS+=(--mirrors)
-  if [ -z "$DOCKER_ARCH" ] || [ "$DOCKER_ARCH" = "all" ]; then
+  if [ -z "$DOCKER_ARCH" ]; then
     echo "[DOCKER] building all platforms, version=${VERSION}..."
     bash "$SCRIPT_DIR/docker/build-docker.sh" "$VERSION" --platform=all "${DOCKER_ARGS[@]}"
   else
