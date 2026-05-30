@@ -9,6 +9,9 @@
 # ============================================================================
 set -euo pipefail
 
+UBUNTU_MIRROR_X86_64="http://mirrors.aliyun.com/ubuntu"
+UBUNTU_MIRROR_ARM64="http://mirrors.aliyun.com/ubuntu-ports"
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PACKAGE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PACKAGE_BUILD_DIR="$PACKAGE_DIR/build"
@@ -17,14 +20,16 @@ SERVICES=(console sidecar alone)
 VERSION="${1:-local}"
 PLATFORMS=()
 PLATFORM_SPECIFIED=0
+USE_MIRRORS=0
 
 for arg in "$@"; do
   case "$arg" in
     --platform=all)  PLATFORMS=(x86_64 arm64); PLATFORM_SPECIFIED=1 ;;
     --platform=x86_64) PLATFORMS=(x86_64); PLATFORM_SPECIFIED=1 ;;
     --platform=arm64)  PLATFORMS=(arm64); PLATFORM_SPECIFIED=1 ;;
+    --mirrors) USE_MIRRORS=1 ;;
     -h|--help)
-      echo "usage: $0 VERSION --platform=x86_64|arm64|all"; exit 0 ;;
+      echo "usage: $0 VERSION [--platform=x86_64|arm64|all] [--mirrors]"; exit 0 ;;
     *) ;;  # first arg is VERSION
   esac
 done
@@ -36,6 +41,13 @@ done
 docker_platform()  { case "$1" in x86_64) echo "linux/amd64" ;; arm64) echo "linux/arm64" ;; esac; }
 base_image_tag()   { echo "clougence/cgdm-${1}-base:local"; }
 image_tag()        { echo "${1}-${2}"; }
+apt_mirror() {
+  [ "$USE_MIRRORS" -eq 1 ] || return 0
+  case "$1" in
+    x86_64) echo "$UBUNTU_MIRROR_X86_64" ;;
+    arm64) echo "$UBUNTU_MIRROR_ARM64" ;;
+  esac
+}
 
 require_package_artifacts() {
   for file_name in cgdm-console.tar.gz cgdm-sidecar.tar.gz cgdm-alone.tar.gz; do
@@ -53,9 +65,12 @@ build_base_image() {
   local plat="$1"
   local dockerfile="$SCRIPT_DIR/${plat}/base/Dockerfile"
   local tag; tag="$(base_image_tag "$plat")"
+  local mirror; mirror="$(apt_mirror "$plat")"
   echo "  building base image: $tag ($(docker_platform "$plat"))"
+  [ -n "$mirror" ] && echo "    apt mirror: $mirror"
   BUILDX_NO_DEFAULT_ATTESTATIONS=1 DOCKER_DEFAULT_PLATFORM="$(docker_platform "$plat")" docker build \
     --provenance=false --sbom=false \
+    --build-arg APT_MIRROR="$mirror" \
     -t "$tag" \
     -f "$dockerfile" \
     "$PACKAGE_DIR"
@@ -108,6 +123,52 @@ generate_k8s_files() {
   done
 }
 
+host_platform() {
+  case "$(uname -m)" in
+    x86_64|amd64) echo "x86_64" ;;
+    arm64|aarch64) echo "arm64" ;;
+    *) echo "" ;;
+  esac
+}
+
+contains_platform() {
+  local expected="$1"
+  local plat
+  for plat in "${PLATFORMS[@]}"; do
+    [ "$plat" = "$expected" ] && return 0
+  done
+  return 1
+}
+
+preferred_local_platform() {
+  local host; host="$(host_platform)"
+  if [ -n "$host" ] && contains_platform "$host"; then
+    echo "$host"
+    return
+  fi
+  echo "${PLATFORMS[0]}"
+}
+
+print_local_run_commands() {
+  local plat; plat="$(preferred_local_platform)"
+  local tag; tag="$(image_tag "$plat" "$VERSION")"
+  local image="clougence/cgdm-alone:${tag}"
+  local compose_file="$PACKAGE_BUILD_DIR/docker-alone-${tag}.yml"
+
+  cat <<EOF
+
+Local verification commands:
+  standalone container:
+    docker rm -f cgdm-alone >/dev/null 2>&1 || true; docker run -d --name cgdm-alone -p 8222:8222 -p 8008:8008 ${image}
+
+  compose with persisted volumes:
+    docker compose -f ${compose_file} down; docker compose -f ${compose_file} up -d
+
+  open:
+    http://localhost:8222/#/initialization
+EOF
+}
+
 # ============================================================================
 # main
 # ============================================================================
@@ -128,3 +189,4 @@ for plat in "${PLATFORMS[@]}"; do
 done
 
 echo "Docker build completed. platforms=${PLATFORMS[*]} version=${VERSION}"
+print_local_run_commands

@@ -578,7 +578,7 @@ export default {
         status: 'IDLE',
         retryAction: 'CHECK',
         message: '',
-        resourceCoordinate: '',
+        detailMessage: '',
         currentFileName: ''
       },
       driverStatusRequestKey: '',
@@ -1038,15 +1038,10 @@ export default {
       return [this.addDataSourceForm.driverFamily, this.addDataSourceForm.driverVersion].filter(Boolean).join(' / ');
     },
     driverStatusTargetText() {
-      const resourceText = `${this.driverStatus.resourceCoordinate || ''}`.trim();
       const fileText = `${this.driverStatus.currentFileName || ''}`.trim();
       const driverText = this.driverStatusTitleText;
 
-      if (resourceText && fileText) {
-        return `${resourceText}（${fileText}）`;
-      }
-
-      return resourceText || fileText || driverText;
+      return fileText || driverText;
     },
     driverResourceText() {
       if (this.showDriverDownloadProgress) {
@@ -1057,7 +1052,7 @@ export default {
     },
     driverStatusMessageText() {
       const message = `${this.driverStatus.message || ''}`.trim();
-      if (!message || message === this.driverStatus.currentFileName || message === this.driverStatus.resourceCoordinate) {
+      if (!message || message === this.driverStatus.currentFileName) {
         return '';
       }
       if (message === this.driverStatusTargetText || message === this.driverResourceText) {
@@ -1347,7 +1342,6 @@ export default {
         status: 'IDLE',
         retryAction: 'CHECK',
         message: '',
-        resourceCoordinate: '',
         currentFileName: ''
       };
     },
@@ -1371,11 +1365,12 @@ export default {
           available: false,
           status: 'UNKNOWN',
           retryAction: 'CHECK',
-          message: ''
+          message: '',
+          detailMessage: ''
         };
       }, 15000);
     },
-    setDriverErrorStatus(message, retryAction = 'CHECK') {
+    setDriverErrorStatus(message, retryAction = 'CHECK', detailMessage = '') {
       this.clearDriverStatusCheckTimeout();
       this.driverStatus = {
         ...this.driverStatus,
@@ -1383,7 +1378,8 @@ export default {
         available: false,
         status: 'ERROR',
         retryAction,
-        message: message || ''
+        message: message || '',
+        detailMessage: detailMessage || ''
       };
     },
     async refreshDriverStatus() {
@@ -1403,7 +1399,6 @@ export default {
         status: 'CHECKING',
         retryAction: 'CHECK',
         message: '',
-        resourceCoordinate: '',
         currentFileName: '',
         totalFileCount: 0,
         completedFileCount: 0,
@@ -1500,7 +1495,7 @@ export default {
         status: 'DOWNLOADING',
         retryAction: 'DOWNLOAD',
         message: '',
-        resourceCoordinate: '',
+        detailMessage: '',
         currentFileName: ''
       };
 
@@ -1549,7 +1544,7 @@ export default {
           status: 'DOWNLOADING',
           retryAction: 'DOWNLOAD',
           message: event.message || '',
-          resourceCoordinate: event.resourceCoordinate || this.driverStatus.resourceCoordinate,
+          detailMessage: event.detailMessage || '',
           currentFileName: event.currentFileName || this.driverStatus.currentFileName
         };
         this.refreshDriverStatus();
@@ -1557,13 +1552,12 @@ export default {
       }
 
       if (event.status === 'FAILED') {
-        this.setDriverErrorStatus(event.message || this.$t('xia-zai-shi-bai'), 'DOWNLOAD');
+        this.setDriverErrorStatus(event.message || this.$t('xia-zai-shi-bai'), 'DOWNLOAD', event.detailMessage || event.message || '');
         this.driverStatus = {
           ...this.driverStatus,
           totalFileCount: Number.isFinite(event.totalFileCount) ? event.totalFileCount : this.driverStatus.totalFileCount,
           completedFileCount: Number.isFinite(event.completedFileCount) ? event.completedFileCount : this.driverStatus.completedFileCount,
           currentFilePercent: Number.isFinite(event.currentFilePercent) ? event.currentFilePercent : this.driverStatus.currentFilePercent,
-          resourceCoordinate: event.resourceCoordinate || this.driverStatus.resourceCoordinate,
           currentFileName: event.currentFileName || this.driverStatus.currentFileName
         };
         this.$Message.error(event.message || this.$t('xia-zai-shi-bai'));
@@ -1580,7 +1574,7 @@ export default {
         status: event.status || 'DOWNLOADING',
         retryAction: 'DOWNLOAD',
         message: event.message || '',
-        resourceCoordinate: event.resourceCoordinate || this.driverStatus.resourceCoordinate,
+        detailMessage: event.detailMessage || '',
         currentFileName: event.currentFileName || this.driverStatus.currentFileName
       };
     },

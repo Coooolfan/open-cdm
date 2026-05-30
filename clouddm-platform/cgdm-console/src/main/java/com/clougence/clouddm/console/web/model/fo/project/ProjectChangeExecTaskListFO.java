@@ -15,8 +15,8 @@
  */
 package com.clougence.clouddm.console.web.model.fo.project;
 
-import com.clougence.clouddm.console.web.dal.enumeration.AutoExecTaskStatus;
-import com.clougence.clouddm.console.web.util.RdpPageDO;
+import com.clougence.clouddm.platform.dal.model.execution.AutoExecTaskStatus;
+import com.clougence.clouddm.platform.dal.util.PageObj;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -27,5 +27,5 @@ public class ProjectChangeExecTaskListFO {
 
     private long               changeId;
     private AutoExecTaskStatus taskStatus;
-    private RdpPageDO          page;
+    private PageObj page;
 }

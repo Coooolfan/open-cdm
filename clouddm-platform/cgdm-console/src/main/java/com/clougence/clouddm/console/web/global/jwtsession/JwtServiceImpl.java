@@ -15,8 +15,8 @@
  */
 package com.clougence.clouddm.console.web.global.jwtsession;
 
-import static com.clougence.rdp.service.RdpUserService.MFA_TOKEN_EXPIRE_SEC;
-import static com.clougence.rdp.service.RdpUserService.OP_PASSWD_TOEKN_EXPIRE_MS;
+import static com.clougence.clouddm.console.web.service.auth.RdpUserService.MFA_TOKEN_EXPIRE_SEC;
+import static com.clougence.clouddm.console.web.service.auth.RdpUserService.OP_PASSWD_TOEKN_EXPIRE_MS;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -35,9 +35,9 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.clougence.clouddm.console.web.constants.MfaPreActionType;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
-import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
-import com.clougence.rdp.service.RdpUserMfaService;
-import com.clougence.rdp.service.RdpUserService;
+import com.clougence.clouddm.console.web.service.auth.RdpUserMfaService;
+import com.clougence.clouddm.console.web.service.auth.RdpUserService;
+import com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
@@ -108,7 +108,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public void refreshJwtTokenPeriodOfValidity(HttpServletRequest request, HttpServletResponse response, RdpUserDO user) {
+    public void refreshJwtTokenPeriodOfValidity(HttpServletRequest request, HttpServletResponse response, DmAuthUserDO user) {
         Cookie cookie = WebUtils.getCookie(request, jwtTokenName);
         if (cookie != null) {
             cookie.setValue(genJwtToken(user));
@@ -166,7 +166,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public String genJwtToken(RdpUserDO user) {
+    public String genJwtToken(DmAuthUserDO user) {
         // token expire time
         LocalDateTime localDateTime = LocalDateTime.now().minusMinutes(1);
         ZonedDateTime zdt = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
@@ -188,7 +188,7 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public String genOpPwdToken(RdpUserDO user) {
+    public String genOpPwdToken(DmAuthUserDO user) {
         // token expire time
         long nowMills = System.currentTimeMillis();
         Date issueAt = new Date(nowMills);

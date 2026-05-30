@@ -19,12 +19,12 @@ import java.util.List;
 import java.util.Map;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.clougence.clouddm.console.web.dal.enumeration.RdpApprovalType;
 import com.clougence.clouddm.console.web.model.fo.security.ListMyAuthTicketFO;
 import com.clougence.clouddm.console.web.model.fo.ticket.*;
 import com.clougence.clouddm.console.web.model.vo.DmBizLogVO;
 import com.clougence.clouddm.console.web.model.vo.RdpApproTemplateVO;
 import com.clougence.clouddm.console.web.model.vo.ticket.*;
+import com.clougence.clouddm.platform.dal.model.approval.ApprovalType;
 
 /**
  * @author Ekko
@@ -50,6 +50,8 @@ public interface ApprovalControlService {
 
     void endAutoExecJob(String puid, String uid, long ticketId);
 
+    void createAuthTicket(String ownerUid, String uid, RdpAddAuthTicketFO fo);
+
     //
     // query
     //
@@ -62,13 +64,15 @@ public interface ApprovalControlService {
 
     DmQueryTicketVO queryQueryTicketDetail(String puid, DmQueryTicketDetailFO fo);
 
+    RdpAuthTicketDetailVO queryAuthTicketDetail(String ownerUid, String uid, long ticketId);
+
     DmAutoExecJobVO queryExecJobInfo(String puid, String uid, long ticketId);
 
     DmPageVO<DmAutoExecTaskVO> queryExecTaskList(String puid, String uid, DmQueryTaskListFO fo);
 
     List<DmBizLogVO> queryExecLog(String puid, DmQueryExecLogFO fo);
 
-    List<RdpApproTemplateVO> listTemplates(String ownerUid, RdpApprovalType approvalType);
+    List<RdpApproTemplateVO> listTemplates(String ownerUid, ApprovalType approvalType);
 
     List<Map<String, Object>> getTicketTypes(String ownerUid);
 
@@ -76,9 +80,9 @@ public interface ApprovalControlService {
     // assistant
     //
 
-    List<RdpApproTemplateVO> refreshTemplates(String ownerUid, RdpApprovalType approvalType);
+    List<RdpApproTemplateVO> refreshTemplates(String ownerUid, ApprovalType approvalType);
 
-    void addTemplateByUrl(String ownerUid, RdpApprovalType approvalType, String templateUrl);
+    void addTemplateByUrl(String ownerUid, ApprovalType approvalType, String templateUrl);
 
-    void removeTemplateById(String ownerUid, RdpApprovalType approvalType, String templateId);
+    void removeTemplateById(String ownerUid, ApprovalType approvalType, String templateId);
 }

@@ -28,6 +28,7 @@ import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
 import com.clougence.clouddm.base.metadata.ds.DataSourceType;
 import com.clougence.clouddm.base.metadata.ui.menus.UiMenuDef;
+import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsService;
 import com.clougence.clouddm.console.web.component.dsconfig.impl.DsMenuUtils;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsConfig;
@@ -35,22 +36,20 @@ import com.clougence.clouddm.console.web.component.dsconfig.mode.DsMenu;
 import com.clougence.clouddm.console.web.component.file.mode.FormatConvertDef;
 import com.clougence.clouddm.console.web.component.whitelist.WhiteListService;
 import com.clougence.clouddm.console.web.constants.DmControllerUrlPrefix;
-import com.clougence.clouddm.console.web.constants.DmMode;
 import com.clougence.clouddm.console.web.constants.SystemStatus;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
+import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
 import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.vo.ConsoleSettingsVO;
 import com.clougence.clouddm.console.web.model.vo.GlobalSettingsVO;
 import com.clougence.clouddm.console.web.model.vo.SystemStatusVO;
+import com.clougence.clouddm.console.web.service.auth.RdpUserService;
 import com.clougence.clouddm.console.web.service.system.DsVersionsServiceImpl;
-import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.dsfamily.definition.ui.browser.RdbUiMenuDef;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.execute.resultset.file.FileFormatConvert;
 import com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel;
 import com.clougence.clouddm.sdk.ui.menus.DsMenuType;
-import com.clougence.rdp.service.RdpAuthServiceForBiz;
-import com.clougence.rdp.service.RdpUserService;
 import com.clougence.utils.StringUtils;
 
 import jakarta.annotation.Resource;
@@ -65,7 +64,7 @@ public class DmHomeController {
     @Resource
     private DsVersionsServiceImpl dsVersionsService;
     @Resource
-    private RdpAuthServiceForBiz  rdpAuthServiceForBiz;
+    private DmAuthServiceForBiz   rdpAuthServiceForBiz;
     @Resource
     private DmDsService           dmDsService;
     @Resource
@@ -81,13 +80,7 @@ public class DmHomeController {
         systemStatus.setStatus(SystemStatus.Ready);
         settings.setSystemStatus(systemStatus);
 
-        if (this.dmConfig.getDmMode() == DmMode.desktop && this.dmConfig.getPersonalConfig() != null) {
-            settings.setPersonal(this.dmConfig.getPersonalConfig());
-        }
-
-        if (this.dmConfig.getDmMode() == DmMode.output) {
-            settings.setProductVersions(this.dsVersionsService.fetchDsVersions());
-        }
+        settings.setProductVersions(this.dsVersionsService.fetchDsVersions());
 
         return ResWebDataUtils.buildSuccess(settings);
     }

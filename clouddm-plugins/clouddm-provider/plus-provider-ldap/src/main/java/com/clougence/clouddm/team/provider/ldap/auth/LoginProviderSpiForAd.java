@@ -16,7 +16,7 @@
 package com.clougence.clouddm.team.provider.ldap.auth;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,23 +25,17 @@ import javax.naming.Context;
 import javax.naming.NamingException;
 import javax.naming.directory.Attributes;
 
-import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
-import org.springframework.ldap.core.LdapTemplate;
-import org.springframework.ldap.core.support.DefaultDirObjectFactory;
-import org.springframework.ldap.core.support.LdapContextSource;
-import org.springframework.ldap.query.ContainerCriteria;
-import org.springframework.ldap.query.LdapQueryBuilder;
-
-import com.clougence.clouddm.team.provider.ldap.constants.LdapI18nKey;
-import com.clougence.clouddm.sdk.security.auth.def.SecSysRole;
-import com.clougence.clouddm.sdk.security.login.LoginProvider;
-import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
-import com.clougence.clouddm.sdk.service.config.ConsoleConfigService;
-import com.clougence.clouddm.sdk.service.config.RoleData;
-import com.clougence.clouddm.sdk.service.config.UserData;
 import com.clougence.clouddm.sdk.LifeSpiRequest;
 import com.clougence.clouddm.sdk.LifeSpiResponse;
 import com.clougence.clouddm.sdk.LifeSpiStatus;
+import com.clougence.clouddm.sdk.model.exception.ThirdPartyApiException;
+import com.clougence.clouddm.sdk.security.auth.def.SecSysRole;
+import com.clougence.clouddm.sdk.security.login.LoginProvider;
+import com.clougence.clouddm.sdk.security.login.LoginProviderSpi;
+import com.clougence.clouddm.sdk.service.config.ConsoleConfigService;
+import com.clougence.clouddm.sdk.service.config.RoleData;
+import com.clougence.clouddm.sdk.service.config.UserData;
+import com.clougence.clouddm.team.provider.ldap.constants.LdapI18nKey;
 import com.clougence.utils.*;
 import com.clougence.utils.ref.LinkedCaseInsensitiveMap;
 
@@ -118,7 +112,7 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
 
             String[] split = StringUtils.split(ldapAccount, "\\");
             if (!roleMap.containsKey(split[0])) {
-                throw ThirdPartyApiException.asRDP().with(LdapI18nKey.AD_NET_BIOS_IP_MAP.name());
+                throw ThirdPartyApiException.as().with(LdapI18nKey.AD_NET_BIOS_IP_MAP.name());
             }
 
             return "ldap://" + roleMap.get(split[0]) + ":" + cfg.getLdapPort();
@@ -133,29 +127,19 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
             throw new UnsupportedOperationException("adLoginService is was closed");
         }
 
-        return this.contextMap.get(ownerUid).computeIfAbsent(ownerUid, s -> {
+        String ldapUrl = extractLdapUrl(ownerUid, ldapAccount);
+        return this.contextMap.get(ownerUid).computeIfAbsent(ldapUrl, s -> {
             BaseConfig cfg = this.configMap.get(ownerUid);
 
-            LdapContextSource source = new LdapContextSource();
-            source.setUrl(extractLdapUrl(ownerUid, ldapAccount));
-            source.setBase(cfg.getLdapBase());
-            source.setUserDn(cfg.getLdapUser());
-            source.setPassword(cfg.getLdapPassword());
-            //source.setReferral("follow");
-
-            Map<String, Object> config = new HashMap<>();
-            config.put("java.naming.ldap.attributes.binary", "objectGUID");
-            config.put("com.sun.jndi.ldap.read.timeout", StringUtils.isBlank(cfg.getLdapSoTimeout()) ? "3000" : cfg.getLdapSoTimeout());
-            config.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
-            config.put(Context.OBJECT_FACTORIES, new DefaultDirObjectFactory());
-
-            source.setPooled(false);
-            source.setBaseEnvironmentProperties(config);
-            source.afterPropertiesSet();
-
-            LdapTemplate template = new LdapTemplate(source);
-            template.setIgnorePartialResultException(false);
-            return new BaseCtx(cfg, template);
+            Hashtable<String, Object> env = new Hashtable<>();
+            env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+            env.put(Context.PROVIDER_URL, ldapUrl);
+            env.put(Context.SECURITY_AUTHENTICATION, "simple");
+            env.put(Context.SECURITY_PRINCIPAL, cfg.getLdapUser());
+            env.put(Context.SECURITY_CREDENTIALS, cfg.getLdapPassword());
+            env.put("java.naming.ldap.attributes.binary", "objectGUID");
+            env.put("com.sun.jndi.ldap.read.timeout", StringUtils.isBlank(cfg.getLdapSoTimeout()) ? "3000" : cfg.getLdapSoTimeout());
+            return new BaseCtx(cfg, env);
         });
     }
 
@@ -174,7 +158,7 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
     private String[] extractSplit(String fullLoginName) {
         int splitIdx = fullLoginName.lastIndexOf("@");
         if (splitIdx == -1) {
-            throw ThirdPartyApiException.asRDP().with(LdapI18nKey.LDAP_LOGIN_FAIL_PRIMARY_MISSING_ARGS.name());
+            throw ThirdPartyApiException.as().with(LdapI18nKey.LDAP_LOGIN_FAIL_PRIMARY_MISSING_ARGS.name());
         }
 
         String userAccount = fullLoginName.substring(0, splitIdx);
@@ -196,22 +180,18 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
             // UPN format
             String ldapWhere = AD_UserPrincipalName;
             String ldapCondition = ldapAccount;
-            ContainerCriteria ldapQuery = LdapQueryBuilder.query().where(ldapWhere).is(ldapCondition);
-            return new BaseSearch(ldapQuery, ldapWhere, ldapCondition);
+            return new BaseSearch(eqFilter(ldapWhere, ldapCondition), ldapWhere, ldapCondition);
         } else if (ldapAccount.contains("\\")) {
             // NetBIOS format
             String[] split = StringUtils.split(ldapAccount, "\\");
 
             String ldapWhere = AD_SamAccountName;
-            String ldapDomain = split[0];
             String ldapCondition = split[1];
-            ContainerCriteria ldapQuery = LdapQueryBuilder.query().where(ldapWhere).is(ldapCondition);
-            return new BaseSearch(ldapQuery, ldapWhere, ldapCondition);
+            return new BaseSearch(eqFilter(ldapWhere, ldapCondition), ldapWhere, ldapCondition);
         } else {
             String ldapWhere = AD_UserPrincipalName;
             String ldapCondition = ldapAccount + "@" + ldapCtx.getLdapConfig().getLdapDomain();
-            ContainerCriteria ldapQuery = LdapQueryBuilder.query().where(ldapWhere).is(ldapCondition);
-            return new BaseSearch(ldapQuery, ldapWhere, ldapCondition);
+            return new BaseSearch(eqFilter(ldapWhere, ldapCondition), ldapWhere, ldapCondition);
         }
     }
 
@@ -230,7 +210,7 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
         if (!match) {
             String objClass = StringUtils.join(filterd.toArray(), ",");
             log.info("LDAP: user objectClass {} does not match any userType.", objClass);
-            throw ThirdPartyApiException.asRDP().with(LdapI18nKey.LDAP_OBJECTCLASS_NOT_ALLOWED_ERROR.name());
+            throw ThirdPartyApiException.as().with(LdapI18nKey.LDAP_OBJECTCLASS_NOT_ALLOWED_ERROR.name());
         }
 
         // user ACL
@@ -258,7 +238,7 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
         RoleData role = searchRole(primaryUser.getInternalUID(), ldapCtx);
         if (role == null) {
             log.info("Ad: user(" + user.getSubAccount() + ") not found any role, find roleName=" + ldapCtx.getLdapConfig().getLdapRoleMap());
-            throw ThirdPartyApiException.asRDP().with(LdapI18nKey.LDAP_USER_ROLE_MAPPING_FAILED.name());
+            throw ThirdPartyApiException.as().with(LdapI18nKey.LDAP_USER_ROLE_MAPPING_FAILED.name());
         }
         user.setRoleId(role.getRoleId());
 
@@ -269,30 +249,30 @@ public class LoginProviderSpiForAd extends BaseLoginProviderSpi implements Login
     protected void checkThrowError(Exception e) {
         // https://blog.csdn.net/chaijunkun/article/details/23695001
         if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 525")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_ACCOUNT_NOT_EXIST.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_ACCOUNT_NOT_EXIST.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 52e")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_PASSWORD_ERROR.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_PASSWORD_ERROR.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 530")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_LOGIN_NOT_ALLOWED_THIS_TIME.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_LOGIN_NOT_ALLOWED_THIS_TIME.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 531")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_LOGIN_NOT_ALLOWED_THIS_PC.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_LOGIN_NOT_ALLOWED_THIS_PC.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 532")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_PASSWORD_EXPIRED.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_PASSWORD_EXPIRED.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 533")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_USER_DISABLED.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_USER_DISABLED.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 701")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_ACCOUNT_EXPIRED.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_ACCOUNT_EXPIRED.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 773")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_NEED_RESET_PASSWORD.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_NEED_RESET_PASSWORD.name());
         } else if (StringUtils.contains(e.getMessage(), "AcceptSecurityContext error, data 775")) {
-            throw ThirdPartyApiException.asRDP().with(e, LdapI18nKey.AD_LOGIN_FAIL_ACCOUNT_LOCKED.name());
+            throw ThirdPartyApiException.as().with(e, LdapI18nKey.AD_LOGIN_FAIL_ACCOUNT_LOCKED.name());
         }
     }
 
     private void checkUserAcl(long userAclNum) {
         //https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/useraccountcontrol-manipulate-account-properties
         if (userAclNum == (userAclNum | 2)) {
-            throw ThirdPartyApiException.asRDP().with(LdapI18nKey.LDAP_USER_IS_DISABLED_ERROR.name());
+            throw ThirdPartyApiException.as().with(LdapI18nKey.LDAP_USER_IS_DISABLED_ERROR.name());
         }
     }
 

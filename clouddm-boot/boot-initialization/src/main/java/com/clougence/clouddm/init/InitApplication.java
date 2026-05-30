@@ -31,13 +31,14 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import com.clougence.clouddm.console.web.global.handler.StaticResourceNoCacheFilter;
 import com.clougence.clouddm.console.web.global.exception.PrintErrorUncaughtExcHandler;
+import com.clougence.clouddm.console.web.global.handler.StaticResourceNoCacheFilter;
+import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
 import com.clougence.clouddm.init.constant.I18nInitFieldKeys;
-import com.clougence.clouddm.console.web.util.DmI18nUtils;
+import com.clougence.utils.ShutdownHook;
 
-import jakarta.servlet.Filter;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.Filter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -72,7 +73,9 @@ public class InitApplication implements WebMvcConfigurer {
                                                            + "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration,"
                                                            + "org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration,"
                                                            + "com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration");
-        SpringApplication.run(InitApplication.class, args);
+        SpringApplication application = new SpringApplication(InitApplication.class);
+        application.setRegisterShutdownHook(false);
+        application.run(args);
 
         log.info("[DmAloneLauncher] Alone All Context Inited.");
         ShutdownHook.joinShutdown();

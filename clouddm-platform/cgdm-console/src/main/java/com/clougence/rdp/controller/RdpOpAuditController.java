@@ -39,12 +39,12 @@
 //import com.clougence.rdp.controller.model.fo.QueryUserOpAuditFO;
 //import com.clougence.rdp.controller.model.http.RdpControllerUrlPrefix;
 //import com.clougence.rdp.controller.model.vo.RdpOpAuditVO;
-//import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
+//import com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO;
 //import com.clougence.clouddm.api.common.rpc.ResWebData;
 //import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
-//import com.clougence.rdp.service.RdpAuthServiceForBiz;
+//import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
 //import com.clougence.rdp.service.RdpOpAuditService;
-//import com.clougence.rdp.service.RdpUserService;
+//import com.clougence.clouddm.console.web.service.auth.RdpUserService;
 //
 //import lombok.extern.slf4j.Slf4j;
 //
@@ -63,7 +63,7 @@
 //    private RdpUserService       rdpUserService;
 //
 //    @Resource
-//    private RdpAuthServiceForBiz rdpAuthServiceForBiz;
+//    private DmAuthServiceForBiz rdpAuthServiceForBiz;
 //
 //    @RequestAuth(RDP_OP_AUDIT_READ)
 //    @RequestMapping(value = "/ctrl_queryAll", method = RequestMethod.POST)
@@ -97,12 +97,12 @@
 //    @RequestMapping(value = "/querybyusername", method = RequestMethod.POST)
 //    public ResWebData<?> getByUserName(@RequestBody @Valid QueryOpAuditByNameFO auditByNameFO, HttpServletRequest request) {
 //        String puid = (String) request.getAttribute(RdpUserService.PUID);
-//        List<RdpUserDO> subAccounts = rdpUserService.listSubAccounts(puid);
+//        List<DmAuthUserDO> subAccounts = rdpUserService.listSubAccounts(puid);
 //        if (subAccounts == null) {
 //            subAccounts = new ArrayList<>();
 //        }
 //
-//        List<String> uids = subAccounts.stream().map(RdpUserDO::getUid).collect(Collectors.toList());
+//        List<String> uids = subAccounts.stream().map(DmAuthUserDO::getUid).collect(Collectors.toList());
 //        uids.add(puid);
 //
 //        List<RdpOpAuditVO> auditVos = auditService

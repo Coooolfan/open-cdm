@@ -211,7 +211,8 @@ function createInitialMysqlDriverStatus() {
     status: 'CHECKING',
     uiState: 'checking',
     available: false,
-    message: ''
+    message: '',
+    detailMessage: ''
   };
 }
 
@@ -354,8 +355,9 @@ async function pollDmGlobalSettings() {
   }
 }
 
-function redirectToLoginPage() {
-  window.location.replace(`${window.location.origin}${window.location.pathname}#/login`);
+function redirectToLoginPage(defaultLogin) {
+  const query = defaultLogin ? `?defaultLogin=${encodeURIComponent(defaultLogin)}` : '';
+  window.location.replace(`${window.location.origin}${window.location.pathname}#/login${query}`);
 }
 
 export default {
@@ -556,7 +558,7 @@ export default {
         case 'downloading':
           return this.mysqlDriverStatus.message || this.$t('initialization.mysqlDriverPreparing');
         case 'error':
-          return this.mysqlDriverStatus.message || this.$t('initialization.mysqlDriverDownloadRequired');
+          return this.mysqlDriverStatus.detailMessage || this.mysqlDriverStatus.message || this.$t('initialization.mysqlDriverDownloadRequired');
         default:
           return this.$t('initialization.mysqlDriverDownloadRequired');
       }
@@ -712,7 +714,7 @@ export default {
 
       const { status, initReason, dbError, upgradeScripts = [] } = getDmSystemStatus(res);
       if (status === 'Ready') {
-        redirectToLoginPage();
+        redirectToLoginPage('manage');
         return;
       }
 
@@ -1041,7 +1043,7 @@ export default {
         }
 
         if (isDmSystemReady(res)) {
-          redirectToLoginPage();
+          redirectToLoginPage('manage');
           return;
         }
 

@@ -19,10 +19,10 @@ import java.io.IOException;
 
 import org.noear.dami.Dami;
 
-import com.clougence.clouddm.console.web.dal.model.DmAsyncTaskDO;
-import com.clougence.clouddm.console.web.model.vo.datasource.DriverDownloadProgressVO;
+import com.clougence.clouddm.console.web.component.dsconfig.event.DriverDownloadEvent;
 import com.clougence.clouddm.console.web.model.vo.editor.query.WsResMsg;
 import com.clougence.clouddm.console.web.model.vo.export.DmExportVO;
+import com.clougence.clouddm.platform.dal.model.execution.DmExecAsyncTaskDO;
 import com.clougence.utils.function.EConsumer;
 
 /**
@@ -35,11 +35,11 @@ public class DmGlobalEventBus {
     //                                                              DmAsyncTask
     // ------------------------------------------------------------------------
 
-    public static void addDmAsyncEventListen(EConsumer<DmAsyncTaskDO, IOException> consumer) {
-        Dami.bus().listen("/DmAsyncTask", payload -> consumer.eAccept((DmAsyncTaskDO) payload.getContent()));
+    public static void addDmAsyncEventListen(EConsumer<DmExecAsyncTaskDO, IOException> consumer) {
+        Dami.bus().listen("/DmAsyncTask", payload -> consumer.eAccept((DmExecAsyncTaskDO) payload.getContent()));
     }
 
-    public static void triggerDmAsyncEvent(DmAsyncTaskDO taskDO) {
+    public static void triggerDmAsyncEvent(DmExecAsyncTaskDO taskDO) {
         if (taskDO.isShowInDock()) {
             Dami.bus().send("/DmAsyncTask", taskDO);
         }
@@ -65,12 +65,11 @@ public class DmGlobalEventBus {
         Dami.bus().listen("/DmQueryExport", payload -> consumer.eAccept((DmExportVO) payload.getContent()));
     }
 
-    public static void triggerDriverDownloadEvent(DriverDownloadProgressVO progressVO) {
-        Dami.bus().send("/DmDriverDownload", progressVO);
+    public static void triggerDriverDownloadEvent(DriverDownloadEvent event) {
+        Dami.bus().send("/DmDriverDownload", event);
     }
 
-    public static void addDriverDownloadEventListen(EConsumer<DriverDownloadProgressVO, IOException> consumer) {
-        Dami.bus().listen("/DmDriverDownload", payload -> consumer.eAccept((DriverDownloadProgressVO) payload.getContent()));
+    public static void addDriverDownloadEventListen(EConsumer<DriverDownloadEvent, IOException> consumer) {
+        Dami.bus().listen("/DmDriverDownload", payload -> consumer.eAccept((DriverDownloadEvent) payload.getContent()));
     }
-
 }

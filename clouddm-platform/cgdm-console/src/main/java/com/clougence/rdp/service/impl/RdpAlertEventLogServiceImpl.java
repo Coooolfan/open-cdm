@@ -21,11 +21,11 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
-import com.clougence.clouddm.console.web.dal.mapper.RdpAlertEventLogMapper;
-import com.clougence.clouddm.console.web.dal.model.RdpAlertEventLogDO;
+import com.clougence.clouddm.platform.dal.access.MonitorDal;
+import com.clougence.clouddm.platform.dal.model.monitor.AlertEventStatus;
+import com.clougence.clouddm.platform.dal.model.monitor.AlertMediaType;
+import com.clougence.clouddm.platform.dal.model.monitor.DmMonAlertEventLogDO;
 import com.clougence.rdp.service.RdpAlertEventLogService;
-import com.clougence.rdp.service.enumeration.AlertEventStatus;
-import com.clougence.rdp.service.enumeration.AlertMediaType;
 import com.clougence.utils.CollectionUtils;
 
 import jakarta.annotation.Resource;
@@ -34,13 +34,12 @@ import jakarta.annotation.Resource;
 public class RdpAlertEventLogServiceImpl implements RdpAlertEventLogService {
 
     @Resource
-    private RdpAlertEventLogMapper rdpAlertEventLogMapper;
-
+    private MonitorDal      monitorDal;
     @Resource
-    private DmConsoleConfig        rdpConfig;
+    private DmConsoleConfig rdpConfig;
 
     @Override
-    public List<RdpAlertEventLogDO> listAlertEventLogs(Long startTimeMillis, Long endTimeMillis, AlertEventStatus status, String uid, long startId, int pageSize) {
+    public List<DmMonAlertEventLogDO> listAlertEventLogs(Long startTimeMillis, Long endTimeMillis, AlertEventStatus status, String uid, long startId, int pageSize) {
         Date startTime = null;
         if (startTimeMillis != null) {
             startTime = new Date(startTimeMillis);
@@ -51,12 +50,12 @@ public class RdpAlertEventLogServiceImpl implements RdpAlertEventLogService {
             endTime = new Date(endTimeMillis);
         }
 
-        return rdpAlertEventLogMapper.queryPageAlertEventLogs(startId, pageSize, startTime, endTime, status, uid);
+        return monitorDal.alertEventLogMapper().queryPageAlertEventLogs(startId, pageSize, startTime, endTime, status, uid);
     }
 
     @Override
     public void save(AlertEventStatus alertEventStatus, String content, String errMsg, AlertMediaType alertMediaType, List<String> sendUids) {
-        RdpAlertEventLogDO alertLogDO = new RdpAlertEventLogDO();
+        DmMonAlertEventLogDO alertLogDO = new DmMonAlertEventLogDO();
         alertLogDO.setStatus(alertEventStatus);
         alertLogDO.setContent(content);
         alertLogDO.setIp(rdpConfig.getConsolePackageMode().getLocalIpOrHostName());
@@ -68,10 +67,10 @@ public class RdpAlertEventLogServiceImpl implements RdpAlertEventLogService {
             for (String uid : sendUids) {
                 alertLogDO.setId(null);
                 alertLogDO.setUid(uid);
-                rdpAlertEventLogMapper.insert(alertLogDO);
+                monitorDal.alertEventLogMapper().insert(alertLogDO);
             }
         } else {
-            rdpAlertEventLogMapper.insert(alertLogDO);
+            monitorDal.alertEventLogMapper().insert(alertLogDO);
         }
     }
 }

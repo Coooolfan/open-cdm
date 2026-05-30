@@ -16,6 +16,7 @@
 package com.clougence.clouddm.console.web.component.dsconfig.impl;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -30,16 +31,20 @@ import com.clougence.clouddm.api.sidecar.session.drivers.DsDriverVer;
 import com.clougence.clouddm.comm.model.RSocketSendDTO;
 import com.clougence.clouddm.comm.model.RSocketSendType;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDriverService;
-import com.clougence.clouddm.console.web.dal.mapper.DmWorkerMapper;
-import com.clougence.clouddm.console.web.dal.model.DmWorkerDO;
+import com.clougence.clouddm.console.web.component.dsconfig.event.DriverDownloadEvent;
 import com.clougence.clouddm.console.web.global.events.DmGlobalEventBus;
+import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
+import com.clougence.clouddm.console.web.global.i18n.I18nDmMsgKeys;
 import com.clougence.clouddm.console.web.model.vo.DriverVersionStatusVO;
 import com.clougence.clouddm.console.web.model.vo.datasource.DriverDownloadProgressVO;
+import com.clougence.clouddm.platform.dal.access.SystemDal;
+import com.clougence.clouddm.platform.dal.model.system.DmSysWorkerDO;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.drivers.DriverVersion;
 import com.clougence.drivers.def.ResDef;
 import com.clougence.utils.CollectionUtils;
-import com.clougence.utils.HostUtil;
+import com.clougence.utils.ExceptionUtils;
+import com.clougence.utils.StringUtils;
 import com.clougence.utils.ThreadUtils;
 
 import jakarta.annotation.Resource;
@@ -50,9 +55,8 @@ import lombok.extern.slf4j.Slf4j;
 public class DmDriverServiceImpl implements DmDriverService {
 
     private static final int                 PROGRESS_LOG_STEP = 10;
-
     @Resource
-    private DmWorkerMapper                   dmWorkerMapper;
+    private SystemDal                        systemDal;
     @Resource
     private DriversRService                  driversRService;
     private final Map<String, Boolean>       runningTasks      = new ConcurrentHashMap<>();
@@ -77,14 +81,14 @@ public class DmDriverServiceImpl implements DmDriverService {
         }
 
         boolean consoleAvailable = isPrepared(localVersion);
-        List<DmWorkerDO> workers = queryTargetWorkers(clusterId);
+        List<DmSysWorkerDO> workers = queryTargetWorkers(clusterId);
         if (CollectionUtils.isEmpty(workers)) {
             statusVO.setAvailable(consoleAvailable);
             return statusVO;
         }
 
         boolean workersAvailable = true;
-        for (DmWorkerDO worker : workers) {
+        for (DmSysWorkerDO worker : workers) {
             DsDriverVer remoteVersion;
             try {
                 remoteVersion = this.driversRService.refreshDriverVersion(buildSendDTO(worker), driverFamily, driverVersion);
@@ -111,15 +115,18 @@ public class DmDriverServiceImpl implements DmDriverService {
     public void downloadDriver(String uid, Long clusterId, String driverFamily, String driverVersion) {
         String taskKey = buildTaskKey(uid, clusterId, driverFamily, driverVersion);
         if (this.runningTasks.putIfAbsent(taskKey, Boolean.TRUE) != null) {
+            publishDownloadStarted(uid, clusterId, driverFamily, driverVersion);
             return;
         }
 
+        publishDownloadStarted(uid, clusterId, driverFamily, driverVersion);
         this.downloadExecutor.execute(() -> {
             try {
-                new DmDriverDownloadTask(uid, clusterId, driverFamily, driverVersion, this.dmWorkerMapper, this.driversRService).run();
+                new DmDriverDownloadTask(uid, clusterId, driverFamily, driverVersion, this.systemDal, this.driversRService).run();
             } catch (Exception e) {
                 log.error("download driver failed, uid={}, clusterId={}, family={}, version={}", uid, clusterId, driverFamily, driverVersion, e);
-                publishProgress(uid, clusterId, driverFamily, driverVersion, 0, 0, 0, "FAILED", false, null, null, e.getMessage());
+                String summary = DmI18nUtils.getMessage(I18nDmMsgKeys.DS_DRIVER_DOWNLOAD_FAILED_MESSAGE.name());
+                publishProgress(uid, clusterId, driverFamily, driverVersion, 0, 0, 0, "FAILED", false, null, summary, buildDriverDownloadErrorDetail(e));
             } finally {
                 this.runningTasks.remove(taskKey);
             }
@@ -158,10 +165,19 @@ public class DmDriverServiceImpl implements DmDriverService {
         return true;
     }
 
+    private static void publishDownloadStarted(String uid, Long clusterId, String driverFamily, String driverVersion) {
+        publishProgress(uid, clusterId, driverFamily, driverVersion, 0, 0, 0, "PREPARING", false, null, DmI18nUtils
+            .getMessage(I18nDmMsgKeys.DS_DRIVER_PREPARE_STARTED_MESSAGE.name()));
+    }
+
     public static void publishProgress(String uid, Long clusterId, String driverFamily, String driverVersion, int totalFileCount, int completedFileCount, int currentFilePercent,
-                                       String status, boolean available, String resourceCoordinate, String currentFileName, String message) {
+                                       String status, boolean available, String currentFileName, String message) {
+        publishProgress(uid, clusterId, driverFamily, driverVersion, totalFileCount, completedFileCount, currentFilePercent, status, available, currentFileName, message, null);
+    }
+
+    public static void publishProgress(String uid, Long clusterId, String driverFamily, String driverVersion, int totalFileCount, int completedFileCount, int currentFilePercent,
+                                       String status, boolean available, String currentFileName, String message, String detailMessage) {
         DriverDownloadProgressVO progressVO = new DriverDownloadProgressVO();
-        progressVO.setUid(uid);
         progressVO.setClusterId(clusterId);
         progressVO.setDriverFamily(driverFamily);
         progressVO.setDriverVersion(driverVersion);
@@ -171,30 +187,26 @@ public class DmDriverServiceImpl implements DmDriverService {
         progressVO.setStatus(status);
         progressVO.setAvailable(available);
         progressVO.setMessage(message);
-        progressVO.setResourceCoordinate(resourceCoordinate);
+        progressVO.setDetailMessage(detailMessage);
         progressVO.setCurrentFileName(currentFileName);
-        logProgress(progressVO);
-        DmGlobalEventBus.triggerDriverDownloadEvent(progressVO);
+        logProgress(uid, progressVO);
+        DmGlobalEventBus.triggerDriverDownloadEvent(new DriverDownloadEvent(uid, progressVO));
     }
 
-    private static void logProgress(DriverDownloadProgressVO progressVO) {
-        String taskKey = buildTaskKey(progressVO);
+    private static void logProgress(String uid, DriverDownloadProgressVO progressVO) {
+        String taskKey = buildTaskKey(uid, progressVO.getClusterId(), progressVO.getDriverFamily(), progressVO.getDriverVersion());
         String signature = buildProgressSignature(progressVO);
         String previous = progressLogState.put(taskKey, signature);
         if (!signature.equals(previous)) {
-            log.info("driver download progress, uid={}, clusterId={}, family={}, version={}, status={}, completed={}/{}, percent={}%, resource={}, file={}, message={}",//
-                    progressVO.getUid(), progressVO.getClusterId(), progressVO.getDriverFamily(), progressVO.getDriverVersion(), progressVO.getStatus(), //
-                    progressVO.getCompletedFileCount(), progressVO.getTotalFileCount(), progressVO.getCurrentFilePercent(), progressVO.getResourceCoordinate(),//
-                    progressVO.getCurrentFileName(), progressVO.getMessage());
+            log.info("driver download progress, uid={}, clusterId={}, family={}, version={}, status={}, completed={}/{}, percent={}%, file={}, message={}",//
+                    uid, progressVO.getClusterId(), progressVO.getDriverFamily(), progressVO.getDriverVersion(), progressVO.getStatus(), //
+                    progressVO.getCompletedFileCount(), progressVO.getTotalFileCount(), progressVO.getCurrentFilePercent(), progressVO.getCurrentFileName(), progressVO
+                        .getMessage());
         }
 
         if (isTerminalStatus(progressVO.getStatus())) {
             progressLogState.remove(taskKey);
         }
-    }
-
-    private static String buildTaskKey(DriverDownloadProgressVO progressVO) {
-        return buildTaskKey(progressVO.getUid(), progressVO.getClusterId(), progressVO.getDriverFamily(), progressVO.getDriverVersion());
     }
 
     private static String buildTaskKey(String uid, Long clusterId, String driverFamily, String driverVersion) {
@@ -204,11 +216,11 @@ public class DmDriverServiceImpl implements DmDriverService {
 
     private static String buildProgressSignature(DriverDownloadProgressVO progressVO) {
         int roundedPercent = roundPercent(progressVO.getCurrentFilePercent());
-        String resourceCoordinate = progressVO.getResourceCoordinate() == null ? "" : progressVO.getResourceCoordinate();
         String currentFileName = progressVO.getCurrentFileName() == null ? "" : progressVO.getCurrentFileName();
         String message = progressVO.getMessage() == null ? "" : progressVO.getMessage();
-        return progressVO.getStatus() + "::" + progressVO.getCompletedFileCount() + '/' + progressVO.getTotalFileCount() + "::" + roundedPercent + "::" + resourceCoordinate + "::"
-               + currentFileName + "::" + message;
+        String detailMessage = progressVO.getDetailMessage() == null ? "" : progressVO.getDetailMessage();
+        return progressVO.getStatus() + "::" + progressVO.getCompletedFileCount() + '/' + progressVO.getTotalFileCount() + "::" + roundedPercent + "::" + currentFileName + "::"
+               + message + "::" + detailMessage;
     }
 
     private static int roundPercent(int currentFilePercent) {
@@ -222,14 +234,55 @@ public class DmDriverServiceImpl implements DmDriverService {
         return "COMPLETED".equals(status) || "FAILED".equals(status);
     }
 
-    private List<DmWorkerDO> queryTargetWorkers(Long clusterId) {
+    static String buildDriverDownloadErrorDetail(Throwable e) {
+        if (e == null) {
+            return "Driver download failed.";
+        }
+
+        Throwable[] eList = ExceptionUtils.getThrowables(e);
+        Throwable rootCause = ExceptionUtils.getRootCause(e);
+        rootCause = rootCause == null ? e : rootCause;
+
+        StringBuilder message = new StringBuilder("Driver download failed.");
+        String rootMessage = StringUtils.trimToNull(ExceptionUtils.getMessage(rootCause));
+        if (rootMessage != null) {
+            message.append(" Root cause: ").append(rootMessage).append('.');
+        }
+
+        Throwable transferContext = findMavenTransferContext(eList, rootCause);
+        String transferMessage = transferContext == null ? null : StringUtils.trimToNull(ExceptionUtils.getMessage(transferContext));
+        if (transferMessage != null && message.indexOf(transferMessage) < 0) {
+            message.append(" Maven transfer: ").append(transferMessage).append('.');
+        }
+        return message.toString();
+    }
+
+    private static Throwable findMavenTransferContext(Throwable[] eList, Throwable rootCause) {
+        if (eList == null) {
+            return null;
+        }
+
+        for (int i = eList.length - 1; i >= 0; i--) {
+            Throwable candidate = eList[i];
+            if (candidate == null || candidate == rootCause) {
+                continue;
+            }
+            String text = StringUtils.defaultString(candidate.getMessage()).toLowerCase(Locale.ROOT);
+            if (text.contains("could not transfer artifact") || text.contains("could not be resolved") || text.contains("artifact descriptor")) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private List<DmSysWorkerDO> queryTargetWorkers(Long clusterId) {
         if (clusterId != null && clusterId > 0) {
-            return this.dmWorkerMapper.queryConnectedByClusterId(clusterId);
+            return this.systemDal.workerMapper().queryConnectedByClusterId(clusterId);
         }
         throw new IllegalArgumentException("clusterId is required to query target workers.");
     }
 
-    private RSocketSendDTO buildSendDTO(DmWorkerDO worker) {
+    private RSocketSendDTO buildSendDTO(DmSysWorkerDO worker) {
         RSocketSendDTO sendDTO = new RSocketSendDTO();
         sendDTO.setClusterId(worker.getClusterId());
         sendDTO.setWorkerSeqNumber(worker.getWorkerSeqNumber());

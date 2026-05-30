@@ -48,17 +48,19 @@ public class OidcClient implements Closeable {
     private <T> T callApi(OidcApiCaller<T> caller, int count) {
         try {
             return caller.call(this, this.client);
+        } catch (ThirdPartyApiException e) {
+            throw e;
         } catch (Exception e) {
             if (count < 3) {
                 return callApi(caller, count + 1);
             }
             handleCallApiException(e);
-            throw ThirdPartyApiException.asRDP().with(e, OidcI18nKey.OIDC_UNKNOWN_CALL_API_ERROR, e.getMessage());
+            throw ThirdPartyApiException.as().with(e, OidcI18nKey.OIDC_UNKNOWN_CALL_API_ERROR, e.getMessage());
         }
     }
 
     private void handleCallApiException(Exception e) {
-        throw ThirdPartyApiException.asRDP().with(e, OidcI18nKey.OIDC_UNKNOWN_CALL_API_ERROR, e.getMessage());
+        throw ThirdPartyApiException.as().with(e, OidcI18nKey.OIDC_UNKNOWN_CALL_API_ERROR, e.getMessage());
     }
 
     @Override

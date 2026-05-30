@@ -27,12 +27,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.api.common.GlobalConfUtils;
-import com.clougence.clouddm.console.web.global.config.DmDalConfig;
+import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
 import com.clougence.clouddm.console.web.model.vo.datasource.DriverDownloadProgressVO;
-import com.clougence.clouddm.console.web.util.DmI18nUtils;
 import com.clougence.clouddm.init.InitApplication;
 import com.clougence.clouddm.init.component.log.InitMysqlDriverProgressBus;
 import com.clougence.clouddm.init.constant.I18nInitFieldKeys;
+import com.clougence.clouddm.platform.dal.config.DmDalConfig;
 import com.clougence.clouddm.platform.plugin.PluginLoadHelper;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.drivers.DriverBinding;
@@ -102,22 +102,22 @@ public class InitMysqlDriverService {
             return;
         }
         if (status == RuntimeDriverStatus.DOWNLOADING) {
+            publishDownloadStarted();
             return;
         }
 
-        // init plugin
-        File pluginPath1 = new File(GlobalConfUtils.getPluginDir("plugins"));
-        File pluginPath2 = new File(GlobalConfUtils.getAppDataHome(), "plugins");
-        PluginLoadHelper.loadPlugins(InitApplication.class.getClassLoader(), pluginPath1, pluginPath2);
-
-        // download
         this.downloadRunning = true;
+        publishDownloadStarted();
         this.downloadExecutor.execute(() -> {
             try {
+                File pluginPath1 = new File(GlobalConfUtils.getPluginDir("plugins"));
+                File pluginPath2 = new File(GlobalConfUtils.getAppDataHome(), "plugins");
+                PluginLoadHelper.loadPlugins(InitApplication.class.getClassLoader(), pluginPath1, pluginPath2);
                 downloadDriverInternal();
             } catch (Exception e) {
                 log.error("[InitMysqlDriverService] Download mysql driver failed.", e);
-                publishProgress(0, 0, 0, "FAILED", false, null, null, e.getMessage());
+                String summary = i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_PREPARE_FAILED);
+                publishProgress(0, 0, 0, "FAILED", false, null, summary, StringUtils.defaultIfBlank(e.getMessage(), summary));
             } finally {
                 this.downloadRunning = false;
             }
@@ -144,8 +144,12 @@ public class InitMysqlDriverService {
 
     private void publishCompletion() {
         boolean available = resolveDriverStatus() == RuntimeDriverStatus.READY;
-        publishProgress(1, available ? 1 : 0, 100, "COMPLETED", available, null, null,
-                available ? i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_READY) : i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_UNAVAILABLE));
+        String msg = available ? i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_READY) : i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_UNAVAILABLE);
+        publishProgress(1, available ? 1 : 0, 100, "COMPLETED", available, null, msg);
+    }
+
+    private void publishDownloadStarted() {
+        publishProgress(0, 0, 0, "PREPARING", false, null, i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_PREPARE_STARTED));
     }
 
     private void prepareDriver(DriverVersion ver) {
@@ -161,7 +165,8 @@ public class InitMysqlDriverService {
 
             @Override
             public void onStart(DriverVersion driverVersionValue, ResDef driverResource, int resourceIndex, int totalCount) {
-                publishProgress(resolveDriverFileCount(driverResource), completedFiles.size(), 0, "PREPARING", false, null, null, i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_PREPARE_STARTED));
+                String msg = i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_PREPARE_STARTED);
+                publishProgress(resolveDriverFileCount(driverResource), completedFiles.size(), 0, "PREPARING", false, null, msg);
             }
 
             @Override
@@ -169,21 +174,23 @@ public class InitMysqlDriverService {
                 if (StringUtils.isNotBlank(fileName) && total > 0 && current >= total) {
                     completedFiles.add(fileName);
                 }
-                publishProgress(resolveDriverFileCount(driverResource), completedFiles.size(), calcPercent(current, total), "PREPARING", false, null, fileName,
-                        buildDownloadMessage(fileName, current, total));
+
+                String msg = buildDownloadMessage(fileName, current, total);
+                publishProgress(resolveDriverFileCount(driverResource), completedFiles.size(), calcPercent(current, total), "PREPARING", false, fileName, msg);
             }
 
             @Override
             public void onComplete(DriverVersion driverVersionValue, ResDef driverResource, int resourceIndex, int totalCount) {
-                publishProgress(resolveDriverFileCount(driverResource), resolveDriverFileCount(driverResource), 100, "PREPARING", false, null, null,
-                        i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_FILE_DOWNLOAD_COMPLETE));
+                String msg = i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_FILE_DOWNLOAD_COMPLETE);
+                publishProgress(resolveDriverFileCount(driverResource), resolveDriverFileCount(driverResource), 100, "PREPARING", false, null, msg);
             }
 
             @Override
             public void onError(DriverVersion driverVersionValue, ResDef driverResource, Exception exception) {
-                String errorMessage = buildPrepareErrorMessage(exception);
-                prepareError.set(new RuntimeException(errorMessage, exception));
-                publishProgress(resolveDriverFileCount(driverResource), completedFiles.size(), 0, "FAILED", false, null, null, errorMessage);
+                String summary = i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_PREPARE_FAILED);
+                String detailMessage = buildPrepareErrorMessage(exception);
+                prepareError.set(new RuntimeException(detailMessage, exception));
+                publishProgress(resolveDriverFileCount(driverResource), completedFiles.size(), 0, "FAILED", false, null, summary, detailMessage);
             }
         });
 
@@ -192,15 +199,20 @@ public class InitMysqlDriverService {
         }
 
         int totalFileCount = resolveDriverFileCount(mavenResource);
-        publishProgress(totalFileCount, totalFileCount, 100, "PREPARING", false, null, null, i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_FILE_DOWNLOAD_COMPLETE));
+        String msg = i18n(I18nInitFieldKeys.INIT_MYSQL_DRIVER_FILE_DOWNLOAD_COMPLETE);
+        publishProgress(totalFileCount, totalFileCount, 100, "PREPARING", false, null, msg);
 
         if (CollectionUtils.isEmpty(mavenResource.getFileDefList())) {
             throw new IllegalStateException("prepared mysql driver files not found.");
         }
     }
 
-    private void publishProgress(int totalFileCount, int completedFileCount, int currentFilePercent, String status, boolean available, String resourceCoordinate,
-                                 String currentFileName, String message) {
+    private void publishProgress(int totalFileCount, int completedFileCount, int currentFilePercent, String status, boolean available, String currentFileName, String message) {
+        publishProgress(totalFileCount, completedFileCount, currentFilePercent, status, available, currentFileName, message, null);
+    }
+
+    private void publishProgress(int totalFileCount, int completedFileCount, int currentFilePercent, String status, boolean available, String currentFileName, String message,
+                                 String detailMessage) {
         DriverDownloadProgressVO progressVO = new DriverDownloadProgressVO();
         progressVO.setDriverFamily(DmDalConfig.MYSQL_DRIVER_RUNTIME_FAMILY);
         progressVO.setDriverVersion(DmDalConfig.MYSQL_DRIVER_VERSION);
@@ -209,9 +221,9 @@ public class InitMysqlDriverService {
         progressVO.setCurrentFilePercent(currentFilePercent);
         progressVO.setStatus(status);
         progressVO.setAvailable(available);
-        progressVO.setResourceCoordinate(resourceCoordinate);
         progressVO.setCurrentFileName(currentFileName);
         progressVO.setMessage(message);
+        progressVO.setDetailMessage(detailMessage);
         InitMysqlDriverProgressBus.publish(progressVO);
     }
 

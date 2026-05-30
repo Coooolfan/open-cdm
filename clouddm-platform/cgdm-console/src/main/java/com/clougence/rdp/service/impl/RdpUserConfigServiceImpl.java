@@ -27,16 +27,16 @@ import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.model.fo.UpsertUserConfigFO;
 import com.clougence.clouddm.console.web.model.lo.UpsertUserConfigLO;
 import com.clougence.clouddm.console.web.model.vo.RdpUserConfigVO;
-import com.clougence.rdp.constant.UserConfigTagType;
-import com.clougence.clouddm.console.web.dal.mapper.RdpUserKvBaseConfigMapper;
-import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
-import com.clougence.clouddm.console.web.dal.model.RdpUserDO;
-import com.clougence.clouddm.console.web.dal.model.RdpUserKvBaseConfigDO;
+import com.clougence.clouddm.console.web.service.auth.RdpUserConfigHelper;
+import com.clougence.clouddm.console.web.service.auth.RdpUserConfigService;
+import com.clougence.clouddm.platform.dal.access.AuthDal;
+import com.clougence.clouddm.platform.dal.access.SystemDal;
+import com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO;
+import com.clougence.clouddm.platform.dal.model.system.DmSysUserConfDO;
+import com.clougence.clouddm.platform.dal.model.system.UserConfigTagType;
 import com.clougence.rdp.global.config.user.SubAccountConfig;
 import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.service.RdpNotifyService;
-import com.clougence.rdp.service.RdpUserConfigHelper;
-import com.clougence.rdp.service.RdpUserConfigService;
 import com.clougence.rdp.service.model.UserConfigMO;
 import com.clougence.utils.CollectionUtils;
 import com.clougence.utils.StringUtils;
@@ -52,56 +52,25 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpUserConfigServiceImpl implements RdpUserConfigService {
 
     @Resource
-    private RdpUserKvBaseConfigMapper rdpUserKvBaseConfigMapper;
-
+    private SystemDal              systemDal;
     @Resource
-    private RdpUserConfigHelper       rdpUserConfigHelper;
-
+    private AuthDal                authDal;
     @Resource
-    private RdpUserMapper             rdpUserMapper;
-
+    private RdpUserConfigHelper    rdpUserConfigHelper;
     @Resource
-    private DmConsoleConfig           rdpConfig;
-
+    private DmConsoleConfig        rdpConfig;
     @Resource
-    private List<RdpNotifyService>    notifyServices;
-
-    @Override
-    public UserDefinedConfig fetchPriUserConfig(String uid) {
-        List<RdpUserKvBaseConfigDO> configs = rdpUserKvBaseConfigMapper.listByUid(uid);
-
-        Map<String, String> configMap = new HashMap<>();
-        if (configs != null && !configs.isEmpty()) {
-            configs.forEach(kvBaseConfigDO -> configMap.put(kvBaseConfigDO.getConfigName(), kvBaseConfigDO.getConfigValue()));
-        }
-
-        UserDefinedConfig config = new UserDefinedConfig();
-        rdpUserConfigHelper.fillFieldValue(config, configMap);
-        return config;
-    }
-
-    @Override
-    public List<RdpUserConfigVO> getAllConfig(String uid) {
-        List<RdpUserKvBaseConfigDO> configs = rdpUserKvBaseConfigMapper.listByUid(uid);
-        for (RdpUserKvBaseConfigDO configDO : configs) {
-            if (configDO.isSecret() && StringUtils.isNotBlank(configDO.getConfigValue())) {
-                String val = CryptService.INSTANCE.decryptUseDefaultKeyAndSalt(configDO.getConfigValue());
-                configDO.setConfigValue(val);
-            }
-        }
-
-        return convertToVO(configs);
-    }
+    private List<RdpNotifyService> notifyServices;
 
     @Override
     public List<RdpUserConfigVO> queryUserConfigVosWithNewEntries(String uid) {
-        List<RdpUserKvBaseConfigDO> configs = this.rdpUserKvBaseConfigMapper.listByUid(uid);
-        Map<String, RdpUserKvBaseConfigDO> configMap = new HashMap<>();
-        for (RdpUserKvBaseConfigDO configDO : configs) {
+        List<DmSysUserConfDO> configs = this.systemDal.userConfMapper().listByUid(uid);
+        Map<String, DmSysUserConfDO> configMap = new HashMap<>();
+        for (DmSysUserConfDO configDO : configs) {
             configMap.put(configDO.getConfigName(), configDO);
         }
 
-        List<RdpUserKvBaseConfigDO> defaultConfigs = fetchUserDefinedDefaultConfig(uid);
+        List<DmSysUserConfDO> defaultConfigs = fetchUserDefinedDefaultConfig(uid);
 
         Set<String> userConfigBlack;
         if (StringUtils.isNotBlank(this.rdpConfig.getUserConfigBlacklist())) {
@@ -111,11 +80,11 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
         }
 
         List<RdpUserConfigVO> resultConfigs = new ArrayList<>();
-        for (RdpUserKvBaseConfigDO configDO : defaultConfigs) {
+        for (DmSysUserConfDO configDO : defaultConfigs) {
             if (userConfigBlack.contains(configDO.getConfigName())) {
                 continue;
             }
-            RdpUserKvBaseConfigDO config = configMap.get(configDO.getConfigName());
+            DmSysUserConfDO config = configMap.get(configDO.getConfigName());
             RdpUserConfigVO v = new RdpUserConfigVO();
             if (config == null) {
                 v.convertFromDO(configDO);
@@ -133,13 +102,13 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
 
     @Override
     public Map<String, RdpUserConfigVO> queryWithNewEntriesAndSpecifiedConfs(String uid, List<String> configNames) {
-        List<RdpUserKvBaseConfigDO> configs = this.rdpUserKvBaseConfigMapper.listByUidAndConfigNames(uid, configNames);
-        Map<String, RdpUserKvBaseConfigDO> configMap = new HashMap<>();
-        for (RdpUserKvBaseConfigDO configDO : configs) {
+        List<DmSysUserConfDO> configs = this.systemDal.userConfMapper().listByUidAndConfigNames(uid, configNames);
+        Map<String, DmSysUserConfDO> configMap = new HashMap<>();
+        for (DmSysUserConfDO configDO : configs) {
             configMap.put(configDO.getConfigName(), configDO);
         }
 
-        List<RdpUserKvBaseConfigDO> defaultConfigs = fetchUserDefinedDefaultConfig(uid);
+        List<DmSysUserConfDO> defaultConfigs = fetchUserDefinedDefaultConfig(uid);
 
         Set<String> userConfigBlack;
         if (StringUtils.isNotBlank(this.rdpConfig.getUserConfigBlacklist())) {
@@ -149,7 +118,7 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
         }
 
         Map<String, RdpUserConfigVO> resultConfigs = new HashMap<>();
-        for (RdpUserKvBaseConfigDO configDO : defaultConfigs) {
+        for (DmSysUserConfDO configDO : defaultConfigs) {
             if (userConfigBlack.contains(configDO.getConfigName())) {
                 continue;
             }
@@ -158,7 +127,7 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
                 continue;
             }
 
-            RdpUserKvBaseConfigDO config = configMap.get(configDO.getConfigName());
+            DmSysUserConfDO config = configMap.get(configDO.getConfigName());
             RdpUserConfigVO v = new RdpUserConfigVO();
             if (config == null) {
                 v.convertFromDO(configDO);
@@ -183,7 +152,7 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
         if (CollectionUtils.isNotEmpty(config.getUpdateConfigs())) {
             for (Map.Entry<String, String> configEntry : config.getUpdateConfigs().entrySet()) {
                 String configName = configEntry.getKey();
-                RdpUserKvBaseConfigDO oldConfig = rdpUserKvBaseConfigMapper.queryByUidAndConfigName(ownerUid, configName);
+                DmSysUserConfDO oldConfig = systemDal.userConfMapper().queryByUidAndConfigName(ownerUid, configName);
                 String newValue = configEntry.getValue();
                 if (newValue != null) {
                     newValue = newValue.trim();
@@ -213,21 +182,21 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
                 configMO.setDelete(false);
                 configList.add(configMO);
 
-                rdpUserKvBaseConfigMapper.updateUserConfig(ownerUid, configName, newValue);
+                systemDal.userConfMapper().updateUserConfig(ownerUid, configName, newValue);
             }
         }
 
         if (CollectionUtils.isNotEmpty(config.getNeedCreateConfigs())) {
-            List<RdpUserKvBaseConfigDO> defaultConfigs = fetchUserDefinedDefaultConfig(ownerUid);
+            List<DmSysUserConfDO> defaultConfigs = fetchUserDefinedDefaultConfig(ownerUid);
             for (Map.Entry<String, String> configEntry : config.getNeedCreateConfigs().entrySet()) {
                 String configName = configEntry.getKey();
-                RdpUserKvBaseConfigDO configInDb = rdpUserKvBaseConfigMapper.queryByUidAndConfigName(ownerUid, configName);
+                DmSysUserConfDO configInDb = systemDal.userConfMapper().queryByUidAndConfigName(ownerUid, configName);
                 // if config already exists, skip
                 if (configInDb != null) {
                     continue;
                 }
 
-                RdpUserKvBaseConfigDO defaultConfig = defaultConfigs.stream().filter(c -> c.getConfigName().equals(configName)).findFirst().orElse(null);
+                DmSysUserConfDO defaultConfig = defaultConfigs.stream().filter(c -> c.getConfigName().equals(configName)).findFirst().orElse(null);
                 // if config not exists in default config, skip
                 if (defaultConfig == null) {
                     continue;
@@ -260,7 +229,7 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
                 configMO.setDelete(false);
                 configList.add(configMO);
 
-                rdpUserKvBaseConfigMapper.insert(defaultConfig);
+                systemDal.userConfMapper().insert(defaultConfig);
             }
         }
 
@@ -269,8 +238,8 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
         return configLOs;
     }
 
-    public List<RdpUserKvBaseConfigDO> fetchUserDefinedDefaultConfig(String uid) {
-        RdpUserDO userDO = rdpUserMapper.queryByUid(uid);
+    public List<DmSysUserConfDO> fetchUserDefinedDefaultConfig(String uid) {
+        DmAuthUserDO userDO = authDal.userMapper().queryByUid(uid);
         boolean isPrimary = userDO != null && (userDO.getParentId() == null || userDO.getParentId() <= 0);
         if (isPrimary) {
             return rdpUserConfigHelper.collectConfigs(new UserDefinedConfig(), uid);
@@ -280,10 +249,10 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
     }
 
     @Override
-    public List<RdpUserKvBaseConfigDO> getSpecifiedConfigs(String uid, List<String> configNames) {
-        List<RdpUserKvBaseConfigDO> configs = rdpUserKvBaseConfigMapper.listByUidAndConfigNames(uid, configNames);
+    public List<DmSysUserConfDO> getSpecifiedConfigs(String uid, List<String> configNames) {
+        List<DmSysUserConfDO> configs = systemDal.userConfMapper().listByUidAndConfigNames(uid, configNames);
         if (configs != null) {
-            for (RdpUserKvBaseConfigDO configDO : configs) {
+            for (DmSysUserConfDO configDO : configs) {
                 if (configDO.isSecret() && StringUtils.isNotBlank(configDO.getConfigValue())) {
                     String val = CryptService.INSTANCE.decryptUseDefaultKeyAndSalt(configDO.getConfigValue());
                     configDO.setConfigValue(val);
@@ -295,13 +264,8 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
     }
 
     @Override
-    public RdpUserKvBaseConfigDO getDefaultClusterName(String uid) {
-        return rdpUserKvBaseConfigMapper.queryByUidAndConfigName(uid, "defaultClusterName");
-    }
-
-    @Override
-    public RdpUserKvBaseConfigDO getSpecifiedConfig(String uid, String configName) {
-        RdpUserKvBaseConfigDO configDO = rdpUserKvBaseConfigMapper.queryByUidAndConfigName(uid, configName);
+    public DmSysUserConfDO getSpecifiedConfig(String uid, String configName) {
+        DmSysUserConfDO configDO = systemDal.userConfMapper().queryByUidAndConfigName(uid, configName);
         if (configDO != null && configDO.isSecret() && StringUtils.isNotBlank(configDO.getConfigValue())) {
             String val = CryptService.INSTANCE.decryptUseDefaultKeyAndSalt(configDO.getConfigValue());
             configDO.setConfigValue(val);
@@ -312,8 +276,8 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
 
     @Override
     public List<RdpUserConfigVO> queryOneConfigTypeByUid(String uid, UserConfigTagType type) {
-        List<RdpUserKvBaseConfigDO> configs = rdpUserKvBaseConfigMapper.listOneConfigTypeByUid(uid, type);
-        for (RdpUserKvBaseConfigDO configDO : configs) {
+        List<DmSysUserConfDO> configs = systemDal.userConfMapper().listOneConfigTypeByUid(uid, type);
+        for (DmSysUserConfDO configDO : configs) {
             if (configDO.isSecret() && com.clougence.utils.StringUtils.isNotBlank(configDO.getConfigValue())) {
                 String val = CryptService.INSTANCE.decryptUseDefaultKeyAndSalt(configDO.getConfigValue());
                 configDO.setConfigValue(val);
@@ -324,33 +288,26 @@ public class RdpUserConfigServiceImpl implements RdpUserConfigService {
     }
 
     @Override
-    public void initUserConfigs(String uid) {
-        UserDefinedConfig config = new UserDefinedConfig();
-        List<RdpUserKvBaseConfigDO> dos = rdpUserConfigHelper.collectConfigs(config, uid);
-        insertConfigDOs(dos);
-    }
-
-    @Override
     public void initSubAccountConfigs(String uid) {
         SubAccountConfig config = new SubAccountConfig();
-        List<RdpUserKvBaseConfigDO> dos = rdpUserConfigHelper.collectConfigs(config, uid);
+        List<DmSysUserConfDO> dos = rdpUserConfigHelper.collectConfigs(config, uid);
         insertConfigDOs(dos);
     }
 
-    protected void insertConfigDOs(List<RdpUserKvBaseConfigDO> dos) {
-        for (RdpUserKvBaseConfigDO obj : dos) {
+    protected void insertConfigDOs(List<DmSysUserConfDO> dos) {
+        for (DmSysUserConfDO obj : dos) {
             if (obj.isSecret() && StringUtils.isNotBlank(obj.getConfigValue())) {
                 String val = CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(obj.getConfigValue());
                 obj.setConfigValue(val);
             }
 
-            rdpUserKvBaseConfigMapper.insert(obj);
+            systemDal.userConfMapper().insert(obj);
         }
     }
 
-    protected List<RdpUserConfigVO> convertToVO(List<RdpUserKvBaseConfigDO> configs) {
+    protected List<RdpUserConfigVO> convertToVO(List<DmSysUserConfDO> configs) {
         List<RdpUserConfigVO> userConfigs = new ArrayList<>();
-        for (RdpUserKvBaseConfigDO config : configs) {
+        for (DmSysUserConfDO config : configs) {
             RdpUserConfigVO configVO = new RdpUserConfigVO();
             configVO.convertFromDO(config);
             userConfigs.add(configVO);

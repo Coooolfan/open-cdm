@@ -35,10 +35,10 @@ import com.clougence.clouddm.comm.component.impl.MainRequestDispatcher;
 import com.clougence.clouddm.comm.component.server.RSocketConnManager;
 import com.clougence.clouddm.comm.component.server.RSocketServerSender;
 import com.clougence.clouddm.comm.component.server.ServerSideRegistry;
-import com.clougence.clouddm.console.web.dal.mapper.DmWorkerMapper;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.global.notify.DmWorkerRegisterNotify;
-import com.clougence.clouddm.console.web.dal.mapper.RdpUserMapper;
+import com.clougence.clouddm.platform.dal.access.AuthDal;
+import com.clougence.clouddm.platform.dal.access.SystemDal;
 
 import io.rsocket.plugins.SocketAcceptorInterceptor;
 import jakarta.annotation.Resource;
@@ -50,17 +50,13 @@ import jakarta.annotation.Resource;
 public class ConsoleRSocketConfig {
 
     @Resource
+    private SystemDal                    systemDal;
+    @Resource
+    private AuthDal                      authDal;
+    @Resource
     private ApplicationContext           appCtx;
-
-    @Resource
-    private RdpUserMapper                dmUserMapper;
-
-    @Resource
-    private DmWorkerMapper               workerMapper;
-
     @Resource
     private DmConsoleConfig              consoleConfig;
-
     @Resource
     private List<DmWorkerRegisterNotify> notifyServices;
 
@@ -112,7 +108,7 @@ public class ConsoleRSocketConfig {
 
     @Bean
     public RSocketConnManager consoleRSocketConnManager() {
-        return new DmConsoleConnManager(workerMapper);
+        return new DmConsoleConnManager(systemDal);
     }
 
     public SocketAcceptorInterceptor consoleSocketAcceptorInterceptor() {
@@ -121,11 +117,11 @@ public class ConsoleRSocketConfig {
 
     @Bean
     public RSocketServerSender consoleRSocketServerSender() {
-        return new DmServerSender(consoleRSocketRequestManager(), this.workerMapper, consoleServerSideRegistry(), RSocketSerializationImpl.DEFAULT);
+        return new DmServerSender(consoleRSocketRequestManager(), this.systemDal, consoleServerSideRegistry(), RSocketSerializationImpl.DEFAULT);
     }
 
     @Bean
     public ServerSideRegistry consoleServerSideRegistry() {
-        return new DmServerSideRegistry(dmUserMapper, workerMapper, notifyServices, new DmConsoleExceptionManager());
+        return new DmServerSideRegistry(authDal, systemDal, notifyServices, new DmConsoleExceptionManager());
     }
 }
