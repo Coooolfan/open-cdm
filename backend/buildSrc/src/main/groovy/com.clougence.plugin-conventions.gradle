@@ -1,0 +1,140 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import com.clougence.gradle.AntlrBuildSupport
+
+import java.text.SimpleDateFormat
+import java.util.regex.Pattern
+
+plugins {
+    id 'java-library'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+Properties globalConfig = new Properties()
+try (FileInputStream fis = new FileInputStream(new File(rootDir, "gradle.properties"))) {
+    globalConfig.load(fis)
+}
+
+ext {
+    ANTLR_VERSION = globalConfig.getProperty("cg.lib.antlr.version")
+    JACKSON_VERSION = globalConfig.getProperty("cg.lib.jackson.version")
+    SPRINGBOOT_VERSION = globalConfig.getProperty("cg.lib.springboot.version")
+    SPRING_VERSION = globalConfig.getProperty("cg.lib.spring.version")
+    SLF4J_VERSION = globalConfig.getProperty("cg.lib.slf4j.version")
+    HIKARICP_VERSION = globalConfig.getProperty("cg.lib.hikaricp.version")
+    OKHTTP_VERSION = globalConfig.getProperty("cg.lib.okhttp.version")
+    FASTJSON_VERSION = globalConfig.getProperty("cg.lib.fastjson.version")
+
+    configureClougenceAntlrGrammar = { Map config ->
+        tasks.named('generateGrammarSource', AntlrTask).configure { task -> AntlrBuildSupport.configureGrammarTask(project, task, config)
+        }
+        AntlrBuildSupport.wireGrammarTasks(project, ['generateGrammarSource'])
+    }
+
+    registerClougenceAntlrGrammarTask = { String taskName, Map config ->
+        tasks.register(taskName, AntlrTask) { task -> AntlrBuildSupport.configureGrammarTask(project, task, config)
+        }
+    }
+
+    wireClougenceAntlrTasks = { Object... taskRefs -> AntlrBuildSupport.wireGrammarTasks(project, taskRefs.flatten())
+    }
+}
+
+dependencies {
+    compileOnly project(':cgdm-share-libs')
+
+    // lombok
+    compileOnly 'org.projectlombok:lombok:1.18.46'
+    annotationProcessor 'org.projectlombok:lombok:1.18.46'
+
+    // test
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.46'
+    testCompileOnly 'org.projectlombok:lombok:1.18.46'
+    testImplementation 'junit:junit:4.12'
+}
+
+group = 'com.cdmgr'
+version = 'lib'
+
+java {
+    sourceCompatibility = 21
+    targetCompatibility = 21
+}
+
+task customFatJar(type: Jar, dependsOn: jar) {
+    def sharedRuntimeArtifactNames = providers.provider {
+        def sharedRuntime = configurations.detachedConfiguration(project.dependencies.project(path: ':cgdm-share-libs'))
+        sharedRuntime.transitive = true
+        return sharedRuntime.incoming.resolutionResult.allComponents.collectMany { component ->
+            def moduleVersion = component.moduleVersion
+            if (moduleVersion != null) {
+                return [moduleVersion.name]
+            }
+
+            def projectPath = component.id.hasProperty('projectPath') ? component.id.projectPath : null
+            if (projectPath != null) {
+                return [projectPath.substring(projectPath.lastIndexOf(':') + 1)]
+            }
+            return []
+        }.toSet()
+    }
+
+    Properties properties = new Properties()
+    properties.setProperty("buildDate", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()))
+
+    buildDir.mkdirs()
+    File buildDsInfo = new File(buildDir, "ds-info.properties")
+    buildDsInfo.createNewFile()
+    try (FileOutputStream fos = new FileOutputStream(buildDsInfo)) {
+        properties.store(fos, "  this file auto generation");
+        fos.flush()
+    }
+
+    manifest {
+        attributes properties
+    }
+
+    entryCompression = 'STORED'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(configurations.runtimeClasspath) {
+        exclude { details ->
+            sharedRuntimeArtifactNames.get().any { artifactName ->
+                details.file.name ==~ /^${Pattern.quote(artifactName)}-.+\.jar$/
+            }
+        }
+    }
+    from buildDsInfo
+    with jar
+}
+
+tasks.register('buildx') {
+    dependsOn customFatJar
+}
+
+tasks.register('local') {
+    dependsOn build
+    doLast {
+        copy {
+            from("${buildDir}/libs") { include "${project.description}-lib.jar" }
+            into "${System.env.HOME}/clouddm/plugins"
+        }
+    }
+}

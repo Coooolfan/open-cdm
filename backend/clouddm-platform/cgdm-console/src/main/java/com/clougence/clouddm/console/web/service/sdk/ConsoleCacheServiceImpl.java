@@ -1,0 +1,96 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.clougence.clouddm.console.web.service.sdk;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
+
+import com.clougence.clouddm.sdk.service.cache.CacheService;
+import com.clougence.utils.ThreadUtils;
+import com.clougence.utils.function.EFunction;
+
+@Primary
+@Service
+public class ConsoleCacheServiceImpl implements CacheService {
+
+    private final AtomicBoolean inited = new AtomicBoolean(false);
+    private final Object        lock   = new Object();
+    private Map<String, Object> theCache;
+
+    public void init() throws Exception {
+        if (inited.compareAndSet(false, true)) {
+            if (this.theCache != null) {
+                return;
+            }
+
+            this.theCache = new LinkedHashMap<>(500);
+
+            ThreadUtils.runDaemonThread(() -> {
+                Thread.currentThread().setName("ConsoleCacheService-cache-cleanup");
+                while (true) {
+                    synchronized (this.lock) {
+                        theCache.clear();
+                    }
+                    ThreadUtils.sleep(60 * 1000);
+                }
+            });
+        }
+    }
+
+    public void stop() {
+        if (this.inited.compareAndSet(true, false)) {
+            synchronized (this.lock) {
+                this.theCache.clear();
+            }
+        }
+    }
+
+    @Override
+    public synchronized Object getObject(String key) {
+        synchronized (this.lock) {
+            return this.theCache.get(key);
+        }
+    }
+
+    @Override
+    public synchronized Object getObjectIfAbsent(String key, EFunction<String, Object, Exception> absent) throws Exception {
+        synchronized (this.lock) {
+            Object v = this.theCache.get(key);
+            if (v == null) {
+                v = absent.eApply(key);
+                this.theCache.put(key, v);
+            }
+            return v;
+        }
+    }
+
+    @Override
+    public synchronized Object cacheAndReturn(String key, Object obj) {
+        synchronized (this.lock) {
+            this.theCache.put(key, obj);
+            return obj;
+        }
+    }
+
+    //    @Override
+    //    public Object cacheAndReturn(String key, Object obj, int timeout, TimeUnit timeUnit) {
+    //        return obj;
+    //    }
+}

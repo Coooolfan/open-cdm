@@ -1,5 +1,0 @@
-if
-  @domain.sqlType in ['DELETE']
-then
-  return cast(@domain.hasLimit as bool)
-end

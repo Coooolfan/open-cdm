@@ -15,9 +15,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BACKEND_DIR="$REPO_ROOT/backend"
 PACKAGE_BUILD_DIR="$SCRIPT_DIR/build"
 
-VERSION="$(grep '^cg\.clouddm\.main\.version=' "$REPO_ROOT/gradle.properties" | cut -d'=' -f2 | tr -d '[:space:]')"
+VERSION="$(grep '^cg\.clouddm\.main\.version=' "$BACKEND_DIR/gradle.properties" | cut -d'=' -f2 | tr -d '[:space:]')"
 [ -z "$VERSION" ] && { echo "error: cg.clouddm.main.version not found"; exit 1; }
 
 DO_BUILD=0
@@ -92,8 +93,8 @@ if [ "$DO_BUILD" -eq 1 ]; then
   rm -rf "$SCRIPT_DIR/pkg/alone/build"
   rm -rf "$PACKAGE_BUILD_DIR"
 
-  "$REPO_ROOT/gradlew" -p "$REPO_ROOT" -Ptarget=all clean
-  "$REPO_ROOT/gradlew" -p "$REPO_ROOT" -Ptarget=all -Pprofile=output -PbuildFrontend=true \
+  "$BACKEND_DIR/gradlew" -p "$BACKEND_DIR" -Ptarget=all clean
+  "$BACKEND_DIR/gradlew" -p "$BACKEND_DIR" -Ptarget=all -Pprofile=output -PbuildFrontend=true \
     buildx local installDist tgz -x test --rerun-tasks --parallel --max-workers=8
 
   mkdir -p "$PACKAGE_BUILD_DIR"
@@ -107,13 +108,20 @@ fi
 # ---- Step 2: Docker ----
 if [ "$DO_DOCKER" -eq 1 ]; then
   echo "=== Docker: starting image build ==="
-  DOCKER_ARGS=()
-  [ "$USE_MIRRORS" -eq 1 ] && DOCKER_ARGS+=(--mirrors)
+  run_docker_build() {
+    local platform_arg="$1"
+    if [ "$USE_MIRRORS" -eq 1 ]; then
+      bash "$SCRIPT_DIR/docker/build-docker.sh" "$VERSION" "$platform_arg" --mirrors
+    else
+      bash "$SCRIPT_DIR/docker/build-docker.sh" "$VERSION" "$platform_arg"
+    fi
+  }
+
   if [ -z "$DOCKER_ARCH" ]; then
     echo "[DOCKER] building all platforms, version=${VERSION}..."
-    bash "$SCRIPT_DIR/docker/build-docker.sh" "$VERSION" --platform=all "${DOCKER_ARGS[@]}"
+    run_docker_build --platform=all
   else
     echo "[DOCKER] building $DOCKER_ARCH images, version=${VERSION}..."
-    bash "$SCRIPT_DIR/docker/build-docker.sh" "$VERSION" --platform="$DOCKER_ARCH" "${DOCKER_ARGS[@]}"
+    run_docker_build --platform="$DOCKER_ARCH"
   fi
 fi

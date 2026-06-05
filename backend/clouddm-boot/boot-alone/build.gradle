@@ -1,0 +1,100 @@
+/*
+ * Copyright 2026 杭州开云集致科技有限公司
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+plugins {
+    id 'com.clougence.java-conventions'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'distribution'
+    id 'application'
+}
+
+application {
+    mainClass = 'com.clougence.clouddm.boot.DmAloneLauncher'
+}
+
+tasks.named('run', JavaExec) {
+    description = 'Run DmAloneLauncher for development'
+    group = 'application'
+
+    jvmArgs '-Xms256m', '-Xmx1024m', '-Djava.awt.headless=true'
+    workingDir = rootProject.projectDir
+    systemProperties = System.properties
+}
+
+configurations.all {
+    resolutionStrategy {
+        force "org.slf4j:slf4j-api:${SLF4J_VERSION}"
+    }
+}
+
+dependencies {
+    // project
+    implementation project(':boot-initialization')
+    implementation project(':cgdm-api')
+    implementation project(':cgdm-dao')
+    implementation project(':cgdm-plugin-loader')
+    implementation project(':cgdm-share-libs')
+    implementation project(':cgdm-sidecar')
+    implementation project(':cgdm-console')
+    implementation project(':cgdm-web')
+
+    implementation project(':dsc-common')
+    implementation 'org.codehaus.plexus:plexus-classworlds:2.6.0'
+
+    // spring
+    implementation "org.springframework.security:spring-security-core:5.7.5"
+    implementation "org.springframework:spring-websocket:${SPRING_VERSION}"
+    implementation "org.springframework:spring-messaging:${SPRING_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-web:${SPRINGBOOT_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-thymeleaf:${SPRINGBOOT_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-jdbc:${SPRINGBOOT_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-validation:${SPRINGBOOT_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-logging:${SPRINGBOOT_VERSION}"
+    implementation "org.springframework.boot:spring-boot-starter-mail:${SPRINGBOOT_VERSION}"
+
+    // utils
+    implementation "com.fasterxml.uuid:java-uuid-generator:4.0"
+    implementation "org.apache.commons:commons-lang3:3.12.0"
+    implementation 'com.google.guava:guava:33.3.1-jre'
+    implementation 'com.warrenstrange:googleauth:1.5.0'
+    implementation 'com.google.zxing:core:3.4.1'
+    implementation 'com.google.zxing:javase:3.4.1'
+    implementation('org.noear:dami:0.56') { transitive = false }
+    implementation 'com.auth0:java-jwt:4.5.0'
+    implementation('com.github.oshi:oshi-core:6.6.2') { exclude group: 'org.slf4j', module: 'slf4j-api' }
+    //implementation 'com.jcraft:jsch:0.1.55' // JSSH
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.78'
+    implementation 'io.github.java-diff-utils:java-diff-utils:4.15'
+    implementation 'com.googlecode.aviator:aviator:5.0.0-RC1'
+    implementation 'io.sentry:sentry:3.1.0'
+    implementation 'com.opencsv:opencsv:5.4'
+    implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect:2.4.1'
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.9.17'
+    implementation 'io.prometheus:simpleclient:0.15.0'
+    implementation 'io.prometheus:simpleclient_hotspot:0.15.0'
+    implementation 'io.prometheus:simpleclient_httpserver:0.15.0'
+
+    // for debug or test
+    testImplementation 'uk.co.jemos.podam:podam:7.2.3.RELEASE'
+    testImplementation "org.springframework.boot:spring-boot-starter-test:${SPRINGBOOT_VERSION}"
+}
+
+description = 'boot-alone'
+
+jar {
+    exclude 'ssl/**'
+    exclude 'logback.xml'
+    exclude 'alone.properties'
+}

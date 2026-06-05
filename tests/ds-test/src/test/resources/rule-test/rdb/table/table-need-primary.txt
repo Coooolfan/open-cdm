@@ -1,5 +1,0 @@
-if
-  @domain.sqlType == 'CREATE_TABLE'
-then
-  return @domain.hasPrimary
-end

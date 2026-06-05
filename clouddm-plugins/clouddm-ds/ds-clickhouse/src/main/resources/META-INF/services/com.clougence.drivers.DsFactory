@@ -1,3 +1,0 @@
-com.clougence.clouddm.ds.clickhouse.execute.dsfactory.ChYandexDsFactory
-com.clougence.clouddm.ds.clickhouse.execute.dsfactory.ChNativeDsFactory
-com.clougence.clouddm.ds.clickhouse.execute.dsfactory.ChJdbcDsFactory
