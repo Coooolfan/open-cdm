@@ -30,6 +30,7 @@ import com.clougence.clouddm.api.common.exception.ErrorMessageException;
 import com.clougence.clouddm.api.sidecar.session.execute.ResultPageDTO;
 import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
 import com.clougence.clouddm.base.metadata.ds.DataSourceType;
+import com.clougence.clouddm.base.metadata.rdp.enumeration.ResultEnum;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.SecurityType;
 import com.clougence.clouddm.console.web.component.detectrule.SecHintInfo;
 import com.clougence.clouddm.console.web.component.detectrule.domain.SecRange;
@@ -42,6 +43,7 @@ import com.clougence.clouddm.console.web.model.fo.browse.BrowseActionFO;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseConvertDDLFO;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseGenerateFO;
 import com.clougence.clouddm.console.web.model.fo.browse.BrowseRequestFO;
+import com.clougence.clouddm.console.web.model.fo.editor.language.WsLanguageFO;
 import com.clougence.clouddm.console.web.model.fo.editor.query.WsQueryFO;
 import com.clougence.clouddm.console.web.model.fo.openapi.DmApiDsListFO;
 import com.clougence.clouddm.console.web.model.fo.openapi.DmApiDsQueryFO;
@@ -54,6 +56,7 @@ import com.clougence.clouddm.console.web.model.vo.checkrules.*;
 import com.clougence.clouddm.console.web.model.vo.cluster.ClusterVO;
 import com.clougence.clouddm.console.web.model.vo.cluster.WorkerVO;
 import com.clougence.clouddm.console.web.model.vo.datasource.DmSimpleDsVO;
+import com.clougence.clouddm.console.web.model.vo.editor.language.WsLanguageResult;
 import com.clougence.clouddm.console.web.model.vo.editor.query.WsRuleEntity;
 import com.clougence.clouddm.console.web.model.vo.faker.DmAsyncTaskVO;
 import com.clougence.clouddm.console.web.model.vo.openapi.DmApiDataSourceVO;
@@ -83,6 +86,8 @@ import com.clougence.clouddm.sdk.execute.meta.DsElement;
 import com.clougence.clouddm.sdk.execute.resultset.echo.ReceiveMode;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbIsolation;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbSupportSpi;
+import com.clougence.clouddm.sdk.language.AbstractRequest;
+import com.clougence.clouddm.sdk.language.LanguageResult;
 import com.clougence.clouddm.sdk.model.analysis.TargetType;
 import com.clougence.clouddm.sdk.security.auth.SecQueryType;
 import com.clougence.clouddm.sdk.service.secrules.CheckerRange;
@@ -123,6 +128,39 @@ import com.fasterxml.jackson.core.type.TypeReference;
  * @author mode create time is 2021/1/30
  **/
 public class DmConvertUtils {
+
+    public static WsLanguageResult convertToWsLanguageResult(WsLanguageFO fo, LanguageResult result) {
+        WsLanguageResult res = new WsLanguageResult();
+        res.setCurUserId(fo.getCurrentUserId());
+        res.setChannelKey(fo.getChannelKey());
+        res.setLanguageType(fo.getLanguageType());
+        res.setRequestId(result.getRequestId());
+        res.setSuccess(true);
+        res.setCode(ResultEnum.SUCCESS.getCode());
+        res.setMsg(ResultEnum.SUCCESS.getMsg());
+        res.setResult(result);
+        return res;
+    }
+
+    public static WsLanguageResult convertToWsLanguageErrorResult(WsLanguageFO fo, AbstractRequest request, String code, String msg) {
+        LanguageResult result = new LanguageResult();
+        if (request != null) {
+            result.setRequestId(request.getRequestId());
+            result.setRequestVersion(request.getRequestVersion());
+        } else {
+            result.setRequestId(fo.getRequestId());
+        }
+        WsLanguageResult res = new WsLanguageResult();
+        res.setCurUserId(fo.getCurrentUserId());
+        res.setChannelKey(fo.getChannelKey());
+        res.setLanguageType(fo.getLanguageType());
+        res.setRequestId(result.getRequestId());
+        res.setSuccess(false);
+        res.setCode(code);
+        res.setMsg(msg);
+        res.setResult(result);
+        return res;
+    }
 
     public static Map<TargetType, String> convertToResource(DsLevels dsLevels, String tableOrView) {
         Map<TargetType, String> result = new HashMap<>();
@@ -346,7 +384,7 @@ public class DmConvertUtils {
         return mo;
     }
 
-    private static BrowseColumnMO convertToBrowseColumnMOTipsType(RdbColumn rdbColumn, List<String> keyCols, List<String> idxCols, List<String> ukCols, List<String> fkCols) {
+    public static BrowseColumnMO convertToBrowseColumnMOTipsType(RdbColumn rdbColumn, List<String> keyCols, List<String> idxCols, List<String> ukCols, List<String> fkCols) {
         String colName = rdbColumn.getName();
         FieldType sqlType = rdbColumn.getSqlType();
 
@@ -355,8 +393,8 @@ public class DmConvertUtils {
         mo.setDbType(sqlType == null ? "" : sqlType.getCodeKey());
         mo.setDataType(BrowseColumnType.DEFAULT);
 
-        mo.setDbKey(keyCols.contains(colName));
-        mo.setDbUnique(ukCols.contains(colName));
+        mo.setDbKey(keyCols.contains(colName) || rdbColumn.hasConstraint(GeneralConstraintType.Primary));
+        mo.setDbUnique(ukCols.contains(colName) || rdbColumn.hasConstraint(GeneralConstraintType.Unique));
         mo.setDbForeign(fkCols.contains(colName));
         mo.setDbIndex(idxCols.contains(colName));
 
@@ -431,15 +469,37 @@ public class DmConvertUtils {
 
     public static BrowseColumnMO convertToBrowseColumnMOTipsType(RdbColumn rdbColumn) {
         String colName = rdbColumn.getName();
+        FieldType sqlType = rdbColumn.getSqlType();
 
         BrowseColumnMO mo = new BrowseColumnMO();
         mo.setName(colName);
-        mo.setDbType(rdbColumn.getSqlType().getCodeKey());
+        mo.setDbType(sqlType == null ? "" : sqlType.getCodeKey());
+        mo.setDataType(BrowseColumnType.DEFAULT);
 
         mo.setDbKey(rdbColumn.hasConstraint(GeneralConstraintType.Primary));
         mo.setDbUnique(rdbColumn.hasConstraint(GeneralConstraintType.Unique));
         mo.setDbForeign(false);   // TODO use metadata
         mo.setDbIndex(false);     // TODO use metadata
+
+        if (sqlType != null) {
+            if (sqlType.isArray()) {
+                mo.setDataType(BrowseColumnType.ARRAY);
+            } else if (sqlType.isStruct()) {
+                mo.setDataType(BrowseColumnType.OBJECT);
+            } else if (sqlType.isString()) {
+                mo.setDataType(BrowseColumnType.TEXT);
+            } else if (sqlType.isDataOrTime()) {
+                mo.setDataType(BrowseColumnType.DATETIME);
+            } else if (sqlType.isGeometry()) {
+                mo.setDataType(BrowseColumnType.GEO);
+            } else if (sqlType.isBinary()) {
+                mo.setDataType(BrowseColumnType.BIN);
+            } else if (sqlType.isBoolean()) {
+                mo.setDataType(BrowseColumnType.BOOL);
+            } else if (sqlType.isNumber()) {
+                mo.setDataType(BrowseColumnType.NUM);
+            }
+        }
 
         // TODO the user's personalized configuration, currently fixed as columnType
         mo.setTips(mo.getDbType());
@@ -621,45 +681,7 @@ public class DmConvertUtils {
                 itemVO.getAttrs().put("isUnique", columnMO.isDbUnique());
                 itemVO.getAttrs().put("isIndex", columnMO.isDbIndex());
                 itemVO.getAttrs().put("isForeign", columnMO.isDbForeign());
-                if (columnMO.isDbKey()) {
-                    itemVO.setIcon("COLUMN-PK");
-                } else if (columnMO.isDbUnique()) {
-                    itemVO.setIcon("COLUMN-UK");
-                } else if (columnMO.isDbForeign()) {
-                    itemVO.setIcon("COLUMN-FK");
-                } else {
-                    String endTag = columnMO.isDbIndex() ? "-IDX" : "";
-                    switch (columnMO.getDataType()) {
-                        case DATETIME:
-                            itemVO.setIcon("COLUMN-DAT" + endTag);
-                            break;
-                        case TEXT:
-                            itemVO.setIcon("COLUMN-TXT" + endTag);
-                            break;
-                        case BIN:
-                            itemVO.setIcon("COLUMN-BIN" + endTag);
-                            break;
-                        case GEO:
-                            itemVO.setIcon("COLUMN-GEO" + endTag);
-                            break;
-                        case NUM:
-                            itemVO.setIcon("COLUMN-NUM" + endTag);
-                            break;
-                        case BOOL:
-                            itemVO.setIcon("COLUMN-BOOL" + endTag);
-                            break;
-                        case ARRAY:
-                            itemVO.setIcon("COLUMN-ARRAY" + endTag);
-                            break;
-                        case OBJECT:
-                            itemVO.setIcon("COLUMN-OBJECT" + endTag);
-                            break;
-                        case DEFAULT:
-                        default:
-                            itemVO.setIcon("COLUMN-DEFAULT" + endTag);
-                            break;
-                    }
-                }
+                itemVO.setIcon(convertToBrowseColumnIcon(columnMO));
 
                 columnGroup.getItems().add(itemVO);
             }
@@ -778,6 +800,35 @@ public class DmConvertUtils {
         }
 
         return vo;
+    }
+
+    public static String convertToBrowseColumnIcon(BrowseColumnMO columnMO) {
+        if (columnMO.isDbKey()) {
+            return "COLUMN-PK";
+        }
+        if (columnMO.isDbUnique()) {
+            return "COLUMN-UK";
+        }
+        if (columnMO.isDbForeign()) {
+            return "COLUMN-FK";
+        }
+
+        String endTag = columnMO.isDbIndex() ? "-IDX" : "";
+        BrowseColumnType dataType = columnMO.getDataType();
+        if (dataType == null) {
+            return "COLUMN-DEFAULT" + endTag;
+        }
+        return switch (dataType) {
+            case DATETIME -> "COLUMN-DAT" + endTag;
+            case TEXT -> "COLUMN-TXT" + endTag;
+            case BIN -> "COLUMN-BIN" + endTag;
+            case GEO -> "COLUMN-GEO" + endTag;
+            case NUM -> "COLUMN-NUM" + endTag;
+            case BOOL -> "COLUMN-BOOL" + endTag;
+            case ARRAY -> "COLUMN-ARRAY" + endTag;
+            case OBJECT -> "COLUMN-OBJECT" + endTag;
+            case DEFAULT -> "COLUMN-DEFAULT" + endTag;
+        };
     }
 
     private static BrowseObjectVO convertToBrowseObjectVO(BrowseProcedureMO mo) {

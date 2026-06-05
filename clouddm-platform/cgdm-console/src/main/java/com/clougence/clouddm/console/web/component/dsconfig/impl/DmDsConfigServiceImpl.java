@@ -46,6 +46,10 @@ import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.execute.dsconf.DsConfigMap;
 import com.clougence.clouddm.sdk.execute.dsconf.DsConfigSpi;
 import com.clougence.clouddm.sdk.execute.session.rdb.RdbSupportSpi;
+import com.clougence.clouddm.sdk.language.DsLanguageSupport;
+import com.clougence.clouddm.sdk.language.DsLanguageSpi;
+import com.clougence.clouddm.sdk.resource.ResourceCategory;
+import com.clougence.clouddm.sdk.resource.ResourceSpi;
 import com.clougence.clouddm.sdk.service.config.ConsoleConfigService;
 import com.clougence.clouddm.sdk.ui.browser.DsBrowseSpi;
 import com.clougence.clouddm.sdk.ui.ddl.ConvertTableDDLSpi;
@@ -130,6 +134,7 @@ public class DmDsConfigServiceImpl implements DmDsConfigService, UnifiedPostCons
             config.setDriverFamilies(familyNames.stream().map(s -> {
                 return DmConvertUtils.convertToDsDriverFamily(driverLoader.findDriver(s));
             }).filter(Objects::nonNull).collect(Collectors.toList()));
+            config.setLanguage(loadDsLanguage(dsPlugin));
 
             //
             RdbSupportSpi supportSpi = PluginManager.findRdbSupportSpi(dsType);
@@ -357,6 +362,36 @@ public class DmDsConfigServiceImpl implements DmDsConfigService, UnifiedPostCons
             log.error(msg, e);
             throw new RuntimeException(msg, e);
         }
+    }
+
+    private DsLanguage loadDsLanguage(DsPluginInfo dsPlugin) {
+        List<DsLanguageSpi> languageSpis = dsPlugin.findSpi(DsLanguageSpi.class);
+        if (CollectionUtils.isEmpty(languageSpis)) {
+            return null;
+        }
+
+        DsLanguageSpi languageSpi = languageSpis.get(0);
+        Set<DsLanguageSupport> supports = Optional.ofNullable(languageSpi.supports()).orElseGet(Collections::emptySet);
+        DsLanguage language = new DsLanguage();
+        language.setSupported(CollectionUtils.isNotEmpty(supports));
+        language.setSupports(Set.copyOf(supports));
+        language.setCompletion(supports.contains(DsLanguageSupport.COMPLETE));
+        language.setValidate(supports.contains(DsLanguageSupport.VALIDATE));
+        language.setSplit(supports.contains(DsLanguageSupport.SPLIT));
+        String keywordResourceModule = findEditorKeywordResourceModule(dsPlugin);
+        if (!StringUtils.isBlank(keywordResourceModule)) {
+            language.setKeywordResource(ResourceCategory.EDITOR.getCode() + "/" + keywordResourceModule + "@keywords");
+        }
+        return language;
+    }
+
+    private String findEditorKeywordResourceModule(DsPluginInfo dsPlugin) {
+        List<ResourceSpi> resourceSpis = dsPlugin.findSpi(ResourceSpi.class);
+        if (CollectionUtils.isEmpty(resourceSpis)) {
+            return null;
+        }
+
+        return resourceSpis.stream().filter(spi -> spi.findResource(ResourceCategory.EDITOR.getCode(), "keywords", null) != null).map(ResourceSpi::name).findFirst().orElse(null);
     }
 
     @Override

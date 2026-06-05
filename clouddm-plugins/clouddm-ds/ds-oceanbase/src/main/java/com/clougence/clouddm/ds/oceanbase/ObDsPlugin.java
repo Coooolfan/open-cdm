@@ -18,23 +18,25 @@ package com.clougence.clouddm.ds.oceanbase;
 import com.clougence.adapter.ob.obformysql.ObForMySQLTypes;
 import com.clougence.clouddm.base.metadata.ds.DataSourceType;
 import com.clougence.clouddm.base.metadata.ui.DsFeatureIDs;
-import com.clougence.clouddm.ds.oceanbase.analysis.obformysql.*;
-import com.clougence.clouddm.ds.oceanbase.analysis.obformysql.rewrite.ObRewriteSpi;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.ObDefService;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.browser.ObDsBrowseSpi;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.ddl.ObDDLSpiConvert;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.editor.data.ObDataEditorSpi;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.editor.table.ObEditorProvider;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.editor.table.ObTableEditorUiDataSpi;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.exception.ObDetermineExceptionSpi;
-import com.clougence.clouddm.ds.oceanbase.definition.obformysql.ui.template.ObCmdTemplateSpi;
-import com.clougence.clouddm.ds.oceanbase.dialect.obformysql.ObForMySQLDialect;
-import com.clougence.clouddm.ds.oceanbase.dsconf.obformysql.ObConfigSpi;
-import com.clougence.clouddm.ds.oceanbase.dsconf.obformysql.ObSerializationSpi;
-import com.clougence.clouddm.ds.oceanbase.execute.obformysql.ObSessionFactory;
-import com.clougence.clouddm.ds.oceanbase.execute.obformysql.ObSessionSpi;
-import com.clougence.clouddm.ds.oceanbase.execute.obformysql.ObSupportSpi;
+import com.clougence.clouddm.ds.oceanbase.analysis.ob4my.*;
+import com.clougence.clouddm.ds.oceanbase.analysis.ob4my.rewrite.ObRewriteSpi;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.ObDefService;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.browser.ObDsBrowseSpi;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.ddl.ObDDLSpiConvert;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.editor.data.ObDataEditorSpi;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.editor.table.ObEditorProvider;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.editor.table.ObTableEditorUiDataSpi;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.exception.ObDetermineExceptionSpi;
+import com.clougence.clouddm.ds.oceanbase.definition.ob4my.ui.template.ObCmdTemplateSpi;
+import com.clougence.clouddm.ds.oceanbase.dialect.ob4my.ObForMySQLDialect;
+import com.clougence.clouddm.ds.oceanbase.dsconf.ob4my.ObConfigSpi;
+import com.clougence.clouddm.ds.oceanbase.dsconf.ob4my.ObSerializationSpi;
+import com.clougence.clouddm.ds.oceanbase.execute.ob4my.ObSessionFactory;
+import com.clougence.clouddm.ds.oceanbase.execute.ob4my.ObSessionSpi;
+import com.clougence.clouddm.ds.oceanbase.execute.ob4my.ObSupportSpi;
 import com.clougence.clouddm.ds.oceanbase.i18n.ObDsI18nKeys;
+import com.clougence.clouddm.ds.oceanbase.language.ob4my.ObMyLanguageSpi;
+import com.clougence.clouddm.ds.oceanbase.resource.ObMyEditorResourceSpi;
 import com.clougence.clouddm.dsfamily.definition.TypeMapUtils;
 import com.clougence.clouddm.sdk.DsPlugin;
 import com.clougence.clouddm.sdk.DsPluginBinder;
@@ -67,6 +69,7 @@ public class ObDsPlugin implements DsPlugin, SchemaPlugin, DsFeatureIDs {
         this.configBasic(dsPlugin);
         this.configExecute(dsPlugin);
         this.configUi(dsPlugin);
+        this.configEditor(dsPlugin);
         this.configTeam(dsPlugin);
         this.configFeature(dsPlugin);
     }
@@ -98,6 +101,12 @@ public class ObDsPlugin implements DsPlugin, SchemaPlugin, DsFeatureIDs {
         dsPlugin.addPluginSpi(new ObDataEditorSpi());
         dsPlugin.addPluginSpi(new ObDDLSpiConvert());
         dsPlugin.addPluginSpi(new ObDetermineExceptionSpi());
+    }
+
+    private void configEditor(DsPluginBinder dsPlugin) {
+        // SPIs
+        dsPlugin.addPluginSpi(new ObMyLanguageSpi(dsPlugin.findGlobalService(MetaService.class)));
+        dsPlugin.addPluginSpi(new ObMyEditorResourceSpi(dsPlugin.getPluginClassLoader()));
     }
 
     private void configTeam(DsPluginBinder dsPlugin) {

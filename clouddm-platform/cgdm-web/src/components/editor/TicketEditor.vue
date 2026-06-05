@@ -1,8 +1,9 @@
 <script>
 import * as monaco from 'monaco-editor';
-import { MySQL, PostgresSQL, RedisSQL, StarRocksSQL } from '@/components/editor/core';
 import { getLanguage } from '@/utils/tools';
 import { markRaw, nextTick } from 'vue';
+import { mapState } from 'vuex';
+import { applySqlEditorLanguage, resolveSqlEditorLanguage } from './sqlLanguage';
 
 export default {
   name: 'TicketEditor',
@@ -18,17 +19,27 @@ export default {
       dsType: this.dataSourceType
     };
   },
+  computed: {
+    ...mapState(['dmGlobalSetting', 'globalDsSetting'])
+  },
+  watch: {
+    dataSourceType(newVal) {
+      this.dsType = newVal;
+      this.applyLanguage();
+    }
+  },
   mounted() {
     this.createEditor();
   },
   methods: {
-    createEditor() {
+    async createEditor() {
       if (!this.monacoEditor) {
+        const language = await this.resolveLanguage();
         // 使用markRaw防止Monaco Editor实例被Vue3响应式系统包装
         this.monacoEditor = markRaw(
           monaco.editor.create(this.$refs.ticketEditor, {
             value: this.text, // 编辑器的值
-            language: getLanguage(this.dataSourceType),
+            language,
             fontSize: 14,
             fontWeight: 'bold',
             scrollBeyondLastLine: false,
@@ -41,73 +52,15 @@ export default {
           })
         );
       }
-      this.registerCompletion(getLanguage(this.dataSourceType));
-      this.setParser();
     },
-    registerCompletion(lang) {
-      const providerItem = monaco.languages.registerCompletionItemProvider(lang, {
-        triggerCharacters: [' ', '.', '`', '/'],
-        provideCompletionItems: (model, position) => {
-          this.sortText = 0;
-          let suggestions = [];
-
-          const { lineNumber, column } = position;
-
-          const textUntilPosition = model.getValueInRange({
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: lineNumber,
-            endColumn: column
-          });
-
-          const syntaxSuggestions = this.currentParser.getSuggestionAtCaretPosition(textUntilPosition, position);
-
-          if (syntaxSuggestions) {
-            const { keywords } = syntaxSuggestions;
-
-            if (keywords.length) {
-              suggestions = suggestions.concat(this.getSQLSuggest(keywords));
-            }
-          }
-
-          return {
-            suggestions
-          };
-        }
-      });
+    resolveLanguage() {
+      return resolveSqlEditorLanguage(monaco, this.dsType, this.getDsSettings(), getLanguage(this.dsType));
     },
-    setParser() {
-      switch (this.dsType) {
-        case 'Redis':
-          this.currentParser = new RedisSQL();
-          break;
-        case 'Mysql':
-        case 'TiDB':
-          this.currentParser = new MySQL();
-          break;
-        case 'Oracle':
-        case 'PostgreSQL':
-        case 'Greenplum':
-        case 'SQLServer':
-          this.currentParser = new PostgresSQL();
-          break;
-        case 'StarRocks':
-          this.currentParser = new StarRocksSQL();
-          break;
-        default:
-          this.currentParser = new MySQL();
-      }
+    applyLanguage() {
+      return applySqlEditorLanguage(monaco, this.monacoEditor, this.dsType, this.getDsSettings(), getLanguage(this.dsType));
     },
-    getSQLSuggest(keywords) {
-      const list = keywords.map((key) => ({
-        label: key,
-        kind: monaco.languages.CompletionItemKind.Keyword,
-        detail: `[${this.$t('guan-jian-zi')}]`,
-        sortText: `${this.sortText++}`.padStart(8, '0'),
-        insertText: `${key}`
-      }));
-
-      return list;
+    getDsSettings() {
+      return this.dmGlobalSetting?.dsSettingDef || this.globalDsSetting || {};
     },
     getSql() {
       if (this.monacoEditor) {

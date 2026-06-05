@@ -33,9 +33,9 @@ import com.clougence.clouddm.console.web.global.jwtsession.JwtCheckResult;
 import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.AuthStrategy;
 import com.clougence.clouddm.console.web.global.jwtsession.WebSoInterceptor;
-import com.clougence.clouddm.console.web.model.vo.editor.query.WsResMsg;
+import com.clougence.clouddm.console.web.model.vo.editor.WsResult;
 import com.clougence.clouddm.console.web.model.vo.system.WsSysMsg;
-import com.clougence.clouddm.console.web.service.editor.query.ConsoleQueryApi;
+import com.clougence.clouddm.console.web.service.editor.DsConsoleEditorService;
 import com.clougence.clouddm.console.web.util.DmConvertUtils;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
@@ -54,13 +54,15 @@ public class WsChannel extends TextWebSocketHandler implements UnifiedPostConstr
     private final Map<String, WsChannelStore> sessionMap = new ConcurrentHashMap<>();
     private final AtomicBoolean               inited     = new AtomicBoolean(false);
     @Resource
-    private ConsoleQueryApi                   queryServiceApi;
+    private DsConsoleEditorService            editorApi;
 
     @Override
     public void init() throws Exception {
         this.inited.set(true);
         // query request & response
-        DmGlobalEventBus.addQueryResultEventListen(msg -> this.wsDirectChannel(WsType.WS_RES_QUERY, msg.getCurUserId(), msg));
+        DmGlobalEventBus.addQueryResultEventListen(msg -> this.wsDirectChannel(WsType.WS_RES_QUERY, msg));
+        // language request & response
+        DmGlobalEventBus.addLanguageResultEventListen(msg -> this.wsDirectChannel(WsType.WS_RES_LANGUAGE, msg));
         // export info
         DmGlobalEventBus.addQueryResultExportListen(exportVO -> this.wsBroadcastChannel(WsType.WS_RES_EXPORT_EVENT, exportVO.getUid(), exportVO));
         // async task
@@ -106,7 +108,7 @@ public class WsChannel extends TextWebSocketHandler implements UnifiedPostConstr
             String uid = (String) ws.getAttributes().get(WebSoInterceptor.WS_USER_ID);
             String channelKey = WsUtils.getChannelKey(ws);
 
-            WsChannelStore channelStore = this.sessionMap.computeIfAbsent(uid, s -> new WsChannelStore(uid, this.queryServiceApi));
+            WsChannelStore channelStore = this.sessionMap.computeIfAbsent(uid, s -> new WsChannelStore(uid, this.editorApi));
             if (!channelStore.containsChannel(channelKey)) {
                 channelStore.acceptChannel(channelKey, ws);
             }
@@ -194,7 +196,8 @@ public class WsChannel extends TextWebSocketHandler implements UnifiedPostConstr
         }
     }
 
-    private void wsDirectChannel(WsType type, String uid, WsResMsg data) {
+    private void wsDirectChannel(WsType type, WsResult data) {
+        String uid = data.getCurUserId();
         String channelKey = data.getChannelKey();
 
         if (StringUtils.isBlank(channelKey)) {

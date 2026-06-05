@@ -24,6 +24,7 @@ import com.clougence.clouddm.console.web.component.detectrule.SecHintInfo;
 import com.clougence.clouddm.console.web.component.detectrule.SecRulesCheckResult;
 import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
 import com.clougence.clouddm.console.web.global.i18n.I18nDmMsgKeys;
+import com.clougence.clouddm.console.web.model.fo.editor.WsRequestFO;
 import com.clougence.clouddm.console.web.model.fo.editor.query.WsQueryFO;
 import com.clougence.clouddm.console.web.model.fo.editor.query.WsQueryType;
 import com.clougence.clouddm.console.web.model.vo.editor.query.*;
@@ -46,13 +47,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BuildResMsgUtils {
 
-    public static WsResMsg buildRules(WsQueryFO queryDTO, SecRulesCheckResult checkResult) {
-        WsRuleResMsg dto = new WsRuleResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.RuleCheck);
+    private static <T extends WsQueryResult> T fillResult(T result, WsResultType type, WsRequestFO fo) {
+        result.setOriginal(fo.resultOriginal());
+        result.setChannelKey(fo.getChannelKey());
+        result.setSessionId(fo.resultSessionId());
+        result.setCurUserId(fo.getCurrentUserId());
+        result.setRequestId(fo.resultRequestId());
+        result.setResultType(type);
+
+        return result;
+    }
+
+    public static WsQueryResult buildRules(WsQueryFO queryDTO, SecRulesCheckResult checkResult) {
+        WsRuleResMsg dto = fillResult(new WsRuleResMsg(), WsResultType.RuleCheck, queryDTO);
 
         dto.setQueryBody(queryDTO.getQueryString());
         dto.setWarnLevel(WarnLevel.PASS);
@@ -70,15 +77,10 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildCost(WsQueryFO queryDTO, QueryCtx ctx, boolean isFinish) {
+    public static WsQueryResult buildCost(WsQueryFO queryDTO, QueryCtx ctx, boolean isFinish) {
         // step : Prepare -> Query  -> Receive    -> Finish
         // cost : (none)  -> preCost -> queryCost -> rcvCost
-        WsCostResMsg dto = new WsCostResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.Cost);
+        WsCostResMsg dto = fillResult(new WsCostResMsg(), WsResultType.Cost, queryDTO);
 
         dto.setStep(ctx.getQueryStatus());
         dto.setStartTime(ctx.getStartTime());
@@ -88,13 +90,8 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildResultMeta(WsQueryFO queryDTO, QueryCtx ctx, ResultSetMeta result) {
-        WsResultSetMetaMsg dto = new WsResultSetMetaMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.ResultSetMeta);
+    public static WsQueryResult buildResultMeta(WsQueryFO queryDTO, QueryCtx ctx, ResultSetMeta result) {
+        WsResultSetMetaMsg dto = fillResult(new WsResultSetMetaMsg(), WsResultType.ResultSetMeta, queryDTO);
 
         dto.setResultId(result.getResultId());
         //dto.setResource(result.getResource());
@@ -114,13 +111,8 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildResult(WsQueryFO queryDTO, QueryCtx ctx, ResultSet result) {
-        WsResultSetResMsg dto = new WsResultSetResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.ResultSet);
+    public static WsQueryResult buildResult(WsQueryFO queryDTO, QueryCtx ctx, ResultSet result) {
+        WsResultSetMsg dto = fillResult(new WsResultSetMsg(), WsResultType.ResultSet, queryDTO);
 
         dto.setResultId(result.getResultId());
         dto.setFetchCount(result.getFetchCount());
@@ -129,13 +121,8 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildResultSetRows(WsQueryFO queryDTO, QueryCtx ctx, ResultSetCount result) {
-        WsResultSetRowsMsg dto = new WsResultSetRowsMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.ResultSetRows);
+    public static WsQueryResult buildResultSetRows(WsQueryFO queryDTO, QueryCtx ctx, ResultSetCount result) {
+        WsResultSetRowsMsg dto = fillResult(new WsResultSetRowsMsg(), WsResultType.ResultSetRows, queryDTO);
 
         dto.setResultId(result.getResultId());
         dto.setFetchCount(result.getFetchCount());
@@ -143,15 +130,10 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildStatus(WsQueryFO queryDTO, QueryCtx ctx, DsQueryEditorService queryService) {
+    public static WsQueryResult buildStatus(WsQueryFO queryDTO, QueryCtx ctx, DsQueryEditorService queryService) {
         DsAvailableDTO statusDTO = queryService.availableDataSource(queryDTO.getPrimaryUserId(), queryDTO.getCurrentUserId(), ctx.getLevels().dsDO().getId());
 
-        WsStatusResMsg dto = new WsStatusResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.Status);
+        WsStatusResMsg dto = fillResult(new WsStatusResMsg(), WsResultType.Status, queryDTO);
         dto.setDsStatus(statusDTO.getDsStatus());
         dto.setDsStatusMessage(statusDTO.getDsStatusMessage());
 
@@ -163,33 +145,18 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildDone(WsQueryFO queryDTO) {
-        WsDoneResMsg dto = new WsDoneResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.Done);
+    public static WsQueryResult buildDone(WsRequestFO queryDTO) {
+        WsDoneResMsg dto = fillResult(new WsDoneResMsg(), WsResultType.Done, queryDTO);
         return dto;
     }
 
-    public static WsResMsg buildCancelDone(WsQueryFO queryDTO) {
-        WsDoneResMsg dto = new WsDoneResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.CancelDone);
+    public static WsQueryResult buildCancelDone(WsQueryFO queryDTO) {
+        WsDoneResMsg dto = fillResult(new WsDoneResMsg(), WsResultType.CancelDone, queryDTO);
         return dto;
     }
 
-    public static WsResMsg buildQueryMsg(WsQueryFO queryDTO, ResultPhase phase, QueryCtx ctx) {
-        WsQueryInfoMsg dto = new WsQueryInfoMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.QueryScript);
+    public static WsQueryResult buildQueryMsg(WsQueryFO queryDTO, ResultPhase phase, QueryCtx ctx) {
+        WsQueryInfoMsg dto = fillResult(new WsQueryInfoMsg(), WsResultType.QueryScript, queryDTO);
 
         SessionContextDTO ctxDTO = ctx.getCtxDTO();
         List<UmiTypes> levelsDef = ctx.getLevels().levelsDef();
@@ -220,13 +187,8 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildConsoleMsg(WsQueryFO queryDTO, String message, MessageLevel level, boolean timestamp) {
-        WsInfoResMsg dto = new WsInfoResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.Message);
+    public static WsQueryResult buildConsoleMsg(WsRequestFO queryDTO, String message, MessageLevel level, boolean timestamp) {
+        WsInfoResMsg dto = fillResult(new WsInfoResMsg(), WsResultType.Message, queryDTO);
 
         WsInfoEntity entity = new WsInfoEntity();
         entity.setTitle("");
@@ -239,23 +201,13 @@ public class BuildResMsgUtils {
         return dto;
     }
 
-    public static WsResMsg buildClearHint(WsQueryFO queryDTO) {
-        WsClearHintMsg dto = new WsClearHintMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.ClearHintMessage);
+    public static WsQueryResult buildClearHint(WsRequestFO queryDTO) {
+        WsClearHintMsg dto = fillResult(new WsClearHintMsg(), WsResultType.ClearHintMessage, queryDTO);
         return dto;
     }
 
-    public static WsResMsg buildHintMsg(WsQueryFO queryDTO, String message, MessageLevel level) {
-        WsInfoResMsg dto = new WsInfoResMsg();
-        dto.setOriginal(queryDTO.getQueryType().name());
-        dto.setChannelKey(queryDTO.getChannelKey());
-        dto.setSessionId(queryDTO.getSessionId());
-        dto.setCurUserId(queryDTO.getCurrentUserId());
-        dto.setResultType(WsResultType.Message);
+    public static WsQueryResult buildHintMsg(WsRequestFO queryDTO, String message, MessageLevel level) {
+        WsInfoResMsg dto = fillResult(new WsInfoResMsg(), WsResultType.Message, queryDTO);
 
         WsInfoEntity entity = new WsInfoEntity();
         entity.setTitle("");

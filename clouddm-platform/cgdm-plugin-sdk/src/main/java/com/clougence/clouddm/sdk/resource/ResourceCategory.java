@@ -20,7 +20,8 @@ import lombok.Getter;
 @Getter
 public enum ResourceCategory {
 
-    WEBSIDE("webside");
+    WEBSIDE("webside"),
+    EDITOR("editor");
 
     private final String code;
 

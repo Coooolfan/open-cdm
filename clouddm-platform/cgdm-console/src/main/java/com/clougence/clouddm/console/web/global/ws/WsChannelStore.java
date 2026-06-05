@@ -25,9 +25,9 @@ import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorato
 import com.alibaba.fastjson.JSONObject;
 import com.clougence.clouddm.console.web.global.events.DmGlobalEventBus;
 import com.clougence.clouddm.console.web.global.jwtsession.WebSoInterceptor;
+import com.clougence.clouddm.console.web.model.fo.editor.language.WsLanguageFO;
 import com.clougence.clouddm.console.web.model.fo.editor.query.WsQueryFO;
-import com.clougence.clouddm.console.web.model.vo.editor.query.WsResMsg;
-import com.clougence.clouddm.console.web.service.editor.query.ConsoleQueryApi;
+import com.clougence.clouddm.console.web.service.editor.DsConsoleEditorService;
 import com.clougence.utils.StringUtils;
 
 import lombok.Getter;
@@ -40,12 +40,12 @@ import lombok.extern.slf4j.Slf4j;
 public class WsChannelStore {
 
     private final String                        uid;
-    private final ConsoleQueryApi               queryServiceApi;
+    private final DsConsoleEditorService        editorService;
     private final Map<String, WebSocketSession> channelMap = new ConcurrentHashMap<>();
 
-    public WsChannelStore(String uid, ConsoleQueryApi queryServiceApi){
+    public WsChannelStore(String uid, DsConsoleEditorService editorService){
         this.uid = uid;
-        this.queryServiceApi = queryServiceApi;
+        this.editorService = editorService;
     }
 
     public boolean containsChannel(String channelKey) {
@@ -68,22 +68,34 @@ public class WsChannelStore {
 
     public void handleMessage(WebSocketSession ws, WsMsg reqMsg) {
         String channelKey = reqMsg.getChannelKey();
-
-        //Objects.requireNonNull(body, "missing request info.");
-        log.info("WS[" + channelKey + "]:RECEIVE user(" + uid + "), type:" + reqMsg.getType().getCode());
+        if (reqMsg.getType() == null) {
+            log.warn("WS[" + channelKey + "]:RECEIVE user(" + uid + "), missing request type.");
+            return;
+        } else {
+            log.info("WS[" + channelKey + "]:RECEIVE user(" + uid + "), type:" + reqMsg.getType().getCode());
+        }
 
         switch (reqMsg.getType()) {
             case WS_REQ_ECHO:
                 WsUtils.writeToSocket(ws, WsType.WS_RES_ECHO, reqMsg.getObject());
                 return;
             case WS_REQ_QUERY:
-                WsQueryFO queryFO = JSONObject.parseObject(reqMsg.getObject(), WsQueryFO.class);
-                queryFO.setChannelKey(channelKey);
-                queryFO.setPrimaryUserId((String) ws.getAttributes().get(WebSoInterceptor.WS_PUSER_ID));
-                queryFO.setCurrentUserId((String) ws.getAttributes().get(WebSoInterceptor.WS_USER_ID));
-                queryFO.setRequestTime(System.currentTimeMillis());
-                queryFO.setClientIp(getHost(ws));
-                this.queryServiceApi.offerQueryRequest(queryFO, DmGlobalEventBus::triggerQueryResultEvent);
+                WsQueryFO qfo = JSONObject.parseObject(reqMsg.getObject(), WsQueryFO.class);
+                qfo.setChannelKey(channelKey);
+                qfo.setPrimaryUserId((String) ws.getAttributes().get(WebSoInterceptor.WS_PUSER_ID));
+                qfo.setCurrentUserId((String) ws.getAttributes().get(WebSoInterceptor.WS_USER_ID));
+                qfo.setRequestTime(System.currentTimeMillis());
+                qfo.setClientIp(getHost(ws));
+                this.editorService.offerQueryRequest(qfo, DmGlobalEventBus::triggerQueryResultEvent);
+                return;
+            case WS_REQ_LANGUAGE:
+                WsLanguageFO lfo = JSONObject.parseObject(reqMsg.getObject(), WsLanguageFO.class);
+                lfo.setChannelKey(channelKey);
+                lfo.setPrimaryUserId((String) ws.getAttributes().get(WebSoInterceptor.WS_PUSER_ID));
+                lfo.setCurrentUserId((String) ws.getAttributes().get(WebSoInterceptor.WS_USER_ID));
+                lfo.setRequestTime(System.currentTimeMillis());
+                lfo.setClientIp(getHost(ws));
+                this.editorService.offerLanguageRequest(lfo, DmGlobalEventBus::triggerLanguageResultEvent);
                 return;
             default:
                 throw new UnsupportedOperationException("Request WsType '" + reqMsg.getType() + "' Unsupported.");
@@ -91,7 +103,7 @@ public class WsChannelStore {
     }
 
     private String getHost(WebSocketSession ws) {
-        //aliyun  slb
+        // for aliyun  slb
         String host = ws.getHandshakeHeaders().getFirst("X-Forwarded-For");
         if (!StringUtils.isEmpty(host)) {
             return host;
@@ -105,7 +117,7 @@ public class WsChannelStore {
         log.info("WS[Broadcast]:SEND user(" + uid + "), type:" + type);
     }
 
-    public void directWrite(String channelKey, WsType type, WsResMsg data) {
+    public void directWrite(String channelKey, WsType type, Object data) {
         WebSocketSession ws = channelMap.get(channelKey);
         if (ws != null) {
             WsUtils.writeToSocket(ws, type, data);

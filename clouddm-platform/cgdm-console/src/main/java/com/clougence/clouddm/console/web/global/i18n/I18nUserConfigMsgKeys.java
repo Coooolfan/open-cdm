@@ -99,6 +99,10 @@ public enum I18nUserConfigMsgKeys {
     OIDC_CONFIG_LOGIN_SCOPE,
     OIDC_CONFIG_LOGIN_ROLE_MAP,
 
+    // for Language
+    LANGUAGE_MAX_REQUESTS,
+    LANGUAGE_MAX_REQUESTS_BY_USER,
+
     // for CloudDM
     AI_DM_ENABLE_MCP,
     PROJECT_DEFAULT_PROJECT_SPACE,

@@ -15,6 +15,8 @@
  */
 package com.clougence.clouddm.sdk.language.completion;
 
+import com.clougence.schema.umi.struts.UmiTypes;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,8 +26,9 @@ public class CompletionItem {
 
     private String             label;
     private CompletionItemKind kind;
+    private UmiTypes           umiType;
+    private String             icon;
     private String             insertText;
-    private String             detail;
-    private String             documentation;
     private String             sortText;
+    private Integer            weight;
 }

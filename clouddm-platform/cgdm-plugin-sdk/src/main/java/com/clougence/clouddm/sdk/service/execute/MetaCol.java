@@ -35,4 +35,5 @@ public class MetaCol {
     private String table;
     private String schema;
     private String catalog;
+    private String icon;
 }

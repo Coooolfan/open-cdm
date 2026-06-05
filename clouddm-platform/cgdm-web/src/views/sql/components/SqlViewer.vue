@@ -61,7 +61,6 @@
 </template>
 <script>
 import * as monaco from 'monaco-editor';
-import { Modal } from 'ant-design-vue';
 import { mapGetters, mapMutations, mapState } from 'vuex';
 import Operators from '@/views/sql/components/Operators';
 import { chunk } from 'xe-utils';
@@ -136,7 +135,6 @@ export default {
       noPassedRuleList: [],
       showNoPassedRuleModal: false,
       stopping: false,
-      canRun: true,
       monacoEditor: null
     };
   },
@@ -156,6 +154,9 @@ export default {
     handleShowUnPassedRuleListModal(index) {
       this.noPassedRuleList = this.tab.executeInfo[index].ruleList;
       this.showNoPassedRuleModal = true;
+    },
+    showNoExecutableSqlError() {
+      this.$refs.editor?.showNoExecutableSqlError?.(this.$t('dang-qian-mei-you-ke-zhi-hang-de-sql-yu-ju'));
     },
     async handleReRunAfterRuleCheck() {
       const type = this.tab.currentQueryType || 'query';
@@ -306,32 +307,35 @@ export default {
       if (window._hmt && this.isDesktop) {
         window._hmt.push(['_trackEvent', 'execute sql', 'uid', 'personal']);
       }
-      let selectedSql = '';
-      console.log('get selected sql', selectedSql);
-      selectedSql = this.monacoEditor.getModel().getValueInRange(this.monacoEditor.getSelection());
-      console.log('get selected sql2', selectedSql);
-      // if (!selectedSql) {
-      //   selectedSql = this.$refs.editor.getCurrentSql();
-      // }
+      const selection = this.monacoEditor.getSelection();
+      const hasSelection =
+        selection.selectionStartLineNumber !== selection.positionLineNumber || selection.selectionStartColumn !== selection.positionColumn;
+      let selectedSql = this.monacoEditor.getModel().getValueInRange(selection);
+      let position = selection;
+      if (!hasSelection) {
+        const targetState = this.$refs.editor?.getExecutableSqlTargetState?.();
+        if (!targetState?.hasStatement) {
+          this.showNoExecutableSqlError();
+          return;
+        }
+        const target = this.$refs.editor.getCurrentSqlTarget();
+        selectedSql = target.sql;
+        position = target.position || selection;
+      }
 
-      console.log('get selected sql3', selectedSql);
-      if (!selectedSql) {
-        Modal.warning({
-          title: this.$t('zhi-hang-yi-chang-ti-shi'),
-          content: this.$t('nin-dang-qian-mei-you-xuan-zhong-ren-he-sql-yu-ju-qing-xuan-zhong-hou-zai-zhi-hang'),
-          okText: this.$t('zhi-dao-le')
-        });
+      if (!selectedSql || !selectedSql.trim()) {
+        this.showNoExecutableSqlError();
         return;
       }
 
-      this.position = this.monacoEditor.getSelection();
+      this.position = position;
       switch (type) {
         case 'run':
-          await this.handleRun(selectedSql, this.position);
+          await this.handleRun(selectedSql, position);
           break;
         case 'plan':
           this.handleInterceptor('explain', async () => {
-            await this.handlePlan(selectedSql, this.position);
+            await this.handlePlan(selectedSql, position);
           });
           break;
         case 'ticket':

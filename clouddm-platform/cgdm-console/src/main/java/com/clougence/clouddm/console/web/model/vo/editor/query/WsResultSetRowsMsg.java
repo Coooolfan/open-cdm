@@ -23,7 +23,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class WsResultSetRowsMsg extends WsResMsg {
+public class WsResultSetRowsMsg extends WsQueryResult {
 
     private String resultId;
     private int    fetchCount;

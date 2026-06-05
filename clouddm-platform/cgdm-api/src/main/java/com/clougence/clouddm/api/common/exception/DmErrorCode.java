@@ -22,6 +22,7 @@ public enum DmErrorCode {
 
     // DS ERROR  101xx
     DS_DISCONNECT_ERROR("10103"),
+    DS_LANGUAGE_ERROR("10104"),
 
     //Worker & Cluster & RPC   102xx
     CLUSTER_HAVE_NO_WORKS_ERROR("10201"),
@@ -29,6 +30,9 @@ public enum DmErrorCode {
     // DAO ERROR 103xx
     O_AUTHORITY("10301"),
     O_DATA("10302"),
+
+    // Plugin error 104xx
+    PLUGIN_DAMAGED_ERROR("10401"),
 
     //Ticket error
     TICKET_SQL_PARSE_FAILED("20001");
