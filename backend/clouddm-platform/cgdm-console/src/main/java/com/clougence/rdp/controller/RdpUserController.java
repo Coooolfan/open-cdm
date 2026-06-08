@@ -21,6 +21,11 @@ import static com.clougence.clouddm.console.web.global.jwtsession.RequestAuth.Au
 import static com.clougence.clouddm.platform.dal.model.monitor.SecurityLevel.HIGH;
 import static com.clougence.clouddm.sdk.security.auth.def.SecRoleAuthLabel.*;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,38 +34,41 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.clougence.clouddm.api.common.rpc.ResWebData;
 import com.clougence.clouddm.api.common.rpc.ResWebDataUtils;
 import com.clougence.clouddm.base.metadata.rdp.enumeration.ResourceType;
 import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
+import com.clougence.clouddm.console.web.constants.CheckSubAccountType;
+import com.clougence.clouddm.console.web.constants.LoginAuthType;
 import com.clougence.clouddm.console.web.global.config.DmConsoleConfig;
 import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
 import com.clougence.clouddm.console.web.global.i18n.I18nRdpMsgKeys;
 import com.clougence.clouddm.console.web.global.jwtsession.JwtService;
 import com.clougence.clouddm.console.web.global.jwtsession.RequestAuth;
 import com.clougence.clouddm.console.web.model.fo.*;
+import com.clougence.clouddm.console.web.model.fo.user.CheckSubAccountFO;
 import com.clougence.clouddm.console.web.model.fo.user.ResetSubAccountPwdFO;
 import com.clougence.clouddm.console.web.model.vo.LoginUserVO;
-import com.clougence.clouddm.console.web.model.vo.PwdValidateExprVO;
+import com.clougence.clouddm.console.web.model.vo.PwdPolicyVO;
 import com.clougence.clouddm.console.web.model.vo.RdpUserAkSkVO;
 import com.clougence.clouddm.console.web.model.vo.ResourceSummaryVO;
 import com.clougence.clouddm.console.web.service.auth.RdpRoleService;
-import com.clougence.clouddm.console.web.service.auth.RdpUserLoginRegService;
 import com.clougence.clouddm.console.web.service.auth.RdpUserService;
 import com.clougence.clouddm.console.web.util.RdpConvertUtils;
 import com.clougence.clouddm.console.web.util.Sm2Utils;
 import com.clougence.clouddm.platform.dal.access.AuthDal;
+import com.clougence.clouddm.platform.dal.access.SystemDal;
+import com.clougence.clouddm.platform.dal.model.auth.AccountType;
 import com.clougence.clouddm.platform.dal.model.auth.DmAuthRoleDO;
 import com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO;
-import com.clougence.clouddm.platform.dal.model.auth.VerifyCodeType;
 import com.clougence.clouddm.platform.dal.model.monitor.AuditType;
 import com.clougence.clouddm.platform.dal.model.monitor.SecurityLevel;
 import com.clougence.clouddm.sdk.security.auth.AuthInfo;
 import com.clougence.rdp.constant.RdpControllerUrlPrefix;
+import com.clougence.rdp.global.config.user.UserDefinedConfig;
 import com.clougence.rdp.service.RdpOpAuditService;
-import com.clougence.rdp.service.RdpVerifyService;
 import com.clougence.rdp.service.enumeration.OpVerifyErrType;
-import com.clougence.rdp.service.model.CheckVerifyMO;
 import com.clougence.rdp.service.model.OpPasswdVerifyMO;
 import com.clougence.rdp.service.model.UpdateUserInfoMO;
 import com.clougence.rdp.service.model.ValidateResultMO;
@@ -83,30 +91,21 @@ import lombok.extern.slf4j.Slf4j;
 public class RdpUserController {
 
     @Resource
-    private AuthDal                authDal;
-
+    private AuthDal             authDal;
     @Resource
-    private RdpUserService         rdpUserService;
+    private RdpUserService      rdpUserService;
     @Resource
-    private RdpRoleService         rdpRoleService;
-
+    private RdpRoleService      rdpRoleService;
     @Resource
-    private JwtService             jwtService;
-
+    private JwtService          jwtService;
     @Resource
-    private RdpVerifyService       rdpVerifyService;
-
+    private DmAuthServiceForBiz rdpAuthService;
     @Resource
-    private DmAuthServiceForBiz    rdpAuthService;
-
+    private RdpOpAuditService   rdpOpAuditService;
     @Resource
-    private RdpUserLoginRegService rdpUserLoginRegService;
-
+    private DmConsoleConfig     rdpConfig;
     @Resource
-    private RdpOpAuditService      rdpOpAuditService;
-
-    @Resource
-    private DmConsoleConfig        rdpConfig;
+    private SystemDal           systemDal;
 
     // --------------------------------
     //      for User Info
@@ -131,26 +130,42 @@ public class RdpUserController {
         }
 
         LoginUserVO userVO = RdpConvertUtils.convertToLoginUserVO(userDO, pUser);
-        rdpUserLoginRegService.fillSubAccountPwdValidDays(userVO, userDO.getLastDateUpdatePwd(), pUser.getUid());
+        DecodedJWT jwt = this.jwtService.verify(request);
+        userVO.setLoginType(jwt == null ? null : LoginAuthType.valueOfCode(jwt.getClaim(JwtService.LOGIN_TYPE).asString()));
+        this.fillPasswordValidDays(userVO, userDO.getLastDateUpdatePwd(), pUser.getUid());
 
         //if value is sub-zero,need logout
         if (userVO.getSubAccountPwdValidDays() != null && userVO.getSubAccountPwdValidDays() < 0) {
             logout(response);
         }
 
-        //        // refresh saas user status
-        //        if (GlobalDeployMode.inCloud()) {
-        //            String fuid = rdpUserService.findFinanceOwnerUid(uid, puid);
-        //            if (fuid != null && !fuid.equals(uid)) {
-        //                userVO.setSaasResMode(SaasResMode.MANAGED);
-        //                saasService.refreshUserStatus(fuid);
-        //            } else {
-        //                userVO.setSaasResMode(SaasResMode.BYOC);
-        //                saasService.refreshUserStatus(uid);
-        //            }
-        //        }
-
         return ResWebDataUtils.buildSuccess(userVO);
+    }
+
+    public void fillPasswordValidDays(LoginUserVO userVO, Date lastDateUpdatePwd, String pUid) {
+        if (lastDateUpdatePwd == null || userVO.getAccountType() == null || userVO.getAccountType() != AccountType.SUB_ACCOUNT) {
+            return;
+        }
+
+        Integer days = this.systemDal.fetchSystemConf(UserDefinedConfig.Fields.accountPwdExpireDays, Integer.class);
+        if (days == null) {
+            return;
+        }
+
+        if (days <= 0) {
+            return;
+        }
+
+        LocalDateTime lastUpdateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lastDateUpdatePwd.getTime()), ZoneId.systemDefault());
+        LocalDateTime limit = lastUpdateTime.plusDays(days);
+
+        Instant r = limit.toInstant(ZoneOffset.UTC);
+        Instant n = LocalDateTime.now().toInstant(ZoneOffset.UTC);
+
+        long diffMinutes = ChronoUnit.MINUTES.between(n, r);
+        double diffDays = ((double) diffMinutes) / 60 / 24;
+
+        userVO.setSubAccountPwdValidDays((long) (Math.floor(diffDays)));
     }
 
     @RequestAuth(strategy = RefAnyOnes)
@@ -165,18 +180,18 @@ public class RdpUserController {
     }
 
     @RequestAuth(strategy = Ignore)
-    @RequestMapping(value = "/getPrimaryAccountPwdValidateExpr", method = RequestMethod.POST)
-    public ResWebData<?> getPrimaryAccountPwdValidateExpr(HttpServletRequest request) {
-        PwdValidateExprVO vo = this.rdpUserService.getPwdValidateExprWithoutEscape(null);
+    @RequestMapping(value = "/getPrimaryAccountPwdPolicy", method = RequestMethod.POST)
+    public ResWebData<?> getPrimaryAccountPwdPolicy(HttpServletRequest request) {
+        PwdPolicyVO vo = this.rdpUserService.getPwdPolicy(null);
         return ResWebDataUtils.buildSuccess(vo);
     }
 
     @RequestAuth(strategy = Ignore)
-    @RequestMapping(value = "/getSubAccountPwdValidateExpr", method = RequestMethod.POST)
-    public ResWebData<?> getSubAccountPwdValidateExpr(HttpServletRequest request) {
+    @RequestMapping(value = "/getSubAccountPwdPolicy", method = RequestMethod.POST)
+    public ResWebData<?> getSubAccountPwdPolicy(HttpServletRequest request) {
         String puid = (String) request.getAttribute(RdpUserService.PUID);
 
-        PwdValidateExprVO vo = this.rdpUserService.getPwdValidateExprWithoutEscape(puid);
+        PwdPolicyVO vo = this.rdpUserService.getPwdPolicy(puid);
         return ResWebDataUtils.buildSuccess(vo);
     }
 
@@ -366,6 +381,56 @@ public class RdpUserController {
         return ResWebDataUtils.buildSuccess();
     }
 
+    @RequestAuth(strategy = Ignore)
+    @RequestMapping(value = "/updateUserName", method = RequestMethod.POST)
+    public ResWebData<?> updateUserName(@RequestBody @Valid UpdateUserNameFO fo, HttpServletRequest request) {
+        String puid = (String) request.getAttribute(RdpUserService.PUID);
+        String uid = (String) request.getAttribute(RdpUserService.UID);
+
+        UpdateUserInfoMO res = this.rdpUserService.updateUserName(uid, fo);
+        if (!res.isSuccess()) {
+            return ResWebDataUtils.buildError(res.getErrorMsg());
+        }
+
+        this.rdpOpAuditService.logAndAddOperationAudit(puid, uid, request.getRequestURI(), request.getRemoteAddr(), uid, res
+            .getConfigLO(), SecurityLevel.NORMAL, AuditType.UPDATE_ACCOUNT_USER_NAME, ResourceType.ACCOUNT);
+
+        return ResWebDataUtils.buildSuccess();
+    }
+
+    @RequestAuth(strategy = Ignore)
+    @RequestMapping(value = "/checkProfileDuplicate", method = RequestMethod.POST)
+    public ResWebData<?> checkProfileDuplicate(@RequestBody @Valid CheckSubAccountFO fo, HttpServletRequest request) {
+        String uid = (String) request.getAttribute(RdpUserService.UID);
+        DmAuthUserDO userDO = this.rdpUserService.getUserByUid(uid);
+        if (userDO == null) {
+            return ResWebDataUtils.buildError(DmI18nUtils.getMessage(I18nRdpMsgKeys.USER_NOT_EXIST_ERROR.name()));
+        }
+
+        DmAuthUserDO existUserDO = null;
+        if (fo.getCheckType() == CheckSubAccountType.PHONE) {
+            if (userDO.getAccountType() == AccountType.PRIMARY_ACCOUNT) {
+                existUserDO = this.authDal.userMapper().queryPrimaryByPhone(fo.getCheckContent());
+            } else {
+                existUserDO = this.authDal.userMapper().queryByPhoneAndParentIdExcludeUid(fo.getCheckContent(), userDO.getParentId(), uid);
+            }
+            if (existUserDO != null && !StringUtils.equals(existUserDO.getUid(), uid)) {
+                return ResWebDataUtils.buildError(DmI18nUtils.getMessage(I18nRdpMsgKeys.USER_PHONE_EXIST_ERROR.name(), fo.getCheckContent()));
+            }
+        } else if (fo.getCheckType() == CheckSubAccountType.EMAIL) {
+            if (userDO.getAccountType() == AccountType.PRIMARY_ACCOUNT) {
+                existUserDO = this.authDal.userMapper().queryPrimaryByEmail(fo.getCheckContent());
+            } else {
+                existUserDO = this.authDal.userMapper().queryByEmailAndParentIdExcludeUid(fo.getCheckContent(), userDO.getParentId(), uid);
+            }
+            if (existUserDO != null && !StringUtils.equals(existUserDO.getUid(), uid)) {
+                return ResWebDataUtils.buildError(DmI18nUtils.getMessage(I18nRdpMsgKeys.USER_EMAIL_EXIST_ERROR.name(), fo.getCheckContent()));
+            }
+        }
+
+        return ResWebDataUtils.buildSuccess();
+    }
+
     protected void logout(HttpServletResponse response) {
         Cookie cookie = new Cookie(jwtTokenName, StringUtils.EMPTY);
         cookie.setHttpOnly(true);
@@ -461,27 +526,6 @@ public class RdpUserController {
         }
 
         return resWebData;
-    }
-
-    // --------------------------------
-    //      for Verify
-    // --------------------------------
-
-    @RequestAuth(strategy = Ignore)
-    @RequestMapping(value = "/checkVerifyCode", method = RequestMethod.POST)
-    public ResWebData<?> checkVerifyCode(@RequestBody @Valid CheckVerifyCodeFO verifyCodeFO, HttpServletRequest request) {
-        String puid = (String) request.getAttribute(RdpUserService.PUID);
-        String uid = (String) request.getAttribute(RdpUserService.UID);
-
-        DmAuthUserDO userDO = this.rdpUserService.getUserByUid(uid);
-        CheckVerifyMO verifyData = new CheckVerifyMO();
-        verifyData.setVerifyType(verifyCodeFO.getVerifyType());
-        verifyData.setVerifyCode(verifyCodeFO.getVerifyCode());
-        verifyData.setVerifyCodeType(VerifyCodeType.VERIFY_OLD_ACCOUNT);
-        verifyData.setEmail(userDO.getEmail());
-        verifyData.setPhoneNumber(userDO.getPhone());
-        this.rdpVerifyService.checkVerifyCode(verifyData);
-        return ResWebDataUtils.buildSuccess();
     }
 
     @RequestAuth(strategy = Ignore)

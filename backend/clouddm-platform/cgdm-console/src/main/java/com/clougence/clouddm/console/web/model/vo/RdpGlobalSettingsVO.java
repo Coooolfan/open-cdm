@@ -30,11 +30,11 @@ public class RdpGlobalSettingsVO {
     private boolean             onPremiseDeployMode;
 
     // for Auth
-    private boolean             authVerifyCodeEnable;
     private boolean             authOpPassword;
 
     private boolean             enableWaterMark;
     private boolean             enableProductCluster;
+    private boolean             enableValidateDsExtraConf;
 
     private Map<String, Object> features;
 

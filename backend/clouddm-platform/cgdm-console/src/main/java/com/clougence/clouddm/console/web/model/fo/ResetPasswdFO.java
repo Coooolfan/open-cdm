@@ -15,8 +15,8 @@
  */
 package com.clougence.clouddm.console.web.model.fo;
 
-import com.clougence.clouddm.platform.dal.model.auth.VerifyType;
 import com.clougence.clouddm.platform.dal.model.auth.AccountType;
+import com.clougence.clouddm.platform.dal.model.auth.VerifyType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,7 +32,7 @@ public class ResetPasswdFO {
     @NotNull(message = "{notnull.accounttype}")
     private AccountType accountType;
 
-    private String      subAccount;
+    private String      account;
 
     /**
      * verify by email
@@ -48,9 +48,6 @@ public class ResetPasswdFO {
 
     @NotNull(message = "{notnull.verifytype}")
     private VerifyType  verifyType;
-
-    @NotBlank(message = "{notblank.verifycode}")
-    private String      verifyCode;
 
     @NotBlank(message = "{notblank.password}")
     private String      password;

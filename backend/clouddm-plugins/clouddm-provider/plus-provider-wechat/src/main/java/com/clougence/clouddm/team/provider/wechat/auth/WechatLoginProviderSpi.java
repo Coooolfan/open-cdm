@@ -57,6 +57,11 @@ public class WechatLoginProviderSpi implements LoginProviderSpi {
     }
 
     @Override
+    public int order() {
+        return 60;
+    }
+
+    @Override
     public LifeSpiResponse start(String ownerUid, LifeSpiRequest requestDTO) {
         // fetch config
         List<ConfigData> configList = configService.fetchSettings(ownerUid, Arrays.asList(//
@@ -73,7 +78,7 @@ public class WechatLoginProviderSpi implements LoginProviderSpi {
 
         // enable is false.
         String enableCfg = configMap.get(WechatConfigKey.LoginEnable.getConfigKey());
-        if (!StringUtils.equalsIgnoreCase(enableCfg, LoginProvider.Wechat.name())) {
+        if (!containsProvider(enableCfg, LoginProvider.Wechat)) {
             log.info("ignoreLogin[Wechat] primaryUid：" + ownerUid + ", enable is false.");
             return new LifeSpiResponse();
         }
@@ -144,8 +149,8 @@ public class WechatLoginProviderSpi implements LoginProviderSpi {
         }
 
         String userAccount = fullLoginName.substring(0, splitIdx);
-        String userDomain = fullLoginName.substring(splitIdx + 1);
-        return new String[] { userAccount, userDomain };
+        String domain = fullLoginName.substring(splitIdx + 1);
+        return new String[] { userAccount, domain };
     }
 
     @Override
@@ -170,9 +175,7 @@ public class WechatLoginProviderSpi implements LoginProviderSpi {
 
         // map user
         UserData wechatUser = loginApi(primaryUID).getUserInfo(userTicket);
-        UserData primaryUser = this.configService.findUserByUID(primaryUID);
-        wechatUser.setSubAccount(wechatUser.getBindAccount() + "@" + primaryUser.getUserDomain());
-        wechatUser.setUserDomain(primaryUser.getUserDomain());
+        wechatUser.setAccount(wechatUser.getBindAccount());
         wechatUser.setAccessToken(userTicket);
 
         // mapping role
@@ -181,11 +184,15 @@ public class WechatLoginProviderSpi implements LoginProviderSpi {
         List<RoleData> roles = this.configService.findRoleByName(primaryUID, roleName);
         RoleData role = CollectionUtils.isEmpty(roles) ? null : roles.get(0);
         if (role == null) {
-            log.info("Wechat: user(" + wechatUser.getSubAccount() + ") not found any role, memberOf=" + roleName);
+            log.info("Wechat: user(" + wechatUser.getAccount() + ") not found any role, memberOf=" + roleName);
             throw ThirdPartyApiException.as().with(WechatI18nKey2.WECHAT_ROLE_MAPPING_FAILED);
         }
         wechatUser.setRoleId(role.getRoleId());
 
         return new LoginResponse(wechatUser, true, null);
+    }
+
+    private boolean containsProvider(String authType, LoginProvider provider) {
+        return Arrays.stream(StringUtils.defaultString(authType).split("[,，;；]")).anyMatch(item -> StringUtils.equalsIgnoreCase(item.trim(), provider.name()));
     }
 }

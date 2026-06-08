@@ -60,12 +60,17 @@ public class LoginProviderSpiForLdap extends BaseLoginProviderSpi implements Log
     }
 
     @Override
+    public int order() {
+        return 10;
+    }
+
+    @Override
     public LifeSpiResponse start(String ownerUid, LifeSpiRequest requestDTO) {
         // fetch config
         BaseConfig conf = ConfigHelper.fetchConfig(this.configService, ownerUid);
 
         // enable is false.
-        if (!conf.getAuthType().equalsIgnoreCase(LoginProvider.LDAP.name())) {
+        if (!containsProvider(conf.getAuthType(), LoginProvider.LDAP)) {
             log.info("ignoreLogin[Ldap] primaryUid：" + ownerUid + ", enable is false.");
             return new LifeSpiResponse();
         }
@@ -145,8 +150,8 @@ public class LoginProviderSpiForLdap extends BaseLoginProviderSpi implements Log
         }
 
         String userAccount = split[0];
-        String userDomain = split[1];
-        return new String[] { userAccount, userDomain };
+        String domain = split[1];
+        return new String[] { userAccount, domain };
     }
 
     @Override
@@ -186,14 +191,13 @@ public class LoginProviderSpiForLdap extends BaseLoginProviderSpi implements Log
         user.setUserName(getAttribute(attributes, ldapConfig.getLdapFieldUser()));
         user.setEmail(getAttribute(attributes, ldapConfig.getLdapFieldEmail()));
         user.setPhone(getAttribute(attributes, ldapConfig.getLdapFieldPhone()));
-        user.setSubAccount(ldapAccount.trim() + "@" + primaryUser.getUserDomain());
+        user.setAccount(ldapAccount.trim());
         user.setBindAccount(getAttribute(attributes, ldapConfig.getLdapFieldLogin()));
-        user.setUserDomain(primaryUser.getUserDomain());
 
         // mapping role
         RoleData role = searchRole(primaryUser.getInternalUID(), ldapCtx);
         if (role == null) {
-            log.info("LDAP: user(" + user.getSubAccount() + ") not found any role, find roleName=" + ldapCtx.getLdapConfig().getLdapRoleMap());
+            log.info("LDAP: user(" + user.getAccount() + ") not found any role, find roleName=" + ldapCtx.getLdapConfig().getLdapRoleMap());
             throw ThirdPartyApiException.as().with(LdapI18nKey.LDAP_USER_ROLE_MAPPING_FAILED.name());
         }
         user.setRoleId(role.getRoleId());
@@ -214,5 +218,9 @@ public class LoginProviderSpiForLdap extends BaseLoginProviderSpi implements Log
         roleName = StringUtils.isEmpty(roleName) ? SecSysRole.DEV_ROLE_NAME : roleName;
         List<RoleData> roles = this.configService.findRoleByName(primaryUID, roleName);
         return CollectionUtils.isEmpty(roles) ? null : roles.get(0);
+    }
+
+    private boolean containsProvider(String authType, LoginProvider provider) {
+        return Arrays.stream(StringUtils.defaultString(authType).split("[,，;；]")).anyMatch(item -> StringUtils.equalsIgnoreCase(item.trim(), provider.name()));
     }
 }

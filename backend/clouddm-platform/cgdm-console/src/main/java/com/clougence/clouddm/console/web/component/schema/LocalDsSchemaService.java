@@ -16,7 +16,6 @@
 package com.clougence.clouddm.console.web.component.schema;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -24,17 +23,13 @@ import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
 import com.clougence.clouddm.base.metadata.ui.form.UiPanel;
-import com.clougence.clouddm.console.web.component.config.UserConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsConfig;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevelLeaf;
 import com.clougence.clouddm.console.web.service.browse.MetaInformatinCacheService;
-import com.clougence.clouddm.platform.dal.access.ObjectCacheDao;
-import com.clougence.clouddm.platform.dal.access.entry.UserCacheEntry;
-import com.clougence.clouddm.platform.dal.model.auth.AccountType;
+import com.clougence.clouddm.platform.dal.access.SystemDal;
 import com.clougence.clouddm.platform.dal.model.datasource.DmDsDO;
 import com.clougence.clouddm.platform.dal.model.datasource.MetaInformationType;
-import com.clougence.clouddm.platform.dal.model.system.DmSysUserConfDO;
 import com.clougence.clouddm.sdk.execute.meta.DsElement;
 import com.clougence.clouddm.sdk.ui.editor.property.PropertyUiPanel;
 import com.clougence.clouddm.sdk.ui.editor.table.TableEditorUiPanel;
@@ -46,7 +41,6 @@ import com.clougence.schema.umi.special.rdb.RdbColumn;
 import com.clougence.schema.umi.struts.UmiTypes;
 import com.clougence.schema.umi.struts.Value;
 import com.clougence.utils.JsonUtils;
-import com.clougence.utils.StringUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import jakarta.annotation.Resource;
@@ -64,26 +58,11 @@ public class LocalDsSchemaService implements DsSchemaService {
     @Resource
     private DmDsConfigService          dmDsConfigService;
     @Resource
-    private UserConfigService          userConfigService;
-    @Resource
-    private ObjectCacheDao             cacheDao;
+    private SystemDal                  systemDal;
 
     private boolean isDisableMetaCache(String uid) {
-        UserCacheEntry byUID = this.cacheDao.queryByUid(uid);
-        if (byUID.getUserType() == AccountType.SUB_ACCOUNT) {
-            byUID = this.cacheDao.queryByUid(byUID.getParentUid());
-        }
-
-        DmSysUserConfDO configDO = this.userConfigService.getSpecifiedConfig(byUID.getUid(), UserDefinedConfig.Fields.consoleMetadataCache);
-        if (configDO == null || StringUtils.isBlank(configDO.getConfigValue())) {
-            return true;
-        }
-
-        try {
-            return !Boolean.parseBoolean(configDO.getConfigValue());
-        } catch (Exception e) {
-            return true;
-        }
+        Boolean configValue = this.systemDal.fetchSystemConf(UserDefinedConfig.Fields.consoleMetadataCache, Boolean.class);
+        return configValue == null || !configValue;
     }
 
     @Override
@@ -133,7 +112,10 @@ public class LocalDsSchemaService implements DsSchemaService {
 
     private static boolean shouldListLevels(DsConfig dsConfig, List<UmiTypes> levels) {
         int currentSize = levels == null ? 0 : levels.size();
-        return dsConfig != null && dsConfig.getCategories() != null && dsConfig.getCategories().getLevels() != null && dsConfig.getCategories().getLevels().size() > currentSize + 2;
+        return dsConfig != null &&                            //
+               dsConfig.getCategories() != null &&            //
+               dsConfig.getCategories().getLevels() != null &&//
+               dsConfig.getCategories().getLevels().size() > currentSize + 2;
     }
 
     //

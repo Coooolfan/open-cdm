@@ -13,28 +13,26 @@
                 javaType="com.clougence.clouddm.platform.dal.model.auth.VerifyType"/>
         <result column="email" property="email"/>
         <result column="phone" property="phone"/>
-        <result column="phone" property="phone"/>
-        <result column="verify_code_type" property="verifyCodeType"
-                javaType="com.clougence.clouddm.platform.dal.model.auth.VerifyCodeType"/>
+        <result column="verify_code_type" property="verifyCodeType"/>
         <result column="verify_code_send_time" property="verifyCodeSendTime"/>
         <result column="fail_times" property="failTimes"/>
         <result column="last_fail_date" property="lastFailDate"/>
     </resultMap>
 
     <sql id="rdpVerify">
-        dm_auth_verify.id id,
-        dm_auth_verify.gmt_create gmt_create,
-        dm_auth_verify.gmt_modified gmt_modified,
-        dm_auth_verify.account_type account_type,
-        dm_auth_verify.uid uid,
-        dm_auth_verify.verify_type verify_type,
-        dm_auth_verify.email email,
-        dm_auth_verify.phone phone,
-        dm_auth_verify.verify_code verify_code,
-        dm_auth_verify.verify_code_type verify_code_type,
-        dm_auth_verify.verify_code_send_time verify_code_send_time,
-        dm_auth_verify.fail_times fail_times,
-        dm_auth_verify.last_fail_date last_fail_date
+        id,
+        gmt_create,
+        gmt_modified,
+        account_type,
+        uid,
+        verify_type,
+        email,
+        phone,
+        verify_code,
+        verify_code_type,
+        verify_code_send_time,
+        fail_times,
+        last_fail_date
     </sql>
 
     <select id="queryByUid" resultMap="rdpVerifyDO">
@@ -54,7 +52,7 @@
         WHERE
             verify_type = #{verifyType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyType}
             AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyCodeType}
+            verify_code_type=#{verifyCodeType}
             AND
             uid = #{uid}
     </select>
@@ -67,7 +65,7 @@
         WHERE
             verify_type = #{verifyType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyType}
             AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyCodeType}
+            verify_code_type=#{verifyCodeType}
             AND
             email=#{email}
             AND
@@ -82,7 +80,7 @@
         WHERE
             verify_type = #{verifyType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyType}
         AND
-            verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyCodeType}
+            verify_code_type=#{verifyCodeType}
         AND
             phone=#{phone}
         AND
@@ -144,7 +142,7 @@
         AND
         verify_type = #{verifyType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyType}
         AND
-        verify_code_type=#{verifyCodeType,javaType=com.clougence.clouddm.platform.dal.model.auth.VerifyCodeType}
+        verify_code_type=#{verifyCodeType}
     </update>
 
 </mapper>

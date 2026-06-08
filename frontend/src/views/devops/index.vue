@@ -32,8 +32,13 @@
           <div class="table-container">
             <Table :columns="scmColumns" :data="scmList" :loading="loading" :locale="{ emptyText: $t('zan-wu-shu-ju') }" size="small" border>
               <template #provider="{ row }">
-                <div style="display: flex; align-items: center; gap: 6px">
-                  <CustomIcon :type="row.scmType" size="20px" />
+                <div class="provider-cell">
+                  <CustomIcon
+                    v-if="providerIconResource(row.scmType)"
+                    :resource="providerIconResource(row.scmType)"
+                    :alt="row.scmTypeI18n"
+                    size="20px"
+                  />
                   <span>{{ row.scmTypeI18n }}</span>
                 </div>
               </template>
@@ -64,7 +69,7 @@
             :key="item.scmType"
             @click="handleChangeScmType(item)"
           >
-            <CustomIcon :type="item.scmType" :size="24" />
+            <CustomIcon v-if="item.iconResource" :resource="item.iconResource" :alt="item.scmTypeI18n" size="24px" />
             <div>{{ item.scmTypeI18n }}</div>
           </div>
         </div>
@@ -190,6 +195,9 @@ export default {
     init() {
       this.getScmList();
       this.getScmTypeList();
+    },
+    providerIconResource(scmType) {
+      return this.scmTypeList.find((item) => item.scmType === scmType)?.iconResource || '';
     },
     handleChangeScmType(item) {
       if (this.scmEdit) return;
@@ -419,6 +427,12 @@ export default {
   .actions {
     font-size: 12px;
   }
+}
+
+.provider-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .manage-role-modal {

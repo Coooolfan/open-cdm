@@ -27,9 +27,7 @@ public enum SystemConfigEnum {
     EMAIL_PORT_KEY("spring.mail.port"),
     EMAIL_USERNAME_KEY("spring.mail.username"),
     EMAIL_PASSWORD_KEY("spring.mail.password"),
-    EMAIL_FROM_KEY("spring.mail.properties.from"),
-
-    DINGDING_URL_TOKEN_KEY("clougence.rdp.alert.dingtalk.alerturl");
+    EMAIL_FROM_KEY("spring.mail.properties.from");
 
     private final String configCode;
 

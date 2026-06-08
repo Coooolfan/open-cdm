@@ -4,7 +4,6 @@ export const userApi = {
   // login: '/login',
   // logout: '/logout',
   // requestJumpUrl: '/requestJumpUrl',
-  // getPublicKey: '/getPublicKey',
   // getGlobalSettings: '/global_settings',
   // listOrg: '/list_org',
   // checkSupplement: '/check_supplement',
@@ -19,7 +18,6 @@ export const userApi = {
   // resetSubAccountPwd: '/rdp/console/api/v1/user/resetSubAccountPwd',
   // watermark: '/rdp/console/api/v1/user/waterMark',*
   // getUserInfo: '/rdp/console/api/v1/user/queryLoginUser',*
-  // updateResourceManage: '/rdp/console/api/v1/user/manager/updateresourcemanage',
   // resetPassword: '/rdp/console/api/v1/user/manager/resetpasswd',
   // getSubAccountList: '/rdp/console/api/v1/user/manager/listsubaccounts',
   // updateSubAccount: '/rdp/console/api/v1/user/manager/updatesubaccount',
@@ -31,9 +29,7 @@ export const userApi = {
   // getResourceSummary: '/rdp/console/api/v1/user/resourceSummary',
   // resetOpPwd: '/rdp/console/api/v1/user/resetOpPasswd',
   // getDbOpAudits: '/clouddm/console/api/v1/user/dbopaudits', // 数据源操作记录
-  // updatealiyunaksk: '/rdp/console/api/v1/user/updateAliyunAkSk',
   // verifyOpPwd: '/rdp/console/api/v1/user/opPasswdVerify',
-  // cleanaliyunaksk: '/rdp/console/api/v1/user/cleanaliyunaksk',
   // listMyAuth: '/rdp/console/api/v1/user/listMyAuth',
   // listRules: '/rdp/console/api/v1/user/listRules',
   // getCurrUserConfigs: '/rdp/console/api/v1/user/config/getcurruserconfigs',
@@ -46,10 +42,8 @@ export const userApi = {
   signin: '/signin',
   login: '/login',
   logout: '/logout',
-  primaryUserDomains: '/primary_user_domains',
   loginMfaValid: '/loginMfaValid',
   requestJumpUrl: '/requestJumpUrl',
-  getPublicKey: '/getPublicKey',
   getGlobalSettings: '/global_settings',
   listOrg: '/list_org',
   checkSupplement: '/check_supplement',
@@ -67,21 +61,19 @@ export const userApi = {
   rdpUserResourceSummary: '/rdp/console/api/v1/user/resourceSummary',
   rdpUserResetOpPasswd: '/rdp/console/api/v1/user/resetOpPasswd',
   rdpUserDbOpAudits: '/clouddm/console/api/v1/user/dbopaudits', // 数据源操作记录
-  rdpUserUpdateAliyunAkSk: '/rdp/console/api/v1/user/updateAliyunAkSk',
   rdpUserOpPasswdVerify: '/rdp/console/api/v1/user/opPasswdVerify',
-  rdpUserCleanAliyunAkSk: '/rdp/console/api/v1/user/cleanaliyunaksk',
   rdpUserListMyAuth: '/rdp/console/api/v1/user/listMyAuth',
   rdpUserListRules: '/rdp/console/api/v1/user/listRules', // 规则列表
   rdpUserListMyAuthCategoryForMenu: '/rdp/console/api/v1/user/listMyAuthCategoryForMenu',
   rdpUserUpdateUserEmail: '/rdp/console/api/v1/user/updateUserEmail',
-  rdpUserCheckVerifyCode: '/rdp/console/api/v1/user/checkVerifyCode',
+  rdpUserUpdateUserName: '/rdp/console/api/v1/user/updateUserName',
+  rdpUserCheckProfileDuplicate: '/rdp/console/api/v1/user/checkProfileDuplicate',
   rdpUserUpdateUserPhone: '/rdp/console/api/v1/user/updateUserPhone',
   rdpUserQueryUserAkSk: '/rdp/console/api/v1/user/queryUserAkSk',
   rdpUserResetUserAkSk: '/rdp/console/api/v1/user/resetUserAkSk',
-  rdpUserGetPrimaryAccountPwdValidateExpr: '/rdp/console/api/v1/user/getPrimaryAccountPwdValidateExpr',
-  rdpUserGetSubAccountPwdValidateExpr: '/rdp/console/api/v1/user/getSubAccountPwdValidateExpr',
+  rdpUserGetPrimaryAccountPwdPolicy: '/rdp/console/api/v1/user/getPrimaryAccountPwdPolicy',
+  rdpUserGetSubAccountPwdPolicy: '/rdp/console/api/v1/user/getSubAccountPwdPolicy',
 
-  rdpUserManagerUpdateResourceManage: '/rdp/console/api/v1/user/manager/updateresourcemanage',
   rdpUserManagerListSubAccounts: '/rdp/console/api/v1/user/manager/listsubaccounts',
   rdpUserManagerUpdateSubAccount: '/rdp/console/api/v1/user/manager/updatesubaccount',
   // API

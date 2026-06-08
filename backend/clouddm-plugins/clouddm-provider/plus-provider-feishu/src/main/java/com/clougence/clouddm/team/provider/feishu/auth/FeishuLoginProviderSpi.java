@@ -60,6 +60,11 @@ public class FeishuLoginProviderSpi implements LoginProviderSpi {
     }
 
     @Override
+    public int order() {
+        return 50;
+    }
+
+    @Override
     public LifeSpiResponse start(String ownerUid, LifeSpiRequest requestDTO) {
         // fetch config
         List<ConfigData> configList = configService.fetchSettings(ownerUid, Arrays.asList(//
@@ -74,7 +79,7 @@ public class FeishuLoginProviderSpi implements LoginProviderSpi {
 
         // enable is false.
         String enableCfg = configMap.get(FeishuConfigKey.LoginEnable.getConfigKey());
-        if (!StringUtils.equalsIgnoreCase(enableCfg, LoginProvider.Feishu.name())) {
+        if (!containsProvider(enableCfg, LoginProvider.Feishu)) {
             log.info("ignoreLogin[Feishu] primaryUid：" + ownerUid + ", enable is false.");
             return new LifeSpiResponse();
         }
@@ -146,8 +151,8 @@ public class FeishuLoginProviderSpi implements LoginProviderSpi {
         }
 
         String userAccount = fullLoginName.substring(0, splitIdx);
-        String userDomain = fullLoginName.substring(splitIdx + 1);
-        return new String[] { userAccount, userDomain };
+        String domain = fullLoginName.substring(splitIdx + 1);
+        return new String[] { userAccount, domain };
     }
 
     @Override
@@ -172,9 +177,7 @@ public class FeishuLoginProviderSpi implements LoginProviderSpi {
 
         // map user
         UserData dingUser = loginApi(primaryUID).getUserInfo(accessToken);
-        UserData primaryUser = this.configService.findUserByUID(primaryUID);
-        dingUser.setSubAccount(dingUser.getBindAccount() + "@" + primaryUser.getUserDomain());
-        dingUser.setUserDomain(primaryUser.getUserDomain());
+        dingUser.setAccount(dingUser.getBindAccount());
         dingUser.setAccessToken(accessToken);
 
         // mapping role
@@ -183,11 +186,15 @@ public class FeishuLoginProviderSpi implements LoginProviderSpi {
         List<RoleData> roles = this.configService.findRoleByName(primaryUID, roleName);
         RoleData role = CollectionUtils.isEmpty(roles) ? null : roles.get(0);
         if (role == null) {
-            log.info("Feishu: user(" + dingUser.getSubAccount() + ") not found any role, memberOf=" + roleName);
+            log.info("Feishu: user(" + dingUser.getAccount() + ") not found any role, memberOf=" + roleName);
             throw ThirdPartyApiException.as().with(FeishuI18nKeys2.FEISHU_ROLE_MAPPING_FAILED);
         }
         dingUser.setRoleId(role.getRoleId());
 
         return new LoginResponse(dingUser, true, null);
+    }
+
+    private boolean containsProvider(String authType, LoginProvider provider) {
+        return Arrays.stream(StringUtils.defaultString(authType).split("[,，;；]")).anyMatch(item -> StringUtils.equalsIgnoreCase(item.trim(), provider.name()));
     }
 }

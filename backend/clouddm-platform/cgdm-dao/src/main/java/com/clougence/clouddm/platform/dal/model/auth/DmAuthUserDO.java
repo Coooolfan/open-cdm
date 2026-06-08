@@ -16,11 +16,9 @@
 package com.clougence.clouddm.platform.dal.model.auth;
 
 import java.util.Date;
+import java.util.Objects;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.clougence.clouddm.platform.dal.model.auth.AccountBindType;
-import com.clougence.clouddm.platform.dal.model.auth.AccountType;
-import com.clougence.clouddm.platform.dal.model.auth.UserStatus;
 import com.clougence.clouddm.platform.dal.handler.AccountBindTypeTypeHandler;
 
 import lombok.Getter;
@@ -57,12 +55,7 @@ public class DmAuthUserDO {
      */
     private String          phone;
 
-    /**
-     * for sub account login,account@primary userDomain
-     */
-    private String          subAccount;
-
-    private String          company;
+    private String          account;
 
     private String          password;
 
@@ -93,10 +86,7 @@ public class DmAuthUserDO {
 
     private String          bindAccount;
 
-    /**
-     * "primary account uid".clouddm.com
-     */
-    private String          userDomain;
+    private boolean         allowLocal;
 
     private boolean         disable;
 
@@ -120,15 +110,6 @@ public class DmAuthUserDO {
      */
     private boolean         maintainer;
 
-    @Deprecated
-    private String          aliyunAk;
-
-    @Deprecated
-    private String          aliyunSk;
-
-    @Deprecated
-    private Date            lastDateUpdateAliyunAk;
-
     private Date            lastDateUpdatePwd;
 
     private String          unionId;
@@ -137,8 +118,6 @@ public class DmAuthUserDO {
 
     @Deprecated
     private String          ssoType;
-
-    private boolean         resourceManageEnable;
 
     @Deprecated
     private String          customerId;
@@ -160,24 +139,23 @@ public class DmAuthUserDO {
 
         DmAuthUserDO userDO = (DmAuthUserDO) o;
 
-        if (!uid.equals(userDO.uid))
+        if (!Objects.equals(uid, userDO.uid)) {
             return false;
-        if (!email.equals(userDO.email))
+        }
+
+        if (!Objects.equals(email, userDO.email)) {
             return false;
-        if (!username.equals(userDO.username))
+        }
+
+        if (!Objects.equals(username, userDO.username)) {
             return false;
-        if (!company.equals(userDO.company))
-            return false;
-        return phone.equals(userDO.phone);
+        }
+
+        return Objects.equals(phone, userDO.phone);
     }
 
     @Override
     public int hashCode() {
-        int result = uid.hashCode();
-        result = 31 * result + email.hashCode();
-        result = 31 * result + username.hashCode();
-        result = 31 * result + company.hashCode();
-        result = 31 * result + phone.hashCode();
-        return result;
+        return Objects.hash(uid, email, username, phone);
     }
 }

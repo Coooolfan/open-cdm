@@ -21,12 +21,8 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.clougence.clouddm.platform.dal.model.auth.AccountBindType;
-import com.clougence.clouddm.platform.dal.model.auth.AccountType;
-import com.clougence.clouddm.platform.dal.model.auth.UserStatus;
 import com.clougence.clouddm.platform.dal.model.CanBeReplaced;
-import com.clougence.clouddm.platform.dal.model.auth.RsAuthPersonObj;
-import com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO;
+import com.clougence.clouddm.platform.dal.model.auth.*;
 
 /**
  * @author wanshao create time is 2021/1/5
@@ -35,26 +31,28 @@ public interface DmAuthUserMapper extends BaseMapper<DmAuthUserDO> {
 
     DmAuthUserDO queryById(long id);
 
-    List<RsAuthPersonObj> searchUserByKeywords(String userDomain, String keywords);
+    List<RsAuthPersonObj> searchUserByKeywords(@Param("primaryId") Long primaryId, @Param("keywords") String keywords);
 
     DmAuthUserDO queryPrimaryByPhone(String phone);
 
     DmAuthUserDO queryPrimaryByEmail(String email);
 
-    DmAuthUserDO queryPrimaryByCompany(String company);
-
-    DmAuthUserDO queryPrimaryByDomain(String domain);
-
     List<DmAuthUserDO> querySubByPrimaryId(long primaryId);
 
     List<RsAuthPersonObj> queryApproPerson(@Param("accountType") AccountType accountType, @Param("parentId") long parentId, @Param("resId") Long resId,
-                                                  @Param("resPath") String resPath);
+                                           @Param("resPath") String resPath);
 
     List<RsAuthPersonObj> queryAuthApproPerson(@Param("accountType") AccountType accountType, @Param("parentId") long parentId);
 
     DmAuthUserDO querySubByPhone(String phone);
 
     DmAuthUserDO querySubByEmail(String email);
+
+    DmAuthUserDO queryLocalLoginUserByAccount(@Param("account") String account);
+
+    DmAuthUserDO queryLocalLoginUserByEmail(@Param("email") String email);
+
+    DmAuthUserDO queryLocalLoginUserByPhone(@Param("phone") String phone);
 
     DmAuthUserDO querySubAccountByPhoneAndAccount(String phone, String subAccount);
 
@@ -66,9 +64,17 @@ public interface DmAuthUserMapper extends BaseMapper<DmAuthUserDO> {
 
     DmAuthUserDO queryBySubAccount(String subAccount);
 
+    DmAuthUserDO queryBySubAccountExcludeUid(@Param("subAccount") String subAccount, @Param("excludeUid") String excludeUid);
+
+    DmAuthUserDO queryByPhoneAndParentIdExcludeUid(@Param("phone") String phone, @Param("parentId") Long parentId, @Param("excludeUid") String excludeUid);
+
+    DmAuthUserDO queryByEmailAndParentIdExcludeUid(@Param("email") String email, @Param("parentId") Long parentId, @Param("excludeUid") String excludeUid);
+
     DmAuthUserDO queryBySubAccountAndBind(String parentId, String subAccount, String bindType);
 
     DmAuthUserDO queryBySubAccountByBindInfo(Long parentId, String bindAccount, AccountBindType bindType);
+
+    DmAuthUserDO queryByBindInfo(String bindAccount, AccountBindType bindType);
 
     DmAuthUserDO queryByUid(@CanBeReplaced String uid);
 
@@ -118,23 +124,13 @@ public interface DmAuthUserMapper extends BaseMapper<DmAuthUserDO> {
 
     void updateUserContactInfo(String uid, String phone, String email);
 
-    void updateUserAliyunAkSk(String uid, String aliyunAk, String aliyunSk);
-
     void updateUserAkSk(String uid, String accessKey, String secretKey);
 
     void updateLastUpdatePwdTimeById(Long id);
 
     List<DmAuthUserDO> listSubAccountByPidAndAuth(Long pid, String authLabel);
 
-    void updateResourceMangeEnable(@Param("targetUid") String targetUid, @Param("resourceManage") boolean resourceManage);
-
     String queryUsernameByUid(String uid);
-
-    List<DmAuthUserDO> listSubResourceManagersByPrimaryUId(@Param("puid") String puid);
-
-    List<DmAuthUserDO> listSubResourceManagersByPrimaryId(@Param("pid") Long pid);
-
-    Boolean isResourceManger(@Param("targetUid") String targetUid);
 
     void updateMfaStatus(@Param("uid") String uid, @Param("useMfa") boolean useMfa);
 }

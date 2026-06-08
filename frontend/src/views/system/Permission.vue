@@ -223,15 +223,27 @@
       <Button v-if="false" @click="handleSwitchBatchModeForDm" style="margin-right: 10px; width: 80px">
         {{ batchMode ? $t('tui-chu-pi-liang-shou-quan') : $t('pi-liang-shou-quan') }}
       </Button>
-      <Button @click="goApplAuth" v-if="isView && !previewMode" type="primary" style="margin-right: 10px; width: 80px">
-        {{ $t('shen-qing-quan-xian') }}
-      </Button>
-      <Button @click="previewAuth" v-if="!isView" type="primary" style="margin-right: 10px; width: 80px">
-        {{ $t('ti-jiao-shen-qing') }}
-      </Button>
-      <Button @click="submitAuthApply" v-if="previewMode" type="primary" style="margin-right: 10px; width: 80px">
-        {{ $t('ti-jiao-que-ren') }}
-      </Button>
+      <Tooltip v-if="isView && !previewMode" :content="rootAccountUnsupportedTip" :disabled="!isRootAccount" transfer placement="top">
+        <span style="display: inline-block; margin-right: 10px">
+          <Button @click="goApplAuth" type="primary" style="width: 80px" :disabled="isRootAccount">
+            {{ $t('shen-qing-quan-xian') }}
+          </Button>
+        </span>
+      </Tooltip>
+      <Tooltip v-if="!isView" :content="rootAccountUnsupportedTip" :disabled="!isRootAccount" transfer placement="top">
+        <span style="display: inline-block; margin-right: 10px">
+          <Button @click="previewAuth" type="primary" style="width: 80px" :disabled="isRootAccount">
+            {{ $t('ti-jiao-shen-qing') }}
+          </Button>
+        </span>
+      </Tooltip>
+      <Tooltip v-if="previewMode" :content="rootAccountUnsupportedTip" :disabled="!isRootAccount" transfer placement="top">
+        <span style="display: inline-block; margin-right: 10px">
+          <Button @click="submitAuthApply" type="primary" style="width: 80px" :disabled="isRootAccount">
+            {{ $t('ti-jiao-que-ren') }}
+          </Button>
+        </span>
+      </Tooltip>
     </div>
   </div>
 </template>
@@ -423,6 +435,12 @@ export default {
         }
       });
       return ccList;
+    },
+    isRootAccount() {
+      return this.userInfo.accountType === 'PRIMARY_ACCOUNT';
+    },
+    rootAccountUnsupportedTip() {
+      return '管理员账号不支持此操作';
     },
     datasourceTreeSearchKey: {
       get() {
@@ -650,7 +668,7 @@ export default {
       });
       if (res?.data) {
         this.$message.success(this.$t('shu-ju-ku-shou-quan-cheng-gong'));
-        this.$router.push({ path: '/system/sub_account' });
+        this.$router.push({ path: '/system/account' });
       }
     },
     renderNode(node) {
@@ -1680,7 +1698,7 @@ export default {
     },
     handleGoAuth() {
       this.$router.push({
-        path: `/system/sub_account/authdm/${this.uid}?name=${this.subAccount}&&type=edit`
+        path: `/system/account/authdm/${this.uid}?name=${this.subAccount}&&type=edit`
       });
     },
     handleDsExpand(node) {
@@ -1689,9 +1707,17 @@ export default {
       this.leftTreeNodeClick(node, isExpand);
     },
     previewAuth() {
+      if (this.isRootAccount) {
+        this.$Message.warning(this.rootAccountUnsupportedTip);
+        return;
+      }
       this.handlePreviewForDm();
     },
     async goApplAuth() {
+      if (this.isRootAccount) {
+        this.$Message.warning(this.rootAccountUnsupportedTip);
+        return;
+      }
       this.isView = false;
       this.isEdit = true;
       this.lastRightTreeData = [];
@@ -1716,6 +1742,10 @@ export default {
       });
     },
     async submitAuthApply() {
+      if (this.isRootAccount) {
+        this.$Message.warning(this.rootAccountUnsupportedTip);
+        return;
+      }
       // this.handlePreviewForDm();
       const filterTree = this.filterTreeWithEditedNodes(this.originLeftTree);
       const authData = this.getApplyAuthData(filterTree);

@@ -25,8 +25,13 @@
           <div class="table-container">
             <Table :columns="imColumns" :data="filteredImList" :loading="loading" :locale="{ emptyText: $t('zan-wu-shu-ju') }" size="small" border>
               <template #provider="{ row }">
-                <div style="display: flex; align-items: center; gap: 6px">
-                  <CustomIcon :type="row.imType" size="20px" />
+                <div class="provider-cell">
+                  <CustomIcon
+                    v-if="providerIconResource(row.imType)"
+                    :resource="providerIconResource(row.imType)"
+                    :alt="row.imTypeI18n"
+                    size="20px"
+                  />
                   <span>{{ row.imTypeI18n }}</span>
                 </div>
               </template>
@@ -61,7 +66,7 @@
             @click="handleImDefOne(im)"
             :class="`im ${imDefSelected.imType === im.imType ? 'im-selected' : ''} ${imEdit ? 'im-read' : ''}`"
           >
-            <CustomIcon :type="im.imType" size="24px" />
+            <CustomIcon v-if="im.iconResource" :resource="im.iconResource" :alt="im.imTypeI18n" size="24px" />
             <div>{{ im.imTypeI18n }}</div>
           </div>
         </div>
@@ -180,7 +185,11 @@ export default {
   },
   methods: {
     init() {
+      this.fetchImDefList();
       this.getImList();
+    },
+    providerIconResource(imType) {
+      return this.imDefList.find((item) => item.imType === imType)?.iconResource || '';
     },
     async getImList() {
       this.loading = true;
@@ -335,6 +344,12 @@ export default {
   display: flex;
   padding: 20px;
   margin-bottom: 50px;
+}
+
+.provider-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .im-list {

@@ -135,7 +135,7 @@ import StepConnectivity from './StepConnectivity.vue';
 import StepConfirm from './StepConfirm.vue';
 import StepExecution from './StepExecution.vue';
 import { consumeDmBootstrapStatus, getDmSystemStatus, isDmSystemReady } from '../../utils/dmGlobalSettings';
-import { resolveDeploymentModeText, resolveDisplayVersion } from '../../utils/version';
+import { resolveDisplayVersion, resolveVersionBadgeText } from '../../utils/version';
 
 const INIT_DB_CREATE_IF_MISSING = 'clougence.init.db.createIfMissing';
 const INIT_DB_REBUILD_IF_NOT_EMPTY = 'clougence.init.db.rebuildIfNotEmpty';
@@ -364,9 +364,8 @@ async function pollDmGlobalSettings() {
   }
 }
 
-function redirectToLoginPage(defaultLogin) {
-  const query = defaultLogin ? `?defaultLogin=${encodeURIComponent(defaultLogin)}` : '';
-  window.location.replace(`${window.location.origin}${window.location.pathname}#/login${query}`);
+function redirectToLoginPage() {
+  window.location.replace(`${window.location.origin}${window.location.pathname}#/login`);
 }
 
 export default {
@@ -403,7 +402,10 @@ export default {
   },
   computed: {
     versionBadgeText() {
-      return `${resolveDeploymentModeText({ aloneMode: this.aloneMode })} ${this.displayVersion || 'unknow'}`;
+      return resolveVersionBadgeText({
+        aloneMode: this.aloneMode,
+        version: this.displayVersion
+      });
     },
     dbFields() {
       return this.fieldDefs.filter((f) => f.category === 'database');
@@ -733,7 +735,7 @@ export default {
       this.aloneMode = Boolean(res.data && res.data.aloneMode);
       const { status, initReason, dbError, upgradeScripts = [] } = getDmSystemStatus(res);
       if (status === 'Ready') {
-        redirectToLoginPage('manage');
+        redirectToLoginPage();
         return;
       }
 
@@ -1062,7 +1064,7 @@ export default {
         }
 
         if (isDmSystemReady(res)) {
-          redirectToLoginPage('manage');
+          redirectToLoginPage();
           return;
         }
 

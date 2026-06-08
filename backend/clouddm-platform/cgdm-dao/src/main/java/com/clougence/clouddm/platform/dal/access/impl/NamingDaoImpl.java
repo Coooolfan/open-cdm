@@ -44,18 +44,6 @@ public class NamingDaoImpl implements NamingDao {
     private ApprovalDal approvalDal;
 
     @Override
-    public String genLocalClusterName() {
-        String namePattern = "localcluster%s";
-        while (true) {
-            String name = String.format(namePattern, fixedLenRandomStr(10));
-            DmSysClusterDO clusterDO = systemDal.clusterMapper().getClusterByName(name);
-            if (clusterDO == null) {
-                return name;
-            }
-        }
-    }
-
-    @Override
     public String genClusterName() {
         String namePattern = "cluster%s";
         while (true) {
@@ -68,25 +56,13 @@ public class NamingDaoImpl implements NamingDao {
     }
 
     @Override
-    public String genTicketBizId() {
+    public String genApprovalBizId() {
         String namePattern = "ticket%s";
         while (true) {
             String bizId = String.format(namePattern, fixedLenRandomStr(10));
             DmApprovalDO ticketDO = approvalDal.approvalMapper().queryByBizId(bizId);
             if (ticketDO == null) {
                 return bizId;
-            }
-        }
-    }
-
-    @Override
-    public String genDefaultClusterName() {
-        String namePattern = "defaultcluster%s";
-        while (true) {
-            String name = String.format(namePattern, fixedLenRandomStr(10));
-            DmSysClusterDO clusterDO = systemDal.clusterMapper().getClusterByName(name);
-            if (clusterDO == null) {
-                return name;
             }
         }
     }
@@ -129,7 +105,7 @@ public class NamingDaoImpl implements NamingDao {
     }
 
     @Override
-    public String genUid() {
+    public String genUID() {
         while (true) {
             String uid = fixedLenRandomNumberStr(16);
             DmAuthUserDO user = authDal.userMapper().queryByUid(uid);
@@ -146,9 +122,14 @@ public class NamingDaoImpl implements NamingDao {
     }
 
     @Override
-    public String genInnerUserPwd() {
-        String namePattern = "inner%s";
-        return String.format(namePattern, fixedLenRandomStr(61));
+    public String genLoginAccount() {
+        while (true) {
+            String account = fixedLenRandomStr(8);
+            DmAuthUserDO user = authDal.userMapper().queryLocalLoginUserByAccount(account);
+            if (user == null) {
+                return account;
+            }
+        }
     }
 
     @Override
