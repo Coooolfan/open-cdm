@@ -95,9 +95,14 @@
         ORDER BY id DESC
     </select>
 
-    <select id="findCurrentTimeMillis" resultType="long">
+    <select id="findCurrentTimeMillis" resultType="long" databaseId="mysql">
         SELECT
             UNIX_TIMESTAMP(CURRENT_TIMESTAMP(3)) * 1000
+    </select>
+
+    <select id="findCurrentTimeMillis" resultType="long" databaseId="postgresql">
+        SELECT
+            CAST(FLOOR(EXTRACT(EPOCH FROM CLOCK_TIMESTAMP()) * 1000) AS BIGINT)
     </select>
 
     <select id="findByUuid" resultMap="history">

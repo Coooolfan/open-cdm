@@ -24,8 +24,9 @@ ENV APP_WEB_PORT=8222
 ENV APP_SERVE_NAME=127.0.0.1
 # Sidecar Service Port (config: clouddm.rsocket.console.port)
 ENV APP_SERVE_PORT=8008
-# embedded mysql defaults; set MYSQL_EMBEDDED=false to keep using an external database
+# embedded mysql defaults; set MYSQL_EMBEDDED=false to keep using an external database (mysql or postgresql)
 ENV MYSQL_EMBEDDED=true
+ENV DB_TYPE=mysql
 ENV MYSQL_ROOT_PASSWORD=123456
 ENV MYSQL_DATADIR=/var/lib/mysql
 ENV DB_HOST=127.0.0.1

@@ -3,10 +3,35 @@
     <a-form layout="horizontal" class="step-db-form">
       <div v-if="jdbcUrlField" class="jdbc-generated-editor">
         <a-form-item :label="$t('initialization.jdbcDataSourceType')" class="jdbc-database-type-form-item">
-          <span class="jdbc-database-type-value">
-            <cc-data-source-icon class="jdbc-database-type-icon" type="MySQL" :size="18" color="#0087c7" aria-hidden="true" />
-            <span>{{ $t('initialization.jdbcDataSourceTypeValue') }}</span>
-          </span>
+          <div v-if="readonly" class="jdbc-database-type-value">
+            <cc-data-source-icon
+              class="jdbc-database-type-icon"
+              :type="selectedDbOption.iconType"
+              :size="18"
+              :color="selectedDbOption.iconColor"
+              aria-hidden="true"
+            />
+            <span>{{ $t(selectedDbOption.labelKey) }}</span>
+          </div>
+          <a-radio-group
+            v-else
+            class="jdbc-database-type-group"
+            :value="generatedState.dbType"
+            @change="(e) => onDbTypeChange(normalizeInputValue(e))"
+          >
+            <a-radio-button v-for="option in dbTypeOptions" :key="option.value" :value="option.value" class="jdbc-database-type-option">
+              <span class="jdbc-database-type-value">
+                <cc-data-source-icon
+                  class="jdbc-database-type-icon"
+                  :type="option.iconType"
+                  :size="16"
+                  :color="option.iconColor"
+                  aria-hidden="true"
+                />
+                <span>{{ $t(option.labelKey) }}</span>
+              </span>
+            </a-radio-button>
+          </a-radio-group>
         </a-form-item>
 
         <a-form-item :label="$t('initialization.jdbcHostPort')" required>
@@ -24,7 +49,7 @@
               <a-input
                 :value="generatedState.port"
                 :disabled="readonly"
-                :placeholder="$t('initialization.jdbcPortPlaceholder')"
+                :placeholder="portPlaceholder"
                 @input="(value) => onGeneratedFieldChange('port', normalizeInputValue(value))"
               />
             </div>
@@ -105,17 +130,47 @@
 </template>
 
 <script>
+const DB_TYPE_OPTIONS = Object.freeze([
+  Object.freeze({
+    value: 'mysql',
+    protocol: 'jdbc:mysql://',
+    defaultPort: '3306',
+    iconType: 'MySQL',
+    iconColor: '#0087c7',
+    labelKey: 'initialization.jdbcDataSourceTypeValue',
+    portPlaceholderKey: 'initialization.jdbcPortPlaceholder'
+  }),
+  Object.freeze({
+    value: 'postgresql',
+    protocol: 'jdbc:postgresql://',
+    defaultPort: '5432',
+    iconType: 'PostgreSQL',
+    iconColor: '#336791',
+    labelKey: 'initialization.jdbcDataSourceTypePostgresValue',
+    portPlaceholderKey: 'initialization.jdbcPgPortPlaceholder'
+  })
+]);
+
 const DEFAULT_GENERATED_STATE = Object.freeze({
+  dbType: 'mysql',
   host: '',
   port: '3306',
-  database: 'cdmgr'
+  database: 'cdmgr',
+  query: ''
 });
 
+function getDbTypeOption(dbType) {
+  return DB_TYPE_OPTIONS.find((item) => item.value === dbType) || DB_TYPE_OPTIONS[0];
+}
+
 function createGeneratedState(overrides = {}) {
+  const option = getDbTypeOption(overrides.dbType || DEFAULT_GENERATED_STATE.dbType);
   return {
+    dbType: option.value,
     host: overrides.host ?? DEFAULT_GENERATED_STATE.host,
-    port: overrides.port ?? DEFAULT_GENERATED_STATE.port,
-    database: overrides.database ?? DEFAULT_GENERATED_STATE.database
+    port: overrides.port ?? option.defaultPort,
+    database: overrides.database ?? DEFAULT_GENERATED_STATE.database,
+    query: overrides.query ?? DEFAULT_GENERATED_STATE.query
   };
 }
 
@@ -127,42 +182,41 @@ function decodeJdbcValue(value) {
   }
 }
 
-function getInputValue(payload) {
-  if (payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'target')) {
-    return payload.target ? payload.target.value : '';
-  }
-  return payload;
-}
-
-function parseMysqlJdbcUrl(jdbcUrl) {
+function parseMetaJdbcUrl(jdbcUrl) {
   if (!jdbcUrl || typeof jdbcUrl !== 'string') {
     return null;
   }
 
-  const match = jdbcUrl.match(/^jdbc:mysql:\/\/([^/:?#]*)(?::(\d+))?\/([^?]+)(?:\?(.*))?$/i);
+  const match = jdbcUrl.trim().match(/^jdbc:(mysql|postgresql):\/\/([^/:?#]*)(?::(\d+))?\/([^?]*)(?:\?(.*))?$/i);
   if (!match) {
     return null;
   }
 
-  const [, host, port, database] = match;
+  const [, rawType, host, port, database, query] = match;
+  const option = getDbTypeOption(rawType.toLowerCase());
 
   return createGeneratedState({
+    dbType: option.value,
     host,
-    port: port || DEFAULT_GENERATED_STATE.port,
-    database: decodeJdbcValue(database)
+    port: port || option.defaultPort,
+    database: decodeJdbcValue(database),
+    query: query || ''
   });
 }
 
-function buildMysqlJdbcUrl(generatedState) {
+function buildMetaJdbcUrl(generatedState) {
   const host = generatedState.host || '';
   const port = generatedState.port || '';
   const database = generatedState.database || '';
+  const query = generatedState.query || '';
 
   if (!host) {
     return '';
   }
 
-  return `jdbc:mysql://${host}${port ? `:${port}` : ''}/${database}`;
+  const option = getDbTypeOption(generatedState.dbType);
+  const querySuffix = option.value === 'postgresql' && query ? `?${query}` : '';
+  return `${option.protocol}${host}${port ? `:${port}` : ''}/${database}${querySuffix}`;
 }
 
 export default {
@@ -179,10 +233,20 @@ export default {
   data() {
     return {
       generatedState: createGeneratedState(),
-      databaseInputFocused: false
+      databaseInputFocused: false,
+      lastEmittedJdbcUrl: null
     };
   },
   computed: {
+    dbTypeOptions() {
+      return DB_TYPE_OPTIONS;
+    },
+    selectedDbOption() {
+      return getDbTypeOption(this.generatedState.dbType);
+    },
+    portPlaceholder() {
+      return this.$t(this.selectedDbOption.portPlaceholderKey);
+    },
     jdbcUrlField() {
       return this.fieldDefs.find((field) => field.propertyKey === 'spring.datasource.jdbcurl') || null;
     },
@@ -269,15 +333,35 @@ export default {
       this.$emit('update:formValues', { [key]: value });
     },
     syncJdbcState(jdbcUrl) {
-      const parsed = parseMysqlJdbcUrl(jdbcUrl);
+      if (this.lastEmittedJdbcUrl !== null && jdbcUrl === this.lastEmittedJdbcUrl) {
+        return;
+      }
+      this.lastEmittedJdbcUrl = null;
+      const parsed = parseMetaJdbcUrl(jdbcUrl);
       if (parsed) {
         this.generatedState = parsed;
         return;
       }
 
       if (!jdbcUrl) {
-        this.generatedState = createGeneratedState();
+        this.generatedState = createGeneratedState({ dbType: this.generatedState.dbType });
       }
+    },
+    onDbTypeChange(dbType) {
+      if (this.readonly || !dbType || dbType === this.generatedState.dbType) {
+        return;
+      }
+      const prevOption = getDbTypeOption(this.generatedState.dbType);
+      const nextOption = getDbTypeOption(dbType);
+      const currentPort = `${this.generatedState.port || ''}`.trim();
+      const nextPort = !currentPort || currentPort === prevOption.defaultPort ? nextOption.defaultPort : currentPort;
+      this.generatedState = {
+        ...this.generatedState,
+        dbType: nextOption.value,
+        port: nextPort,
+        query: nextOption.value === 'postgresql' ? this.generatedState.query : ''
+      };
+      this.emitGeneratedJdbcUrl();
     },
     onGeneratedFieldChange(key, value) {
       if (this.readonly) {
@@ -290,7 +374,8 @@ export default {
       this.emitGeneratedJdbcUrl();
     },
     emitGeneratedJdbcUrl() {
-      const jdbcUrl = buildMysqlJdbcUrl(this.generatedState);
+      const jdbcUrl = buildMetaJdbcUrl(this.generatedState);
+      this.lastEmittedJdbcUrl = jdbcUrl;
       this.$emit('update:formValues', { 'spring.datasource.jdbcurl': jdbcUrl });
     }
   }
@@ -344,6 +429,16 @@ export default {
 }
 .jdbc-generated-editor {
   width: 100%;
+}
+.jdbc-database-type-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+.jdbc-database-type-group :deep(.ant-radio-button-wrapper) {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
 }
 .jdbc-database-type-value {
   display: inline-flex;

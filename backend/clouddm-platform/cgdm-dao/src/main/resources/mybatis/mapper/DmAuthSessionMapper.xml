@@ -60,12 +60,27 @@
             uid = #{uid}
     </delete>
 
-    <delete id="deleteExpiredByExpire">
+    <delete id="deleteExpiredByExpire" databaseId="mysql">
         DELETE FROM
             dm_auth_session
         WHERE
             expire_time_ms <![CDATA[ <= ]]> #{nowMs}
         LIMIT #{limit}
+    </delete>
+
+    <delete id="deleteExpiredByExpire" databaseId="postgresql">
+        DELETE FROM
+            dm_auth_session
+        WHERE
+            id IN (
+                SELECT
+                    id
+                FROM
+                    dm_auth_session
+                WHERE
+                    expire_time_ms <![CDATA[ <= ]]> #{nowMs}
+                LIMIT #{limit}
+            )
     </delete>
 
 </mapper>

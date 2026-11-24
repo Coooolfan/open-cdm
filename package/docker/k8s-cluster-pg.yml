@@ -1,0 +1,293 @@
+# ============================================================
+# CloudDM Cluster (PostgreSQL 18+) — Kubernetes Deployment
+# Generated from docker-cluster-pg.yml
+# Usage: kubectl apply -f k8s-cluster-pg.yml
+# Note: Replace __IMAGE_PREFIX__ and __IMAGE_TAG__ before applying.
+# ============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cgdm
+---
+# ---------------------- PostgreSQL 18+ ----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: dm-postgres
+  namespace: cgdm
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: dm-postgres
+  clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-postgres-data
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dm-postgres
+  namespace: cgdm
+spec:
+  serviceName: dm-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dm-postgres
+  template:
+    metadata:
+      labels:
+        app: dm-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: cdmgr
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: "123456"
+            - name: TZ
+              value: Asia/Shanghai
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+---
+# ---------------------- dm_console ----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: dm-console
+  namespace: cgdm
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 8222
+      targetPort: 8222
+    - name: serve
+      port: 8008
+      targetPort: 8008
+  selector:
+    app: dm-console
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-console-conf
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-console-logs
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-console-data
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dm-console
+  namespace: cgdm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dm-console
+  template:
+    metadata:
+      labels:
+        app: dm-console
+    spec:
+      containers:
+        - name: console
+          image: __IMAGE_PREFIX__-console:__IMAGE_TAG__
+          ports:
+            - containerPort: 8222
+            - containerPort: 8008
+          env:
+            - name: APP_WEB_PORT
+              value: "8222"
+            - name: APP_SERVE_NAME
+              value: dm-console
+            - name: APP_SERVE_PORT
+              value: "8008"
+            - name: DB_TYPE
+              value: postgresql
+            - name: DB_HOST
+              value: dm-postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: cdmgr
+            - name: DB_USERNAME
+              value: postgres
+            - name: DB_PASSWORD
+              value: "123456"
+          volumeMounts:
+            - name: conf
+              mountPath: /root/cgdm/console/conf
+            - name: logs
+              mountPath: /root/cgdm/console/logs
+            - name: data
+              mountPath: /root/cgdm/console/data
+      volumes:
+        - name: conf
+          persistentVolumeClaim:
+            claimName: cgdm-console-conf
+        - name: logs
+          persistentVolumeClaim:
+            claimName: cgdm-console-logs
+        - name: data
+          persistentVolumeClaim:
+            claimName: cgdm-console-data
+---
+# ---------------------- dm_sidecar ----------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: dm-sidecar
+  namespace: cgdm
+spec:
+  type: ClusterIP
+  ports:
+    - name: serve
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: dm-sidecar
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-sidecar-0-conf
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-sidecar-0-logs
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cgdm-sidecar-0-data
+  namespace: cgdm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dm-sidecar
+  namespace: cgdm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dm-sidecar
+  template:
+    metadata:
+      labels:
+        app: dm-sidecar
+    spec:
+      containers:
+        - name: sidecar
+          image: __IMAGE_PREFIX__-sidecar:__IMAGE_TAG__
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_WEB_PORT
+              value: "8080"
+            - name: DM_CLIENT_AK
+              value: "ak0a2c62tdo1ap2416655mpyx0v36l359p1v5rn782caw8t0qkk1s94b80lfs90"
+            - name: DM_CLIENT_SK
+              value: "sk6206iy4pb0eydz9hg97jo3tu5d80j97e91bbql65167u8wb75x4ej6e4v4aa4"
+            - name: DM_CLIENT_WSN
+              value: "wsn582nm54ca045p014288w6e919ec6294m430h427619v64g0pyqzcjb5040q3f"
+            - name: APP_SERVE_NAME
+              value: dm-console
+            - name: APP_SERVE_PORT
+              value: "8008"
+          volumeMounts:
+            - name: conf
+              mountPath: /root/cgdm/sidecar/conf
+            - name: logs
+              mountPath: /root/cgdm/sidecar/logs
+            - name: data
+              mountPath: /root/cgdm/sidecar/data
+      volumes:
+        - name: conf
+          persistentVolumeClaim:
+            claimName: cgdm-sidecar-0-conf
+        - name: logs
+          persistentVolumeClaim:
+            claimName: cgdm-sidecar-0-logs
+        - name: data
+          persistentVolumeClaim:
+            claimName: cgdm-sidecar-0-data

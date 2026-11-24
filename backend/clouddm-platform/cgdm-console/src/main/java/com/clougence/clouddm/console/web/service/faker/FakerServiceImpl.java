@@ -112,7 +112,7 @@ public class FakerServiceImpl implements FakerService, FakerMethod {
         }
 
         String tabName = fo.getTable();
-        DmDsDO ds = this.dsDal.dsMapper().selectById(fo.getLevels().get(1));
+        DmDsDO ds = levels.dsDO();
         Map<UmiTypes, Object> levelsParam = levels.levelsParam();
 
         Map<String, List<RdbColumn>> columns = this.dsSchemaService.loadColumns(ds, levelsParam, UmiTypes.Table, Collections.singletonList(tabName));

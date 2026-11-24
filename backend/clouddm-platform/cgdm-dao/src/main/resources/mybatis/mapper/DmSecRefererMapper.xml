@@ -53,7 +53,6 @@
             gmt_modified = NOW()
         WHERE
             id = #{id}
-        LIMIT 1
     </update>
 
     <select id="listBySpecId" resultMap="dmSecRefererDO">
@@ -174,14 +173,13 @@
             owner_uid = #{ownerUid}
             AND
             id        = #{refId}
-        LIMIT 1
     </update>
 
     <update id="markDeprecatedByRefId">
         UPDATE
             dm_sec_referer
         SET
-            enable       = 0,
+            enable       = FALSE,
             gmt_modified = NOW()
         WHERE
             ref_rule = #{refRuleOrSenId}

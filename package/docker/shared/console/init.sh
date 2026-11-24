@@ -3,8 +3,20 @@
 # adjust os timezone
 echo 'Asia/Shanghai' > /etc/timezone
 
+DB_TYPE=${DB_TYPE:-mysql}
+DB_TYPE=$(printf '%s' "$DB_TYPE" | tr '[:upper:]' '[:lower:]')
+if [ "$DB_TYPE" != "mysql" ] && [ "$DB_TYPE" != "postgresql" ]; then
+  echo "unsupported DB_TYPE: ${DB_TYPE} (expected mysql or postgresql)" >&2
+  exit 1
+fi
 DB_HOST=${DB_HOST:-}
-DB_PORT=${DB_PORT:-3306}
+if [ -z "${DB_PORT:-}" ]; then
+  if [ "$DB_TYPE" = "postgresql" ]; then
+    DB_PORT=5432
+  else
+    DB_PORT=3306
+  fi
+fi
 DB_DATABASE=${DB_DATABASE:-cdmgr}
 DB_USERNAME=${DB_USERNAME:-}
 DB_PASSWORD=${DB_PASSWORD:-}
@@ -27,16 +39,16 @@ wait_for_db() {
   local port="$2"
   local waited=0
 
-  echo "waiting for mysql at ${host}:${port} ..."
+  echo "waiting for ${DB_TYPE} at ${host}:${port} ..."
   until can_connect_db "$host" "$port"; do
     waited=$((waited + 1))
     if [ "$waited" -ge "$WAIT_DB_TIMEOUT_SECONDS" ]; then
-      echo "mysql is still unavailable after ${WAIT_DB_TIMEOUT_SECONDS}s: ${host}:${port}" >&2
+      echo "${DB_TYPE} is still unavailable after ${WAIT_DB_TIMEOUT_SECONDS}s: ${host}:${port}" >&2
       exit 1
     fi
     sleep 1
   done
-  echo "mysql is ready: ${host}:${port}"
+  echo "${DB_TYPE} is ready: ${host}:${port}"
 }
 
 sync_missing_default_conf() {
@@ -70,6 +82,7 @@ if [ ! -f "$DST_CONF_FILE" ]; then
   APP_WEB_PORT_SED=$(sed_replacement_escape "${APP_WEB_PORT:-}")
   APP_SERVE_NAME_SED=$(sed_replacement_escape "${APP_SERVE_NAME:-}")
   APP_SERVE_PORT_SED=$(sed_replacement_escape "${APP_SERVE_PORT:-}")
+  DB_TYPE_SED=$(sed_replacement_escape "${DB_TYPE:-mysql}")
   DB_HOST_SED=$(sed_replacement_escape "${DB_HOST:-}")
   DB_PORT_SED=$(sed_replacement_escape "${DB_PORT:-}")
   DB_DATABASE_SED=$(sed_replacement_escape "${DB_DATABASE:-}")
@@ -78,6 +91,7 @@ if [ ! -f "$DST_CONF_FILE" ]; then
   sed -e "s/%APP_WEB_PORT%/$APP_WEB_PORT_SED/g" \
       -e "s/%APP_SERVE_NAME%/$APP_SERVE_NAME_SED/g" \
       -e "s/%APP_SERVE_PORT%/$APP_SERVE_PORT_SED/g" \
+      -e "s/%DB_TYPE%/$DB_TYPE_SED/g" \
       -e "s/%DB_HOST%/$DB_HOST_SED/g" \
       -e "s/%DB_PORT%/$DB_PORT_SED/g" \
       -e "s/%DB_DATABASE%/$DB_DATABASE_SED/g" \
@@ -89,7 +103,7 @@ fi
 if [ -n "$DB_HOST" ]; then
   wait_for_db "$DB_HOST" "$DB_PORT"
 else
-  echo "DB_HOST is empty, skip mysql wait and continue with initialization bootstrap."
+  echo "DB_HOST is empty, skip ${DB_TYPE} wait and continue with initialization bootstrap."
 fi
 
 # start console (Flyway auto-migrates DB on first boot)

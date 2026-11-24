@@ -311,7 +311,7 @@ public class DmDsConfigServiceImpl implements DmDsConfigService, UnifiedPostCons
         String envId = levels.get(0);
         String dsId = levels.get(1);
 
-        DmDsDO dsDO = this.dsDal.dsMapper().selectById(dsId);
+        DmDsDO dsDO = this.dsDal.dsMapper().selectById(Long.valueOf(dsId));
         if (dsDO == null || dsDO.getLifeCycleState() == LifeCycleState.DELETED || dsDO.getLifeCycleState() == LifeCycleState.DELETING) {
             throw new ErrorMessageException(DmI18nUtils.getMessage(I18nDmMsgKeys.DS_NOT_EXIST_ERROR.name()));
         }

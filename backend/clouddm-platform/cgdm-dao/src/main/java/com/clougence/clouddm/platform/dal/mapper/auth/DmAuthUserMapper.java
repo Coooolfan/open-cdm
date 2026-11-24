@@ -72,7 +72,7 @@ public interface DmAuthUserMapper extends BaseMapper<DmAuthUserDO> {
 
     DmAuthUserDO queryByEmailAndParentIdExcludeUid(@Param("email") String email, @Param("parentId") Long parentId, @Param("excludeUid") String excludeUid);
 
-    DmAuthUserDO queryBySubAccountAndBind(String parentId, String subAccount, String bindType);
+    DmAuthUserDO queryBySubAccountAndBind(Long parentId, String subAccount, String bindType);
 
     DmAuthUserDO queryBySubAccountByBindInfo(Long parentId, String bindAccount, AccountBindType bindType);
 

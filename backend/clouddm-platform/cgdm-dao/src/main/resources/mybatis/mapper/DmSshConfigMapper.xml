@@ -85,6 +85,5 @@
             dm_ssh_config
         WHERE
             id = #{id}
-        LIMIT 1
     </delete>
 </mapper>

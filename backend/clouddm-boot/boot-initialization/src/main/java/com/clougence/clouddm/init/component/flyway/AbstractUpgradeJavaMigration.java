@@ -17,6 +17,7 @@ package com.clougence.clouddm.init.component.flyway;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +29,8 @@ import com.clougence.utils.ExceptionUtils;
 
 public abstract class AbstractUpgradeJavaMigration extends BaseJavaMigration {
 
-    private static final Set<Integer> IGNORABLE_ERROR_CODES = Set.of(1050, 1054, 1060, 1061, 1062, 1072, 1091, 1146);
+    private static final Set<Integer> IGNORABLE_MYSQL_ERROR_CODES = Set.of(1050, 1054, 1060, 1061, 1062, 1072, 1091, 1146);
+    private static final Set<String>  IGNORABLE_PG_SQL_STATES     = Set.of("42P07", "42701", "42710", "23505", "42704", "42P01");
 
     @Override
     public void migrate(Context context) throws Exception {
@@ -49,15 +51,52 @@ public abstract class AbstractUpgradeJavaMigration extends BaseJavaMigration {
     public abstract List<String> collectScript();
 
     protected final void safeExecute(Connection conn, String sql) {
-        try (Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+        boolean postgres = isPostgresConnection(conn);
+        Savepoint savepoint = null;
+        try {
+            if (postgres && !conn.getAutoCommit()) {
+                savepoint = conn.setSavepoint();
+            }
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute(sql);
+            }
+            if (savepoint != null) {
+                conn.releaseSavepoint(savepoint);
+            }
         } catch (SQLException e) {
-            if (IGNORABLE_ERROR_CODES.contains(e.getErrorCode())) {
+            if (isIgnorableException(postgres, e)) {
+                rollbackSavepointQuietly(conn, savepoint);
                 System.out.println("Flyway java exec error but skip, msg:" + ExceptionUtils.getRootCauseMessage(e) + ", sql: " + sql);
                 return;
             }
-
             throw new RuntimeException("Failed to execute: " + sql, e);
+        }
+    }
+
+    private static boolean isIgnorableException(boolean postgres, SQLException e) {
+        if (postgres) {
+            return e.getSQLState() != null && IGNORABLE_PG_SQL_STATES.contains(e.getSQLState());
+        }
+        return IGNORABLE_MYSQL_ERROR_CODES.contains(e.getErrorCode());
+    }
+
+    private static boolean isPostgresConnection(Connection conn) {
+        try {
+            String productName = conn.getMetaData().getDatabaseProductName();
+            return productName != null && productName.toLowerCase().contains("postgresql");
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private static void rollbackSavepointQuietly(Connection conn, Savepoint savepoint) {
+        if (savepoint == null) {
+            return;
+        }
+        try {
+            conn.rollback(savepoint);
+            conn.releaseSavepoint(savepoint);
+        } catch (SQLException ignored) {
         }
     }
 }

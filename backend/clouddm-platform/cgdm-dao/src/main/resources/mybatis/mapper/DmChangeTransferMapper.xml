@@ -35,17 +35,31 @@
         last_error
     </sql>
 
-    <insert id="insertIgnore" useGeneratedKeys="true" keyProperty="id">
-            INSERT IGNORE INTO
+    <insert id="insertIgnore" useGeneratedKeys="true" keyProperty="id" keyColumn="id" databaseId="mysql">
+        INSERT IGNORE INTO
             dm_change_transfer (
-            owner_uid, ref_batch_id, ref_source_flow_id, ref_source_change_id,
-            ref_target_flow_id, transfer_status, schedule_time, try_times
+                owner_uid, ref_batch_id, ref_source_flow_id, ref_source_change_id,
+                ref_target_flow_id, transfer_status, schedule_time, try_times
             )
         VALUES
             (
                 #{ownerUid}, #{refBatchId}, #{refSourceFlowId}, #{refSourceChangeId},
                 #{refTargetFlowId}, #{transferStatus}, #{scheduleTime}, #{tryTimes}
             )
+    </insert>
+
+    <insert id="insertIgnore" useGeneratedKeys="true" keyProperty="id" keyColumn="id" databaseId="postgresql">
+        INSERT INTO
+            dm_change_transfer (
+                owner_uid, ref_batch_id, ref_source_flow_id, ref_source_change_id,
+                ref_target_flow_id, transfer_status, schedule_time, try_times
+            )
+        VALUES
+            (
+                #{ownerUid}, #{refBatchId}, #{refSourceFlowId}, #{refSourceChangeId},
+                #{refTargetFlowId}, #{transferStatus}, #{scheduleTime}, #{tryTimes}
+            )
+        ON CONFLICT DO NOTHING
     </insert>
 
     <select id="queryReadyList" resultMap="dmChangeTransferDO">
@@ -62,7 +76,9 @@
                 <![CDATA[ schedule_time <= #{date} ]]>
             )
         ORDER BY
-            schedule_time ASC, id ASC
+            CASE WHEN schedule_time IS NULL THEN 0 ELSE 1 END,
+            schedule_time ASC,
+            id ASC
         LIMIT ${limit}
     </select>
 

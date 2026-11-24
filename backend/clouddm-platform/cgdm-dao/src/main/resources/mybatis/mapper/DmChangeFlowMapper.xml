@@ -115,7 +115,7 @@
         WHERE
             owner_uid          = #{ownerUid}
             AND
-            deleted            = 0
+            deleted            = FALSE
             AND
             flow_status        != 'DELETE'
             AND
@@ -197,7 +197,7 @@
             AND
             flow_status        != 'DELETE'
             AND
-            deleted            = 0
+            deleted            = FALSE
         ORDER BY gmt_create ASC
     </select>
 
@@ -211,7 +211,7 @@
             AND
             flow_status        != 'DELETE'
             AND
-            deleted            = 0
+            deleted            = FALSE
             AND
             ref_parent_flow_id IN
             <foreach item="parentFlowId" collection="parentFlowIds" open="(" separator="," close=")">
@@ -232,9 +232,9 @@
             AND
             flow_status = 'NORMAL'
             AND
-            enable      = 1
+            enable      = TRUE
             AND
-            deleted     = 0
+            deleted     = FALSE
         ORDER BY gmt_create DESC
     </select>
 
@@ -250,7 +250,7 @@
             AND
             flow_status        != 'DELETE'
             AND
-            deleted            = 0
+            deleted            = FALSE
     </select>
 
     <select id="queryEnabledByOwnerAndDsId" resultMap="dmChangeFlowDO">
@@ -265,9 +265,9 @@
             AND
             flow_status = 'NORMAL'
             AND
-            enable      = 1
+            enable      = TRUE
             AND
-            deleted     = 0
+            deleted     = FALSE
         ORDER BY gmt_create ASC
     </select>
 
@@ -283,9 +283,9 @@
             AND
             flow_status = 'NORMAL'
             AND
-            enable      = 1
+            enable      = TRUE
             AND
-            deleted     = 0
+            deleted     = FALSE
         ORDER BY gmt_create ASC
     </select>
 
@@ -301,9 +301,9 @@
             AND
             flow_status = 'NORMAL'
             AND
-            enable_msg  = 1
+            enable_msg  = TRUE
             AND
-            deleted     = 0
+            deleted     = FALSE
         ORDER BY gmt_create ASC
     </select>
 
@@ -319,9 +319,9 @@
             AND
             flow_status   = 'NORMAL'
             AND
-            enable        = 1
+            enable        = TRUE
             AND
-            deleted       = 0
+            deleted       = FALSE
         ORDER BY gmt_create ASC
     </select>
 
@@ -387,7 +387,7 @@
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="updateMessageConfigByOwnerAndId">
@@ -413,52 +413,52 @@
         UPDATE
             dm_change_flow
         SET
-            enable       = 0,
+            enable       = FALSE,
             gmt_modified = NOW()
         WHERE
             owner_uid  = #{ownerUid}
             AND
             ref_scm_id = #{scmId}
             AND
-            deleted    = 0
+            deleted    = FALSE
     </update>
 
     <update id="disableByOwnerAndImId">
         UPDATE
             dm_change_flow
         SET
-            enable_msg   = 0,
+            enable_msg   = FALSE,
             gmt_modified = NOW()
         WHERE
             owner_uid  = #{ownerUid}
             AND
             ref_msg_id = #{imId}
             AND
-            deleted    = 0
+            deleted    = FALSE
     </update>
 
     <update id="deleteByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            deleted      = 1,
+            deleted      = TRUE,
             flow_status  = 'DELETE',
-            enable       = 0,
-            enable_msg   = 0,
+            enable       = FALSE,
+            enable_msg   = FALSE,
             gmt_modified = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="enableFlowByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            enable       = 1,
+            enable       = TRUE,
             gmt_modified = NOW()
         WHERE
             owner_uid   = #{ownerUid}
@@ -467,77 +467,77 @@
             AND
             flow_status = 'NORMAL'
             AND
-            deleted     = 0
+            deleted     = FALSE
     </update>
 
     <update id="disableFlowByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            enable       = 0,
+            enable       = FALSE,
             gmt_modified = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="enableWebHookByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            enable_hook  = 1,
+            enable_hook  = TRUE,
             gmt_modified = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="disableWebHookByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            enable_hook  = 0,
+            enable_hook  = FALSE,
             gmt_modified = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="enableTriggerByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            enable_trigger = 1,
+            enable_trigger = TRUE,
             gmt_modified   = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="disableTriggerByOwnerAndId">
         UPDATE
             dm_change_flow
         SET
-            enable_trigger = 0,
+            enable_trigger = FALSE,
             gmt_modified   = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="configCallBackByOwnerAndId">
@@ -553,7 +553,7 @@
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="configTriggerByOwnerAndId">
@@ -568,7 +568,7 @@
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="updateScmRepoMetadata">
@@ -584,7 +584,7 @@
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 
     <update id="updateWebhookSigningToken">
@@ -598,6 +598,6 @@
             AND
             id        = #{flowId}
             AND
-            deleted   = 0
+            deleted   = FALSE
     </update>
 </mapper>

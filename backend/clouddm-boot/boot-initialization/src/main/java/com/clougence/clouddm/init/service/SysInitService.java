@@ -52,6 +52,7 @@ import com.clougence.clouddm.init.model.TestDbResult;
 import com.clougence.clouddm.platform.dal.access.AuthDal;
 import com.clougence.clouddm.platform.dal.access.SystemDal;
 import com.clougence.clouddm.platform.dal.config.DmDalConfig;
+import com.clougence.clouddm.platform.dal.config.MetaDbType;
 import com.clougence.clouddm.platform.dal.model.system.DmSysUserConfDO;
 import com.clougence.utils.StringUtils;
 import com.clougence.utils.io.IOUtils;
@@ -73,11 +74,17 @@ public class SysInitService {
     private static final String      INIT_WORKFLOW_MODE_UPGRADE = "upgrade";
     private static final String      INIT_DB_CREATE_IF_MISSING  = "clougence.init.db.createIfMissing";
     private static final String      JDBC_URL_CONFIG_KEY        = "spring.datasource.jdbcurl";
-    private static final String      REQUIRED_DB_CHARSET        = "utf8mb4";
-    private static final String      REQUIRED_DB_COLLATION      = "utf8mb4_general_ci";
+    private static final String      REQUIRED_MYSQL_CHARSET     = "utf8mb4";
+    private static final String      REQUIRED_MYSQL_COLLATION   = "utf8mb4_general_ci";
+    private static final String      REQUIRED_PG_CHARSET        = "UTF8";
+    private static final int         REQUIRED_PG_MAJOR_VERSION  = 18;
+    private static final int         REQUIRED_PG_VERSION_NUM    = 180000;
+    private static final String      PG_MAINTENANCE_DB          = "postgres";
     private static final String      SCHEMA_EXISTS_SQL          = "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = ?";
     private static final String      SCHEMA_CHARSET_SQL         = "SELECT default_character_set_name FROM information_schema.schemata WHERE schema_name = ?";
-    private static final String      TABLE_COUNT_SQL            = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ?";
+    private static final String      TABLE_COUNT_SQL            = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'";
+    private static final String      PG_DATABASE_ENCODING_SQL   = "SELECT pg_encoding_to_char(encoding) FROM pg_database WHERE datname = ?";
+    private static final String      PG_SCHEMA_CREATE_PRIV_SQL  = "SELECT has_schema_privilege(current_user, 'public', 'CREATE')";
     private static final Set<String> RUNTIME_INIT_CONFIG_KEYS   = Set.of( //
             INIT_WORKFLOW_MODE_KEY, //
             INIT_DB_CREATE_IF_MISSING, //
@@ -121,6 +128,13 @@ public class SysInitService {
         result.setInstalled(inspection.databaseExists && inspection.tableCount > 0);
         result.setCanProceed(false);
 
+        if (!inspection.versionSupported) {
+            result.setSuccess(false);
+            result.setMessageType("error");
+            result.setMessage(DmI18nUtils.getMessage(I18nInitFieldKeys.INIT_TEST_DB_PG_VERSION_UNSUPPORTED.name(), StringUtils.defaultIfBlank(inspection.serverVersion, "unknown")));
+            return;
+        }
+
         if (!inspection.databaseExists) {
             result.setSuccess(true);
             result.setCanProceed(true);
@@ -132,7 +146,15 @@ public class SysInitService {
         if (!inspection.charsetValid) {
             result.setSuccess(false);
             result.setMessageType("error");
-            result.setMessage(DmI18nUtils.getMessage(I18nInitFieldKeys.INIT_TEST_DB_CHARSET_INVALID.name(), StringUtils.defaultIfBlank(inspection.databaseCharset, "unknown")));
+            String requiredCharset = inspection.dbType.getRequiredCharset();
+            result.setMessage(DmI18nUtils.getMessage(I18nInitFieldKeys.INIT_TEST_DB_CHARSET_INVALID.name(), requiredCharset, StringUtils.defaultIfBlank(inspection.databaseCharset, "unknown")));
+            return;
+        }
+
+        if (!inspection.schemaWritable) {
+            result.setSuccess(false);
+            result.setMessageType("error");
+            result.setMessage(DmI18nUtils.getMessage(I18nInitFieldKeys.INIT_TEST_DB_SCHEMA_PERMISSION_DENIED.name()));
             return;
         }
 
@@ -154,20 +176,21 @@ public class SysInitService {
         String jdbcUrl = resolveConfigValue(userConfig, props, "spring.datasource.jdbcurl");
         String username = resolveConfigValue(userConfig, props, "spring.datasource.username");
         String password = resolveConfigValue(userConfig, props, "spring.datasource.password");
+        MetaDbType dbType = MetaDbType.tryFromJdbcUrl(jdbcUrl);
 
-        if (StringUtils.isBlank(jdbcUrl) || StringUtils.isBlank(username)) {
-            return DmFlywayInit.listAllScriptNames();
+        if (StringUtils.isBlank(jdbcUrl) || StringUtils.isBlank(username) || dbType == null) {
+            return DmFlywayInit.listAllScriptNames(dbType);
         }
 
         try {
-            String databaseName = InitDBStatusDetector.getDatabaseName(jdbcUrl);
-            if (StringUtils.isBlank(databaseName)) {
-                return DmFlywayInit.listAllScriptNames();
+            String targetSchema = InitDBStatusDetector.resolveTargetSchema(dbType, jdbcUrl);
+            if (StringUtils.isBlank(targetSchema)) {
+                return DmFlywayInit.listAllScriptNames(dbType);
             }
-            return DmFlywayInit.listUpgradeRequiredScriptNames(jdbcUrl, username, password, databaseName);
+            return DmFlywayInit.listUpgradeRequiredScriptNames(jdbcUrl, username, password, targetSchema);
         } catch (Exception e) {
             log.warn("[SysInitService] Preview execution scripts failed, fallback to full list. msg={}", e.getMessage());
-            return DmFlywayInit.listAllScriptNames();
+            return DmFlywayInit.listAllScriptNames(dbType);
         }
     }
 
@@ -265,15 +288,17 @@ public class SysInitService {
             if (StringUtils.isNotBlank(jdbcUrl) && StringUtils.isNotBlank(dbUser)) {
                 DatabaseInspection inspection = inspectDatabase(jdbcUrl, dbUser, dbPass, false);
                 bootstrapAdmin = !inspection.databaseExists || inspection.empty;
-                log.info("[SysInitService] Initialization target inspection, bootstrapAdmin={}, databaseExists={}, empty={}, rebuildIfNotEmpty={}, adminAccount={}, adminEmail={}", bootstrapAdmin, inspection.databaseExists, inspection.empty, adminAccount, adminEmail);
+                log.info("[SysInitService] Initialization target inspection, dbType={}, bootstrapAdmin={}, databaseExists={}, empty={}, adminAccount={}, adminEmail={}",
+                        inspection.dbType, bootstrapAdmin, inspection.databaseExists, inspection.empty, adminAccount, adminEmail);
 
                 InstallUpgradeLogBus.info("Preparing database.");
                 prepareDatabase(jdbcUrl, dbUser, dbPass, createIfMissing);
             }
 
             if (StringUtils.isNotBlank(jdbcUrl) && StringUtils.isNotBlank(dbUser)) {
-                String databaseName = InitDBStatusDetector.getDatabaseName(jdbcUrl);
-                pendingScripts = DmFlywayInit.listUpgradeRequiredScriptNames(jdbcUrl, dbUser, dbPass, databaseName);
+                MetaDbType dbType = MetaDbType.fromJdbcUrl(jdbcUrl);
+                String targetSchema = InitDBStatusDetector.resolveTargetSchema(dbType, jdbcUrl);
+                pendingScripts = DmFlywayInit.listUpgradeRequiredScriptNames(jdbcUrl, dbUser, dbPass, targetSchema);
                 runFlywayMigration(jdbcUrl, dbUser, dbPass, bootstrapAdmin ? adminAccount : null, bootstrapAdmin ? adminEmail : null, bootstrapAdmin ? adminPassword : null);
             }
 
@@ -438,24 +463,24 @@ public class SysInitService {
         }
     }
 
-    private void updateAdminUser(String jdbcUrl, String dbUser, String dbPass,//
-                                 String adminAccount, String adminEmail, String adminPassword) throws SQLException {
+    public void updateAdminUser(String jdbcUrl, String dbUser, String dbPass,//
+                                String adminAccount, String adminEmail, String adminPassword) throws SQLException {
+        MetaDbType dbType = MetaDbType.fromJdbcUrl(jdbcUrl);
+        String targetSchema = InitDBStatusDetector.resolveTargetSchema(dbType, jdbcUrl);
         try (Connection conn = DmDalConfig.createDriverConnection(jdbcUrl, dbUser, dbPass, 1000L)) {
-            // Encrypt the password using the same format as the Flyway seed scripts.
             PasswordInfo cryptResult = CryptService.INSTANCE.encryptForOneWay(adminPassword);
             String encodedPassword = cryptResult.getEncryptPassword();
 
-            // Check whether the user table already exists before attempting any update.
-            String dbName = InitDBStatusDetector.getDatabaseName(jdbcUrl);
-            try (Statement checkStmt = conn.createStatement();
-                    ResultSet crs = checkStmt.executeQuery("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='" + dbName + "' AND table_name='dm_auth_user'")) {
-                if (!crs.next() || crs.getInt(1) == 0) {
-                    log.warn("[SysInitService] dm_auth_user table not found, admin user will be created by Flyway with default values.");
-                    return;
+            try (PreparedStatement checkStmt = conn.prepareStatement("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = 'dm_auth_user'")) {
+                checkStmt.setString(1, targetSchema);
+                try (ResultSet crs = checkStmt.executeQuery()) {
+                    if (!crs.next() || crs.getInt(1) == 0) {
+                        log.warn("[SysInitService] dm_auth_user table not found, admin user will be created by Flyway with default values.");
+                        return;
+                    }
                 }
             }
 
-            // Look up the administrator account so it can be updated or inserted.
             try (PreparedStatement stmt = conn.prepareStatement("SELECT id, email FROM dm_auth_user WHERE uid = ?")) {
                 stmt.setString(1, InitSeedConstants.ADMIN_UID);
                 try (ResultSet rs = stmt.executeQuery()) {
@@ -464,7 +489,7 @@ public class SysInitService {
                         String existingEmail = rs.getString(2);
                         log.info("[SysInitService] Admin user found (id={}, email={}), updating...", existingId, existingEmail);
                         try (PreparedStatement updateStmt = conn
-                            .prepareStatement("UPDATE dm_auth_user SET email = ?, phone = NULL, password = ?, username = ?, account = ?, allow_local = 1 WHERE uid = ?")) {
+                            .prepareStatement("UPDATE dm_auth_user SET email = ?, phone = NULL, password = ?, username = ?, account = ?, allow_local = TRUE WHERE uid = ?")) {
                             updateStmt.setString(1, adminEmail);
                             updateStmt.setString(2, encodedPassword);
                             updateStmt.setString(3, adminAccount);
@@ -477,7 +502,7 @@ public class SysInitService {
                         log.warn("[SysInitService] Admin user not found by uid={}, inserting new admin user...", InitSeedConstants.ADMIN_UID);
                         String encryptedSecretKey = CryptService.INSTANCE.encryptUseDefaultKeyAndSalt(InitSeedConstants.DEFAULT_PRIMARY_SECRET_KEY);
                         try (PreparedStatement insertStmt = conn
-                            .prepareStatement("INSERT INTO dm_auth_user (uid, email, phone, password, username, account, allow_local, access_key, secret_key, account_type, gmt_create, gmt_modified) VALUES (?, ?, NULL, ?, ?, ?, 1, ?, ?, 'PRIMARY_ACCOUNT', now(), now())")) {
+                            .prepareStatement("INSERT INTO dm_auth_user (uid, email, phone, password, username, account, allow_local, access_key, secret_key, account_type, gmt_create, gmt_modified) VALUES (?, ?, NULL, ?, ?, ?, TRUE, ?, ?, 'PRIMARY_ACCOUNT', now(), now())")) {
                             insertStmt.setString(1, InitSeedConstants.ADMIN_UID);
                             insertStmt.setString(2, adminEmail);
                             insertStmt.setString(3, encodedPassword);
@@ -532,22 +557,37 @@ public class SysInitService {
     // prepare database.
     // ========================================================================
 
-    private void prepareDatabase(String jdbcUrl, String username, String password, boolean createIfMissing) throws SQLException {
+    public void prepareDatabase(String jdbcUrl, String username, String password, boolean createIfMissing) throws SQLException {
         DatabaseInspection info = inspectDatabase(jdbcUrl, username, password, false);
+
+        if (!info.versionSupported) {
+            throw new IllegalStateException("PostgreSQL 元数据库要求 " + REQUIRED_PG_MAJOR_VERSION + " 及以上版本，当前为 " + StringUtils.defaultIfBlank(info.serverVersion, "未知"));
+        }
 
         if (!info.databaseExists) {
             if (!createIfMissing) {
                 throw new IllegalStateException("目标数据库不存在，请先测试连接并确认自动创建数据库");
             }
-            log.info("[SysInitService] Target database does not exist, creating database {}", info.databaseName);
-            try (Connection conn = DmDalConfig.createDriverConnection(info.serverJdbcUrl, username, password, 1000L)) {
-                createDatabase(conn, info.databaseName);
+            log.info("[SysInitService] Target database does not exist, creating database {}, dbType={}", info.databaseName, info.dbType);
+            try (Connection conn = DmDalConfig.createDriverConnection(info.serverJdbcUrl, username, password, 3000L)) {
+                createDatabase(conn, info.dbType, info.databaseName);
+            }
+            if (info.dbType.isPostgresql()) {
+                try (Connection targetConn = DmDalConfig.createDriverConnection(jdbcUrl, username, password, 3000L)) {
+                    if (!hasPgPublicSchemaCreatePrivilege(targetConn)) {
+                        throw new IllegalStateException("当前数据库用户缺少 public schema 的 CREATE 权限");
+                    }
+                }
             }
             return;
         }
 
         if (!info.charsetValid) {
-            throw new IllegalStateException("目标数据库默认编码必须为 utf8mb4，当前为 " + StringUtils.defaultIfBlank(info.databaseCharset, "未知"));
+            throw new IllegalStateException("目标数据库默认编码必须为 " + info.dbType.getRequiredCharset() + "，当前为 " + StringUtils.defaultIfBlank(info.databaseCharset, "未知"));
+        }
+
+        if (!info.schemaWritable) {
+            throw new IllegalStateException("当前数据库用户缺少 public schema 的 CREATE 权限");
         }
 
         if (info.empty) {
@@ -558,67 +598,165 @@ public class SysInitService {
         log.info("[SysInitService] Target database {} exists with data, keeping existing schema and proceeding with migration/fix tasks", info.databaseName);
     }
 
-    private void createDatabase(Connection conn, String databaseName) throws SQLException {
-        executeStatement(conn, "CREATE DATABASE `" + escapeMysqlIdentifier(databaseName) + "` DEFAULT CHARACTER SET " + REQUIRED_DB_CHARSET + " COLLATE " + REQUIRED_DB_COLLATION);
+    private void createDatabase(Connection conn, MetaDbType dbType, String databaseName) throws SQLException {
+        if (dbType.isPostgresql()) {
+            executeStatement(conn, "CREATE DATABASE \"" + escapePgIdentifier(databaseName) + "\" WITH ENCODING '" + REQUIRED_PG_CHARSET + "'");
+            return;
+        }
+        executeStatement(conn, "CREATE DATABASE `" + escapeMysqlIdentifier(databaseName) + "` DEFAULT CHARACTER SET " + REQUIRED_MYSQL_CHARSET + " COLLATE " + REQUIRED_MYSQL_COLLATION);
     }
 
     private DatabaseInspection inspectDatabase(String jdbcUrl, String username, String password, boolean verifyTargetConnection) throws SQLException {
+        MetaDbType dbType = MetaDbType.fromJdbcUrl(jdbcUrl);
+        if (dbType.isPostgresql()) {
+            return inspectPostgresDatabase(jdbcUrl, username, password);
+        }
+        return inspectMysqlDatabase(jdbcUrl, username, password, verifyTargetConnection);
+    }
+
+    private DatabaseInspection inspectMysqlDatabase(String jdbcUrl, String username, String password, boolean verifyTargetConnection) throws SQLException {
         String databaseName = InitDBStatusDetector.getDatabaseName(jdbcUrl);
         if (StringUtils.isBlank(databaseName)) {
             throw new SQLException("JDBC URL 缺少数据库名");
         }
 
         DatabaseInspection info = new DatabaseInspection();
+        info.dbType = MetaDbType.MYSQL;
         info.databaseName = databaseName;
-        info.serverJdbcUrl = buildServerJdbcUrl(jdbcUrl);
+        info.serverJdbcUrl = buildMysqlServerJdbcUrl(jdbcUrl);
+        info.versionSupported = true;
+        info.schemaWritable = true;
 
-        try (Connection conn = DmDalConfig.createDriverConnection(info.serverJdbcUrl, username, password, 1000L)) {
-            // 1. check exists
+        try (Connection conn = DmDalConfig.createDriverConnection(info.serverJdbcUrl, username, password, 3000L)) {
             try (PreparedStatement stmt = conn.prepareStatement(SCHEMA_EXISTS_SQL)) {
                 stmt.setString(1, databaseName);
                 try (ResultSet rs = stmt.executeQuery()) {
                     info.databaseExists = rs.next() && rs.getInt(1) > 0;
                 }
-            } finally {
-                if (!info.databaseExists) {
-                    info.empty = true;
-                    info.charsetValid = true;
-                    info.databaseCharset = REQUIRED_DB_CHARSET;
-                    return info;
-                }
+            }
+            if (!info.databaseExists) {
+                info.empty = true;
+                info.charsetValid = true;
+                info.databaseCharset = REQUIRED_MYSQL_CHARSET;
+                return info;
             }
 
-            // 2. check db charset
             try (PreparedStatement stmt = conn.prepareStatement(SCHEMA_CHARSET_SQL)) {
                 stmt.setString(1, databaseName);
                 try (ResultSet rs = stmt.executeQuery()) {
                     info.databaseCharset = rs.next() ? rs.getString(1) : null;
                 }
-            } finally {
-                info.charsetValid = REQUIRED_DB_CHARSET.equalsIgnoreCase(info.databaseCharset);
-                if (!info.charsetValid) {
-                    return info;
-                }
+            }
+            info.charsetValid = REQUIRED_MYSQL_CHARSET.equalsIgnoreCase(info.databaseCharset);
+            if (!info.charsetValid) {
+                return info;
             }
 
-            // 2. check empty
             try (PreparedStatement stmt = conn.prepareStatement(TABLE_COUNT_SQL)) {
                 stmt.setString(1, databaseName);
                 try (ResultSet rs = stmt.executeQuery()) {
                     info.tableCount = rs.next() ? rs.getInt(1) : 0;
                 }
-            } finally {
-                info.empty = info.tableCount == 0;
             }
+            info.empty = info.tableCount == 0;
         }
 
         if (verifyTargetConnection && info.databaseExists && info.charsetValid) {
-            try (Connection ignored = DmDalConfig.createDriverConnection(jdbcUrl, username, password, 1000L)) {
-                // It is sufficient to verify that the target schema can be reached.
+            try (Connection ignored = DmDalConfig.createDriverConnection(jdbcUrl, username, password, 3000L)) {
+                // Verify that the target schema can be reached.
             }
         }
 
         return info;
+    }
+
+    private DatabaseInspection inspectPostgresDatabase(String jdbcUrl, String username, String password) throws SQLException {
+        String databaseName = InitDBStatusDetector.getDatabaseName(jdbcUrl);
+        if (StringUtils.isBlank(databaseName)) {
+            throw new SQLException("JDBC URL 缺少数据库名");
+        }
+
+        DatabaseInspection info = new DatabaseInspection();
+        info.dbType = MetaDbType.POSTGRESQL;
+        info.databaseName = databaseName;
+        info.serverJdbcUrl = buildPgMaintenanceJdbcUrl(jdbcUrl);
+        info.versionSupported = true;
+        info.schemaWritable = true;
+
+        try (Connection maintenanceConn = DmDalConfig.createDriverConnection(info.serverJdbcUrl, username, password, 3000L)) {
+            inspectPgVersion(maintenanceConn, info);
+            if (!info.versionSupported) {
+                return info;
+            }
+
+            try (PreparedStatement stmt = maintenanceConn.prepareStatement(PG_DATABASE_ENCODING_SQL)) {
+                stmt.setString(1, databaseName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        info.databaseExists = true;
+                        info.databaseCharset = rs.getString(1);
+                    } else {
+                        info.databaseExists = false;
+                    }
+                }
+            }
+
+            if (!info.databaseExists) {
+                info.empty = true;
+                info.charsetValid = true;
+                info.databaseCharset = REQUIRED_PG_CHARSET;
+                return info;
+            }
+
+            info.charsetValid = REQUIRED_PG_CHARSET.equalsIgnoreCase(info.databaseCharset);
+            if (!info.charsetValid) {
+                return info;
+            }
+        }
+
+        try (Connection targetConn = DmDalConfig.createDriverConnection(jdbcUrl, username, password, 3000L)) {
+            info.schemaWritable = hasPgPublicSchemaCreatePrivilege(targetConn);
+            if (!info.schemaWritable) {
+                return info;
+            }
+
+            try (PreparedStatement stmt = targetConn.prepareStatement(TABLE_COUNT_SQL)) {
+                stmt.setString(1, InitDBStatusDetector.PG_DEFAULT_SCHEMA);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    info.tableCount = rs.next() ? rs.getInt(1) : 0;
+                }
+            }
+            info.empty = info.tableCount == 0;
+        }
+
+        return info;
+    }
+
+    private void inspectPgVersion(Connection conn, DatabaseInspection info) throws SQLException {
+        int versionNum = 0;
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery("SHOW server_version_num")) {
+            if (rs.next()) {
+                versionNum = Integer.parseInt(rs.getString(1).trim());
+            }
+        } catch (NumberFormatException e) {
+            versionNum = 0;
+        }
+
+        String serverVersion = "";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery("SHOW server_version")) {
+            if (rs.next()) {
+                serverVersion = rs.getString(1);
+            }
+        }
+
+        info.serverVersion = serverVersion;
+        info.versionSupported = versionNum >= REQUIRED_PG_VERSION_NUM;
+    }
+
+    private boolean hasPgPublicSchemaCreatePrivilege(Connection conn) throws SQLException {
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(PG_SCHEMA_CREATE_PRIV_SQL)) {
+            return rs.next() && rs.getBoolean(1);
+        }
     }
 
     // ========================================================================
@@ -647,13 +785,17 @@ public class SysInitService {
 
     private static class DatabaseInspection {
 
-        private String  databaseName;
-        private String  serverJdbcUrl;
-        private String  databaseCharset;
-        private boolean databaseExists;
-        private boolean charsetValid;
-        private boolean empty;
-        private int     tableCount;
+        private MetaDbType dbType;
+        private String     databaseName;
+        private String     serverJdbcUrl;
+        private String     serverVersion;
+        private String     databaseCharset;
+        private boolean    versionSupported;
+        private boolean    databaseExists;
+        private boolean    charsetValid;
+        private boolean    schemaWritable;
+        private boolean    empty;
+        private int        tableCount;
     }
 
     // ========================================================================
@@ -678,6 +820,10 @@ public class SysInitService {
         }
 
         String normalizedJdbcUrl = jdbcUrl.trim();
+        MetaDbType dbType = MetaDbType.tryFromJdbcUrl(normalizedJdbcUrl);
+        if (dbType != null && dbType.isPostgresql()) {
+            return normalizedJdbcUrl;
+        }
         int queryIndex = normalizedJdbcUrl.indexOf('?');
         return queryIndex >= 0 ? normalizedJdbcUrl.substring(0, queryIndex) : normalizedJdbcUrl;
     }
@@ -722,12 +868,13 @@ public class SysInitService {
         }
     }
 
-    private String buildServerJdbcUrl(String jdbcUrl) throws SQLException {
+    private String buildMysqlServerJdbcUrl(String jdbcUrl) throws SQLException {
         if (StringUtils.isBlank(jdbcUrl)) {
             throw new SQLException("JDBC URL 不能为空");
         }
 
-        String base = normalizeJdbcUrlForPersistence(jdbcUrl);
+        int queryIndex = jdbcUrl.indexOf('?');
+        String base = queryIndex >= 0 ? jdbcUrl.substring(0, queryIndex).trim() : jdbcUrl.trim();
         int slashIndex = base.lastIndexOf('/');
         if (slashIndex < 0 || slashIndex == base.length() - 1) {
             throw new SQLException("JDBC URL 缺少数据库名");
@@ -735,8 +882,28 @@ public class SysInitService {
         return base.substring(0, slashIndex + 1);
     }
 
+    private String buildPgMaintenanceJdbcUrl(String jdbcUrl) throws SQLException {
+        if (StringUtils.isBlank(jdbcUrl)) {
+            throw new SQLException("JDBC URL 不能为空");
+        }
+
+        String trimmed = jdbcUrl.trim();
+        int queryIndex = trimmed.indexOf('?');
+        String base = queryIndex >= 0 ? trimmed.substring(0, queryIndex) : trimmed;
+        String query = queryIndex >= 0 ? trimmed.substring(queryIndex) : "";
+        int slashIndex = base.lastIndexOf('/');
+        if (slashIndex < 0 || slashIndex == base.length() - 1) {
+            throw new SQLException("JDBC URL 缺少数据库名");
+        }
+        return base.substring(0, slashIndex + 1) + PG_MAINTENANCE_DB + query;
+    }
+
     private String escapeMysqlIdentifier(String identifier) {
         return identifier == null ? "" : identifier.replace("`", "``");
+    }
+
+    private String escapePgIdentifier(String identifier) {
+        return identifier == null ? "" : identifier.replace("\"", "\"\"");
     }
 
     private Properties buildTaskProperties(String jdbcUrl, String dbUser, String dbPass) {

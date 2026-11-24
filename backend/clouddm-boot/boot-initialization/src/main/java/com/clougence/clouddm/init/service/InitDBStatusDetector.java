@@ -26,6 +26,7 @@ import com.clougence.clouddm.console.web.constants.SystemStatus;
 import com.clougence.clouddm.init.component.flyway.DmFlywayInit;
 import com.clougence.clouddm.init.model.SystemStatusResult;
 import com.clougence.clouddm.platform.dal.config.DmDalConfig;
+import com.clougence.clouddm.platform.dal.config.MetaDbType;
 import com.clougence.utils.StringUtils;
 
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +34,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class InitDBStatusDetector {
 
-    private static final String TABLE_COUNT_SQL  = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ?";
-    private static final String TABLE_EXISTS_SQL = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?";
-    private static final String DRIVER_MISSING   = "driverMissing";
+    public static final String  PG_DEFAULT_SCHEMA = "public";
+    private static final String TABLE_COUNT_SQL   = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE'";
+    private static final String TABLE_EXISTS_SQL  = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?";
+    private static final String DRIVER_MISSING    = "driverMissing";
 
     private InitDBStatusDetector(){
     }
@@ -52,8 +54,16 @@ public final class InitDBStatusDetector {
             return result;
         }
 
+        MetaDbType dbType = MetaDbType.tryFromJdbcUrl(jdbcUrl);
+        if (dbType == null) {
+            result.setStatus(SystemStatus.Initial);
+            result.setInitReason("dbConnectionError");
+            result.setDbError("Unsupported metadata database jdbcUrl: " + jdbcUrl);
+            return result;
+        }
+
         try {
-            DmDalConfig.ensureDriverAvailable();
+            DmDalConfig.ensureDriverAvailable(dbType);
         } catch (RuntimeException e) {
             log.warn("[InitDBStatusDetector] Runtime driver is not ready: {}", e.getMessage());
             result.setStatus(SystemStatus.Initial);
@@ -63,10 +73,10 @@ public final class InitDBStatusDetector {
         }
 
         try (Connection conn = DmDalConfig.createDriverConnection(jdbcUrl, username, password, 10000L)) {
-            String dbName = getDatabaseName(jdbcUrl);
-            log.info("[InitDBStatusDetector] Connected to DB: {}, dbName={}", jdbcUrl, dbName);
+            String targetSchema = resolveTargetSchema(dbType, jdbcUrl);
+            log.info("[InitDBStatusDetector] Connected to DB: {}, dbType={}, targetSchema={}", jdbcUrl, dbType, targetSchema);
             try (PreparedStatement stmt = conn.prepareStatement(TABLE_COUNT_SQL)) {
-                stmt.setString(1, dbName);
+                stmt.setString(1, targetSchema);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (rs.next() && rs.getInt(1) == 0) {
                         result.setStatus(SystemStatus.Initial);
@@ -76,9 +86,9 @@ public final class InitDBStatusDetector {
                 }
             }
 
-            if (hasUpdateHistoryTable(conn, dbName)) {
+            if (hasUpdateHistoryTable(conn, targetSchema)) {
                 try {
-                    List<String> pendingScripts = DmFlywayInit.listUpgradeRequiredScriptNames(jdbcUrl, username, password, dbName);
+                    List<String> pendingScripts = DmFlywayInit.listUpgradeRequiredScriptNames(jdbcUrl, username, password, targetSchema);
                     if (!pendingScripts.isEmpty()) {
                         result.setStatus(SystemStatus.Upgrade);
                         result.setInitReason("upgradePending");
@@ -105,7 +115,14 @@ public final class InitDBStatusDetector {
         }
     }
 
-    private static String resolveConnectionErrorReason(SQLException e) {
+    public static String resolveTargetSchema(MetaDbType dbType, String jdbcUrl) {
+        if (dbType != null && dbType.isPostgresql()) {
+            return PG_DEFAULT_SCHEMA;
+        }
+        return getDatabaseName(jdbcUrl);
+    }
+
+    static String resolveConnectionErrorReason(SQLException e) {
         if (isDriverMissing(e)) {
             return DRIVER_MISSING;
         }
@@ -122,10 +139,11 @@ public final class InitDBStatusDetector {
             String message = current.getMessage();
             if (StringUtils.isNotBlank(message)) {
                 String lowerMessage = message.toLowerCase();
-                if (lowerMessage.contains("classnotfoundexception") ||            //
-                    lowerMessage.contains("no suitable driver") ||                //
-                    lowerMessage.contains("runtime mysql driver is not ready") || //
-                    lowerMessage.contains("driver binding is unavailable")) {
+                if (lowerMessage.contains("classnotfoundexception")
+                    || lowerMessage.contains("no suitable driver")
+                    || lowerMessage.contains("runtime mysql driver")
+                    || lowerMessage.contains("runtime postgresql driver")
+                    || lowerMessage.contains("driver binding is unavailable")) {
                     return true;
                 }
             }
@@ -134,22 +152,26 @@ public final class InitDBStatusDetector {
         return false;
     }
 
-    private static boolean isDatabaseMissing(SQLException e) {
+    static boolean isDatabaseMissing(SQLException e) {
         if (e == null) {
             return false;
         }
 
-        if (e.getErrorCode() == 1049) {
+        if (e.getErrorCode() == 1049 || "3D000".equals(e.getSQLState())) {
             return true;
         }
 
         String message = e.getMessage();
-        return StringUtils.isNotBlank(message) && message.toLowerCase().contains("unknown database");
+        if (StringUtils.isBlank(message)) {
+            return false;
+        }
+        String lowerMessage = message.toLowerCase();
+        return lowerMessage.contains("unknown database") || (lowerMessage.contains("database") && lowerMessage.contains("does not exist"));
     }
 
-    private static boolean hasUpdateHistoryTable(Connection conn, String dbName) throws SQLException {
+    private static boolean hasUpdateHistoryTable(Connection conn, String targetSchema) throws SQLException {
         try (PreparedStatement stmt = conn.prepareStatement(TABLE_EXISTS_SQL)) {
-            stmt.setString(1, dbName);
+            stmt.setString(1, targetSchema);
             stmt.setString(2, DmFlywayInit.TABLE);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;

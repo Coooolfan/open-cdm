@@ -154,7 +154,7 @@
         WHERE
             account    = #{account}
             AND
-            (bind_type = 'INTERNAL' OR allow_local = 1)
+            (bind_type = 'INTERNAL' OR allow_local = TRUE)
         LIMIT 1
     </select>
 
@@ -166,7 +166,7 @@
         WHERE
             email      = #{email}
             AND
-            (bind_type = 'INTERNAL' OR allow_local = 1)
+            (bind_type = 'INTERNAL' OR allow_local = TRUE)
         LIMIT 1
     </select>
 
@@ -178,7 +178,7 @@
         WHERE
             phone      = #{phone}
             AND
-            (bind_type = 'INTERNAL' OR allow_local = 1)
+            (bind_type = 'INTERNAL' OR allow_local = TRUE)
         LIMIT 1
     </select>
 
@@ -446,7 +446,7 @@
             AND
             email        != 'inner@clougence.com'
             AND
-            disable      = 0
+            disable      = FALSE
         ORDER BY
             username ASC
     </select>
@@ -457,11 +457,11 @@
         FROM
             dm_auth_user
         WHERE
-            maintainer   = 1
+            maintainer   = TRUE
             AND
-            disable      = 0
+            disable      = FALSE
             AND
-            login_locked = 0
+            login_locked = FALSE
         ORDER BY username ASC
         LIMIT 5
     </select>
@@ -490,9 +490,9 @@
         WHERE
             (id          = #{primaryId} OR parent_id = #{primaryId})
             AND
-            disable      = 0
+            disable      = FALSE
             AND
-            login_locked = 0
+            login_locked = FALSE
             <if test="keywords != null">
                 AND
                 (
@@ -534,7 +534,7 @@
             disable   = false
     </select>
 
-    <select id="queryApproPerson" resultMap="approvalPersonDO">
+    <select id="queryApproPerson" resultMap="approvalPersonDO" databaseId="mysql">
         SELECT
             a.uid,
             a.username,
@@ -560,6 +560,32 @@
             #{resPath} LIKE CONCAT(c.res_path, '%')
     </select>
 
+    <select id="queryApproPerson" resultMap="approvalPersonDO" databaseId="postgresql">
+        SELECT
+            a.uid,
+            a.username,
+            b.role_auth_labels,
+            c.res_auth_label
+        FROM
+            dm_auth_user a
+        LEFT JOIN
+            dm_auth_role b
+        ON
+            a.role_id = b.id
+        LEFT JOIN
+            dm_auth_res c
+        ON
+            a.uid = c.owner_uid
+        WHERE
+            a.account_type = #{accountType}
+            AND
+            a.parent_id    = #{parentId}
+            AND
+            c.res_id       = #{resId}
+            AND
+            #{resPath} LIKE (c.res_path || '%')
+    </select>
+
     <select id="queryPrimaryAccountCount" resultType="java.lang.Long">
         SELECT
             COUNT(*)
@@ -570,7 +596,7 @@
             AND
             email        != 'inner@clougence.com'
             AND
-            disable      = 0
+            disable      = FALSE
     </select>
 
     <select id="querySubAccountCount" resultType="java.lang.Long">
@@ -583,7 +609,7 @@
             AND
             email        != 'inner@clougence.com'
             AND
-            disable      = 0
+            disable      = FALSE
     </select>
 
     <select id="queryUsableSubAccountCountByPrimary" resultType="java.lang.Long">
@@ -596,7 +622,7 @@
             AND
             account_type = 'SUB_ACCOUNT'
             AND
-            disable      = 0
+            disable      = FALSE
     </select>
 
     <select id="listByIds" resultType="com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO">
@@ -647,7 +673,7 @@
         SET
             password             = #{password},
             last_date_update_pwd = NOW(),
-            need_change_pwd      = 0
+            need_change_pwd      = FALSE
         WHERE
             id = #{id}
     </update>
@@ -658,11 +684,11 @@
         SET
             password             = #{password},
             last_date_update_pwd = NOW(),
-            need_change_pwd      = 0
+            need_change_pwd      = FALSE
         WHERE
             id              = #{id}
             AND
-            need_change_pwd = 1
+            need_change_pwd = TRUE
     </update>
 
     <update id="updateAbilityByUid">
@@ -787,7 +813,7 @@
             id = #{id}
     </update>
 
-    <select id="listSubAccountByPidAndAuth" resultType="com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO">
+    <select id="listSubAccountByPidAndAuth" resultType="com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO" databaseId="mysql">
         SELECT
             dm_auth_user.id,
             dm_auth_user.gmt_create,
@@ -835,6 +861,56 @@
             parent_id = #{pid}
             AND
             JSON_CONTAINS(dm_auth_role.role_auth_labels, '["' #{authLabel} '"]')
+    </select>
+
+    <select id="listSubAccountByPidAndAuth" resultType="com.clougence.clouddm.platform.dal.model.auth.DmAuthUserDO" databaseId="postgresql">
+        SELECT
+            dm_auth_user.id,
+            dm_auth_user.gmt_create,
+            dm_auth_user.gmt_modified,
+            dm_auth_user.uid,
+            dm_auth_user.email,
+            dm_auth_user.username,
+            dm_auth_user.phone,
+            dm_auth_user.account,
+            dm_auth_user.password,
+            dm_auth_user.role_id,
+            dm_auth_user.access_key,
+            dm_auth_user.secret_key,
+            dm_auth_user.last_try_login_time,
+            dm_auth_user.login_fail_count,
+            dm_auth_user.login_locked,
+            dm_auth_user.account_type,
+            dm_auth_user.bind_type,
+            dm_auth_user.bind_account,
+            dm_auth_user.allow_local,
+            dm_auth_user.disable,
+            dm_auth_user.parent_id,
+            dm_auth_user.user_status,
+            dm_auth_user.contact_me,
+            dm_auth_user.src,
+            dm_auth_user.keyword,
+            dm_auth_user.client_id,
+            dm_auth_user.country,
+            dm_auth_user.maintainer,
+            dm_auth_user.last_date_update_pwd,
+            dm_auth_user.union_id,
+            dm_auth_user.sso_type,
+            dm_auth_user.customer_id,
+            dm_auth_user.saas_user_status,
+            dm_auth_user.access_token,
+            dm_auth_user.marketplace_type,
+            dm_auth_user.use_mfa
+        FROM
+            dm_auth_user
+        LEFT JOIN
+            dm_auth_role
+        ON
+            dm_auth_user.role_id = dm_auth_role.id
+        WHERE
+            parent_id = #{pid}
+            AND
+            NULLIF(dm_auth_role.role_auth_labels, '')::jsonb @> jsonb_build_array(#{authLabel})
     </select>
 
     <select id="queryUsernameByUid" resultType="java.lang.String">

@@ -68,7 +68,7 @@ generate_yml() {
   mkdir -p "$BUILD_DIR"
 
   # — compose files —
-  for name in alone cluster; do
+  for name in alone cluster cluster-pg; do
     local src="$TEMPLATE_DIR/docker-${name}.yml"
     local dst="$BUILD_DIR/docker-${name}-${build_tag}-${target}.yml"
     if [ -f "$src" ]; then
@@ -80,7 +80,7 @@ generate_yml() {
   done
 
   # — k8s files —
-  for name in alone cluster; do
+  for name in alone cluster cluster-pg; do
     local src="$TEMPLATE_DIR/k8s-${name}.yml"
     local dst="$BUILD_DIR/k8s-${name}-${build_tag}-${target}.yml"
     if [ -f "$src" ]; then

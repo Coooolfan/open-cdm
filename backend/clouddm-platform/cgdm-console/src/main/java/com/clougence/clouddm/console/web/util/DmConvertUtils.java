@@ -1446,7 +1446,9 @@ public class DmConvertUtils {
         vo.setBizId(taskDO.getBizId());
         vo.setBizType(taskDO.getBizType());
         vo.setProcessType(taskDO.getProcessType());
-        vo.setProcessValue(taskDO.getProcessValue());
+        if (taskDO.getProcessValue() != null) {
+            vo.setProcessValue(String.valueOf(taskDO.getProcessValue()));
+        }
         vo.setStatus(taskDO.getStatus());
         vo.setStatusMsg(taskDO.getStatusMsg());
         vo.setTimeOfStart(taskDO.getTimeOfStart());

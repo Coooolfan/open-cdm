@@ -87,10 +87,10 @@ public abstract class AsyncTask extends ScheduleTask {
         BigDecimal totalCount = new BigDecimal(maxValue);
         BigDecimal divide = currentCount.divide(totalCount, 2, RoundingMode.HALF_UP);
         long value = divide.multiply(new BigDecimal(100)).longValue();
-        this.executionDal.asyncTaskMapper().updateProcess(this.taskDO.getId(), AsyncTaskProcessType.PROGRESS.name(), String.valueOf(value));
+        this.executionDal.asyncTaskMapper().updateProcess(this.taskDO.getId(), AsyncTaskProcessType.PROGRESS.name(), value);
 
         this.taskDO.setProcessType(AsyncTaskProcessType.PROGRESS);
-        this.taskDO.setProcessValue(String.valueOf(value));
+        this.taskDO.setProcessValue(value);
     }
 
     protected void notifyAsyncEvent() {

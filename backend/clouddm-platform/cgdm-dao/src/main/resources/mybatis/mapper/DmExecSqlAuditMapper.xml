@@ -160,7 +160,7 @@
             status          IN ('RUNNING', 'WAIT_CONFIRM')
     </update>
 
-    <delete id="deleteAuditBeforeDate">
+    <delete id="deleteAuditBeforeDate" databaseId="mysql">
         DELETE FROM
             dm_exec_sql_audit
         WHERE
@@ -181,6 +181,36 @@
             AND
             #{date} <![CDATA[ > ]]> end_time
         LIMIT 500
+    </delete>
+
+    <delete id="deleteAuditBeforeDate" databaseId="postgresql">
+        DELETE FROM
+            dm_exec_sql_audit
+        WHERE
+            id IN (
+                SELECT
+                    id
+                FROM
+                    dm_exec_sql_audit
+                WHERE
+                    uid IN (
+                        SELECT
+                            scoped_user.uid
+                        FROM
+                            dm_auth_user scoped_user
+                        LEFT JOIN
+                            dm_auth_user primary_user
+                        ON
+                            primary_user.id = scoped_user.parent_id
+                        WHERE
+                            scoped_user.uid  = #{puid}
+                            OR
+                            primary_user.uid = #{puid}
+                    )
+                    AND
+                    #{date} <![CDATA[ > ]]> end_time
+                LIMIT 500
+            )
     </delete>
 
     <select id="queryByQueryId" resultMap="dmSqlAudit">

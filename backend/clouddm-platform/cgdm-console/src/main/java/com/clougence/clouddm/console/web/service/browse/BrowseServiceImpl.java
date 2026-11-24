@@ -71,7 +71,8 @@ public class BrowseServiceImpl implements BrowseService {
      */
     @Override
     public List<BrowseLevelsVO> listDs(String puid, String uid, String envId) {
-        List<Long> dsIds = this.dsDal.dsMapper().listByUidAndEnvId(puid, envId).stream().map(DmDsDO::getId).collect(Collectors.toList());
+        long parsedEnvId = Long.parseLong(envId);
+        List<Long> dsIds = this.dsDal.dsMapper().listByUidAndEnvId(puid, parsedEnvId).stream().map(DmDsDO::getId).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(dsIds)) {
             return Collections.emptyList();
         }
@@ -82,7 +83,7 @@ public class BrowseServiceImpl implements BrowseService {
             return Collections.emptyList();
         }
 
-        List<DmDsDO> dsList = this.dsDal.dsMapper().listByDsIdsAndEnvId(dsIds, envId);
+        List<DmDsDO> dsList = this.dsDal.dsMapper().listByDsIdsAndEnvId(dsIds, parsedEnvId);
         List<DmDsTagDO> dsTags = this.dsDal.tagMapper().listByDsAndUser(dsIds, uid);
         Map<Long, String> dsTagMap = new HashMap<>();
         dsTags.forEach(dsTag -> dsTagMap.put(dsTag.getDataSourceId(), dsTag.getInstanceDesc()));
@@ -179,7 +180,7 @@ public class BrowseServiceImpl implements BrowseService {
     @Override
     public BrowseLevelsVO detailDs(String uid, DsLevels dsLevels) {
         List<Long> searchIds = Collections.singletonList(dsLevels.dsDO().getId());
-        List<DmDsDO> dsList = this.dsDal.dsMapper().listByDsIdsAndEnvId(searchIds, dsLevels.envId());
+        List<DmDsDO> dsList = this.dsDal.dsMapper().listByDsIdsAndEnvId(searchIds, Long.parseLong(dsLevels.envId()));
         if (CollectionUtils.isEmpty(dsList)) {
             return null;
         }

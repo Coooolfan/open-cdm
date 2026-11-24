@@ -79,33 +79,30 @@
             owner_uid = #{ownerUid}
             AND
             id        = #{specId}
-        LIMIT 1
     </delete>
 
     <update id="enableSpec">
         UPDATE
             dm_sec_spec
         SET
-            enable       = 1,
+            enable       = TRUE,
             gmt_modified = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{specId}
-        LIMIT 1
     </update>
 
     <update id="disableSpec">
         UPDATE
             dm_sec_spec
         SET
-            enable       = 0,
+            enable       = FALSE,
             gmt_modified = NOW()
         WHERE
             owner_uid = #{ownerUid}
             AND
             id        = #{specId}
-        LIMIT 1
     </update>
 
     <update id="updateInfo">
@@ -119,6 +116,5 @@
             owner_uid = #{ownerUid}
             AND
             id        = #{specId}
-        LIMIT 1
     </update>
 </mapper>

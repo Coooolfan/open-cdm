@@ -39,10 +39,10 @@ public interface DmDsMapper extends BaseMapper<DmDsDO> {
     List<DmDsDO> listByUserWithGmtOrder(String uid);
 
     /** Query the list of data sources based on the primary account */
-    List<DmDsDO> listByUidAndEnvId(@Param("uid") String uid, @Param("envId") String envId);
+    List<DmDsDO> listByUidAndEnvId(@Param("uid") String uid, @Param("envId") long envId);
 
     /** Query the list of data sources based on the sub account */
-    List<DmDsDO> listByDsIdsAndEnvId(@Param("ids") List<Long> ids, @Param("envId") String envId);
+    List<DmDsDO> listByDsIdsAndEnvId(@Param("ids") List<Long> ids, @Param("envId") long envId);
 
     DmDsDO queryDsIdentityById(Long id);
 

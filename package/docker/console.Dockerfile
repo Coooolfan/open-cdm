@@ -17,7 +17,8 @@ ENV APP_WEB_PORT=8222
 ENV APP_SERVE_NAME=127.0.0.1
 # Sidecar Service Port (config: clouddm.rsocket.console.port)
 ENV APP_SERVE_PORT=8008
-# metadata database; docker-compose should override these for packaged deployment
+# metadata database (mysql or postgresql); docker-compose should override these for packaged deployment
+ENV DB_TYPE=mysql
 ENV DB_HOST=
 ENV DB_PORT=3306
 ENV DB_DATABASE=cdmgr

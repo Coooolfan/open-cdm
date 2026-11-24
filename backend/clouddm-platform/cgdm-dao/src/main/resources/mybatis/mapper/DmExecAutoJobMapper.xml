@@ -102,7 +102,7 @@
             dm_exec_auto_job
         SET
             status = 'INIT',
-            normal = 1
+            normal = TRUE
         WHERE
             id = #{jobId}
     </update>
@@ -193,7 +193,7 @@
             dm_exec_auto_job
         SET
             status = 'PAUSE',
-            normal = 0
+            normal = FALSE
         WHERE
             worker_seq_number = #{wsn}
             AND

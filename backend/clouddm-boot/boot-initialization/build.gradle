@@ -51,3 +51,11 @@ dependencies {
 }
 
 description = 'boot-initialization'
+
+tasks.withType(Test).configureEach {
+    System.getProperties().each { k, v ->
+        if (k.toString().startsWith('dm.test.')) {
+            systemProperty(k.toString(), v.toString())
+        }
+    }
+}

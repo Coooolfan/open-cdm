@@ -50,7 +50,7 @@
         WHERE
             rule_id     = #{ruleStrId}
             AND
-            inner_share = 1
+            inner_share = TRUE
         LIMIT 1
     </select>
 
@@ -73,21 +73,19 @@
         WHERE
             id          = #{ruleId}
             AND
-            inner_share = 1
-        LIMIT 1
+            inner_share = TRUE
     </update>
 
     <delete id="markInnerDeprecatedById">
         UPDATE
             dm_sec_rules
         SET
-            deprecated   = 1,
+            deprecated   = TRUE,
             gmt_modified = NOW()
         WHERE
             rule_id     = #{ruleStrId}
             AND
-            inner_share = 1
-        LIMIT 1
+            inner_share = TRUE
     </delete>
 
     <select id="searchRules" resultMap="dmSecRulesDO">
@@ -96,7 +94,7 @@
         FROM
             dm_sec_rules
         WHERE
-            (owner_uid = #{ownerUid} OR inner_share = 1)
+            (owner_uid = #{ownerUid} OR inner_share = TRUE)
             <if test="searchKeywords != null">
                 AND
                 (rule_name LIKE CONCAT('%', #{searchKeywords}, '%') OR rule_desc LIKE CONCAT('%', #{searchKeywords}, '%'))
@@ -111,7 +109,7 @@
         FROM
             dm_sec_rules
         WHERE
-            (owner_uid = #{ownerUid} OR inner_share = 1)
+            (owner_uid = #{ownerUid} OR inner_share = TRUE)
         ORDER BY
             gmt_create DESC
     </select>
@@ -127,7 +125,7 @@
                 #{item}
             </foreach>
             AND
-            ((owner_uid = #{ownerUid} AND inner_share = 0) OR inner_share = 1)
+            ((owner_uid = #{ownerUid} AND inner_share = FALSE) OR inner_share = TRUE)
         ORDER BY
             gmt_create DESC
     </select>
@@ -140,7 +138,7 @@
         WHERE
             id          = #{ruleId}
             AND
-            ((owner_uid = #{ownerUid} AND inner_share = 0) OR inner_share = 1)
+            ((owner_uid = #{ownerUid} AND inner_share = FALSE) OR inner_share = TRUE)
         LIMIT 1
     </select>
 
@@ -152,8 +150,7 @@
             AND
             id          = #{ruleId}
             AND
-            inner_share = 0
-        LIMIT 1
+            inner_share = FALSE
     </delete>
 
     <update id="updateRule">
@@ -174,7 +171,6 @@
             AND
             id          = #{ruleId}
             AND
-            inner_share = 0
-        LIMIT 1
+            inner_share = FALSE
     </update>
 </mapper>

@@ -68,7 +68,7 @@ public class DmExecAsyncTaskDO {
 
     private AsyncTaskProcessType processType;
 
-    private String                 processValue;
+    private Long                   processValue;
 
     private boolean                fastFail;
 

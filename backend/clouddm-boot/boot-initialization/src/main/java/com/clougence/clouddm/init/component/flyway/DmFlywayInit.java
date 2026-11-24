@@ -35,6 +35,7 @@ import org.springframework.stereotype.Service;
 
 import com.clougence.clouddm.init.component.log.InstallUpgradeLogBus;
 import com.clougence.clouddm.platform.dal.config.DmDalConfig;
+import com.clougence.clouddm.platform.dal.config.MetaDbType;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
 
@@ -52,26 +53,30 @@ public class DmFlywayInit {
     private static final String[] SQL_MIGRATION_SUFFIXES  = { ".java" };
     private static final String   BASELINE_DESCRIPTION    = "<< CloudDM Init >>";
     public static final String[]  LOCATIONS               = { "classpath:com/clougence/clouddm/init/component/scripts" };
+    public static final String[]  PG_LOCATIONS            = { "classpath:com/clougence/clouddm/init/component/scripts_pg" };
+    private static final String   MYSQL_SCRIPTS_PATTERN   = "classpath*:com/clougence/clouddm/init/component/scripts/V*.class";
+    private static final String   PG_SCRIPTS_PATTERN      = "classpath*:com/clougence/clouddm/init/component/scripts_pg/V*.class";
     public static final String    TABLE                   = "dm_update_history";
 
     @Resource
     private DataSource            dataSource;
 
     public void doUpgrade() {
-        String currentSchema = fetchCurrentSchema();
+        MetaDbType dbType = resolveDataSourceDbType();
+        String currentSchema = fetchCurrentSchema(dbType);
         if (StringUtils.isBlank(currentSchema)) {
             throw new RuntimeException("Fetch currentSchema is empty.");
         }
 
-        log.info("Start merged Flyway DB Upgrade.");
-        List<String> upgradeRequiredScripts = listUpgradeRequiredScriptNames(dataSource, currentSchema);
+        log.info("Start merged Flyway DB Upgrade, dbType={}, schema={}.", dbType, currentSchema);
+        List<String> upgradeRequiredScripts = listUpgradeRequiredScriptNames(dataSource, dbType, currentSchema);
         InstallUpgradeLogBus.syncPlannedScripts(upgradeRequiredScripts);
-        InstallUpgradeLogBus.info("Start Flyway migration, schema=" + currentSchema);
+        InstallUpgradeLogBus.info("Start Flyway migration, dbType=" + dbType.getDisplayName() + ", schema=" + currentSchema);
         if (!upgradeRequiredScripts.isEmpty()) {
             InstallUpgradeLogBus.info("Pending migration script count=" + upgradeRequiredScripts.size());
         }
 
-        Flyway flyway = buildFlyway(new InstallUpgradeSqlLoggingDataSource(dataSource), currentSchema, new InstallUpgradeMigrationCallback());
+        Flyway flyway = buildFlyway(new InstallUpgradeSqlLoggingDataSource(dataSource), dbType, currentSchema, new InstallUpgradeMigrationCallback());
         try {
             flyway.migrate();
         } catch (Exception e) {
@@ -86,11 +91,12 @@ public class DmFlywayInit {
     }
 
     public List<String> listUpgradeRequiredScriptNames() {
-        String currentSchema = fetchCurrentSchema();
+        MetaDbType dbType = resolveDataSourceDbType();
+        String currentSchema = fetchCurrentSchema(dbType);
         if (StringUtils.isBlank(currentSchema)) {
             throw new RuntimeException("Fetch currentSchema is empty.");
         }
-        return listUpgradeRequiredScriptNames(dataSource, currentSchema);
+        return listUpgradeRequiredScriptNames(dataSource, dbType, currentSchema);
     }
 
     public void doUpgradeAndValidate() {
@@ -102,14 +108,20 @@ public class DmFlywayInit {
     }
 
     public static List<String> listUpgradeRequiredScriptNames(String jdbcUrl, String username, String password, String currentSchema) {
-        return extractUpgradeRequiredScriptNames(buildFlyway(jdbcUrl, username, password, currentSchema).info().all());
+        MetaDbType dbType = MetaDbType.fromJdbcUrl(jdbcUrl);
+        return extractUpgradeRequiredScriptNames(buildFlyway(jdbcUrl, username, password, dbType, currentSchema).info().all());
     }
 
     public static List<String> listAllScriptNames() {
+        return listAllScriptNames(MetaDbType.MYSQL);
+    }
+
+    public static List<String> listAllScriptNames(MetaDbType dbType) {
+        MetaDbType effectiveType = dbType == null ? MetaDbType.MYSQL : dbType;
+        String pattern = effectiveType.isPostgresql() ? PG_SCRIPTS_PATTERN : MYSQL_SCRIPTS_PATTERN;
         List<String> scriptNames = new ArrayList<>();
         try {
-            org.springframework.core.io.Resource[] resources = new PathMatchingResourcePatternResolver()
-                .getResources("classpath*:com/clougence/clouddm/init/component/scripts/V*.class");
+            org.springframework.core.io.Resource[] resources = new PathMatchingResourcePatternResolver().getResources(pattern);
             for (org.springframework.core.io.Resource resource : resources) {
                 if (resource == null || resource.getFilename() == null) {
                     continue;
@@ -127,18 +139,19 @@ public class DmFlywayInit {
         return scriptNames;
     }
 
-    private static List<String> listUpgradeRequiredScriptNames(DataSource dataSource, String currentSchema) {
-        return extractUpgradeRequiredScriptNames(buildFlyway(dataSource, currentSchema).info().all());
+    private static List<String> listUpgradeRequiredScriptNames(DataSource dataSource, MetaDbType dbType, String currentSchema) {
+        return extractUpgradeRequiredScriptNames(buildFlyway(dataSource, dbType, currentSchema).info().all());
     }
 
-    private static Flyway buildFlyway(DataSource dataSource, String currentSchema) {
-        return buildFlyway(dataSource, currentSchema, null);
+    private static Flyway buildFlyway(DataSource dataSource, MetaDbType dbType, String currentSchema) {
+        return buildFlyway(dataSource, dbType, currentSchema, null);
     }
 
-    private static Flyway buildFlyway(DataSource dataSource, String currentSchema, Callback callback) {
+    private static Flyway buildFlyway(DataSource dataSource, MetaDbType dbType, String currentSchema, Callback callback) {
+        String[] locations = resolveLocations(dbType);
         return Flyway.configure()
             .dataSource(dataSource)
-            .locations(LOCATIONS)
+            .locations(locations)
             .createSchemas(false)
             .defaultSchema(currentSchema)
             .baselineOnMigrate(BASELINE_ON_MIGRATE)
@@ -152,9 +165,16 @@ public class DmFlywayInit {
             .load();
     }
 
-    private static Flyway buildFlyway(String jdbcUrl, String username, String password, String currentSchema) {
+    private static Flyway buildFlyway(String jdbcUrl, String username, String password, MetaDbType dbType, String currentSchema) {
         DataSource ds = DmDalConfig.createDriverDataSource(jdbcUrl, username, password, 10000L);
-        return buildFlyway(ds, currentSchema);
+        return buildFlyway(ds, dbType, currentSchema);
+    }
+
+    private static String[] resolveLocations(MetaDbType dbType) {
+        if (dbType != null && dbType.isPostgresql()) {
+            return PG_LOCATIONS;
+        }
+        return LOCATIONS;
     }
 
     private static String extractScriptName(MigrationInfo migrationInfo) {
@@ -224,12 +244,29 @@ public class DmFlywayInit {
         }
 
         @Override
-        public String getCallbackName() { return "clouddmInstallUpgradeMigrationCallback"; }
+        public String getCallbackName() {
+            return "clouddmInstallUpgradeMigrationCallback";
+        }
     }
 
-    private String fetchCurrentSchema() {
+    private MetaDbType resolveDataSourceDbType() {
         try (Connection c = dataSource.getConnection()) {
-            try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("select database()")) {
+            String productName = c.getMetaData().getDatabaseProductName();
+            if (productName != null && productName.toLowerCase().contains("postgresql")) {
+                return MetaDbType.POSTGRESQL;
+            }
+            return MetaDbType.MYSQL;
+        } catch (SQLException e) {
+            String msg = "Resolve database product type failed, msg:" + ExceptionUtils.getRootCauseMessage(e);
+            log.error(msg, e);
+            throw new RuntimeException(msg, e);
+        }
+    }
+
+    private String fetchCurrentSchema(MetaDbType dbType) {
+        String sql = dbType.isPostgresql() ? "SELECT current_schema()" : "SELECT database()";
+        try (Connection c = dataSource.getConnection()) {
+            try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery(sql)) {
                 if (rs.next()) {
                     return rs.getString(1);
                 }

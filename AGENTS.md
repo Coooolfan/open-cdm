@@ -16,7 +16,7 @@
 - 主要技术栈：
     - 后端：Java、JDK 17+、Gradle 9.5.0+、Spring / Spring Boot、MyBatis。
     - 前端：Vue 3、Vue CLI、JavaScript / TypeScript、Node.js 22.22.1。
-    - 运行数据库：MySQL 8.0+。
+    - 运行数据库：MySQL 8.0+ 或 PostgreSQL 18+（元数据库全新部署二选一）。
 
 ## 项目结构
 
@@ -52,7 +52,7 @@
 - JDK 17+
 - Gradle 9.5.0+
 - Node.js 22.22.1
-- MySQL 8.0+
+- MySQL 8.0+ 或 PostgreSQL 18+
 - Docker 仅在构建镜像或部署清单时需要
 
 ### 全量构建与打包
@@ -215,9 +215,14 @@ cd frontend && npm run check-i18n
 ## 数据库变更
 
 - 不要修改已经发布或已用于升级路径的历史 Flyway Java migration。
-- 新增结构或数据变更时，在
-  `backend/clouddm-boot/boot-initialization/src/main/java/com/clougence/clouddm/init/component/scripts/` 下新增
+- 新增结构或数据变更时，同步在
+  `backend/clouddm-boot/boot-initialization/src/main/java/com/clougence/clouddm/init/component/scripts/`（MySQL）与
+  `backend/clouddm-boot/boot-initialization/src/main/java/com/clougence/clouddm/init/component/scripts_pg/`（PostgreSQL 18+）下新增对应
   migration，并沿用现有命名和执行模式。
+- MyBatis Mapper SQL 须同时兼容 MySQL 8.0+ 与 PostgreSQL 18+：
+  - 布尔列统一使用 `TRUE`/`FALSE`（禁止写 `0`/`1`）；
+  - 禁止在公共 SQL 中使用 `UPDATE/DELETE ... LIMIT`、MySQL 专属 `JSON_*`/`INSERT IGNORE`/`ON DUPLICATE KEY UPDATE` 及正则匹配；确有方言差异时使用 MyBatis `databaseId="mysql"` 与 `databaseId="postgresql"` 分叉；
+  - 可空字段 `ORDER BY` 涉及空值优先语义时，显式处理 `NULL` 排序顺序。
 - SQL 只负责必要的数据查询、过滤和排序；不要把复杂业务计算写进 SQL。
 - 跨日期统计、多口径聚合等复杂计算优先放在 Java 内存里做，数据库侧只拉取必要字段。
 - MyBatis XML 中 SQL 比较符统一使用 `<![CDATA[ ... ]]>`，不要写 `&lt;`、`&gt;` 这类 XML 转义符。

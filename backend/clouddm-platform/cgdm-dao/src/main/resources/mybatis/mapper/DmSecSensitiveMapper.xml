@@ -47,7 +47,7 @@
         WHERE
             sen_id      = #{senStrId}
             AND
-            inner_share = 1
+            inner_share = TRUE
         LIMIT 1
     </select>
 
@@ -69,21 +69,19 @@
         WHERE
             id          = #{senId}
             AND
-            inner_share = 1
-        LIMIT 1
+            inner_share = TRUE
     </update>
 
     <delete id="markInnerDeprecatedById">
         UPDATE
             dm_sec_sensitive
         SET
-            deprecated   = 1,
+            deprecated   = TRUE,
             gmt_modified = NOW()
         WHERE
             sen_id      = #{senStrId}
             AND
-            inner_share = 1
-        LIMIT 1
+            inner_share = TRUE
     </delete>
 
     <select id="searchSens" resultMap="dmSecSensitiveDO">
@@ -92,7 +90,7 @@
         FROM
             dm_sec_sensitive
         WHERE
-            (owner_uid = #{ownerUid} OR inner_share = 1)
+            (owner_uid = #{ownerUid} OR inner_share = TRUE)
             <if test="searchKeywords != null">
                 AND
                 (sen_name LIKE CONCAT('%', #{searchKeywords}, '%') OR sen_desc LIKE CONCAT('%', #{searchKeywords}, '%'))
@@ -107,7 +105,7 @@
         FROM
             dm_sec_sensitive
         WHERE
-            (owner_uid = #{ownerUid} OR inner_share = 1)
+            (owner_uid = #{ownerUid} OR inner_share = TRUE)
         ORDER BY
             gmt_create DESC
     </select>
@@ -123,7 +121,7 @@
                 #{item}
             </foreach>
             AND
-            ((owner_uid = #{ownerUid} AND inner_share = 0) OR inner_share = 1)
+            ((owner_uid = #{ownerUid} AND inner_share = FALSE) OR inner_share = TRUE)
         ORDER BY
             gmt_create DESC
     </select>
@@ -136,7 +134,7 @@
         WHERE
             id          = #{senId}
             AND
-            ((owner_uid = #{ownerUid} AND inner_share = 0) OR inner_share = 1)
+            ((owner_uid = #{ownerUid} AND inner_share = FALSE) OR inner_share = TRUE)
         LIMIT 1
     </select>
 
@@ -148,8 +146,7 @@
             AND
             id          = #{senId}
             AND
-            inner_share = 0
-        LIMIT 1
+            inner_share = FALSE
     </delete>
 
     <update id="updateSen">
@@ -169,7 +166,6 @@
             AND
             id          = #{senId}
             AND
-            inner_share = 0
-        LIMIT 1
+            inner_share = FALSE
     </update>
 </mapper>

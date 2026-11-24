@@ -98,7 +98,7 @@
             AND
             ref_flow_id = #{flowId}
             AND
-            lock_status = 0
+            lock_status = FALSE
     </select>
 
     <select id="queryReadyChangeListByDate" resultMap="dmChangeDO">
@@ -114,7 +114,9 @@
             OR
                 schedule_time IS NULL
             )
-        ORDER BY schedule_time ASC
+        ORDER BY
+            CASE WHEN schedule_time IS NULL THEN 0 ELSE 1 END,
+            schedule_time ASC
         LIMIT ${limit}
     </select>
 
@@ -128,7 +130,7 @@
             AND
             current_status = 'FAILED'
             AND
-            lock_status    = 0
+            lock_status    = FALSE
             AND
             try_times      = 0
     </select>
@@ -169,7 +171,7 @@
         WHERE
             owner_uid   = #{ownerUid}
             AND
-            lock_status = 0
+            lock_status = FALSE
             AND
             ref_flow_id IN
             <foreach collection="flowIds" item="flowId" separator="," open="(" close=")">
@@ -238,7 +240,7 @@
             dm_change
         SET
             version     = version + 1,
-            lock_status = 1
+            lock_status = TRUE
         WHERE
             id      = #{changeId}
             AND
@@ -277,6 +279,6 @@
             AND
             ref_flow_id = #{flowId}
             AND
-            lock_status = 0
+            lock_status = FALSE
     </select>
 </mapper>

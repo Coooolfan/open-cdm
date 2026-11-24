@@ -56,7 +56,7 @@
         WHERE
             id        = #{roleId}
             AND
-            inner_tag = 0
+            inner_tag = FALSE
     </update>
 
     <update id="updateInnerRoleByName">
@@ -68,7 +68,7 @@
         WHERE
             role_name = #{roleName}
             AND
-            inner_tag = 1
+            inner_tag = TRUE
     </update>
 
     <select id="listByIds" resultType="com.clougence.clouddm.platform.dal.model.auth.DmAuthRoleDO">

@@ -108,7 +108,7 @@ public interface DmExecAsyncTaskMapper extends BaseMapper<DmExecAsyncTaskDO> {
 
     int updateFromCancelingTo(long taskId, String toStatus, String message);
 
-    void updateProcess(long taskId, String processType, String processValue);
+    void updateProcess(long taskId, String processType, long processValue);
 
     void updateFromInitTo(long taskId, String toStatus, String message);
 }

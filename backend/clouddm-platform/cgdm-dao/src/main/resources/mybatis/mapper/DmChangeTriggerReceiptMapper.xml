@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.clougence.clouddm.platform.dal.mapper.cicd.DmChangeTriggerReceiptMapper">
-    <insert id="reserve" useGeneratedKeys="true" keyProperty="receipt.id">
-            INSERT
-            IGNORE INTO dm_change_trigger_receipt(
-            gmt_create, gmt_modified, owner_uid, ref_flow_id, provider, delivery_id, commit_id, trigger_type
+    <insert id="reserve" useGeneratedKeys="true" keyProperty="receipt.id" keyColumn="id" databaseId="mysql">
+        INSERT IGNORE INTO
+            dm_change_trigger_receipt(
+                gmt_create, gmt_modified, owner_uid, ref_flow_id, provider, delivery_id, commit_id, trigger_type
             )
         VALUES
             (
@@ -17,6 +17,24 @@
                 #{receipt.commitId},
                 #{receipt.triggerType}
             )
+    </insert>
+
+    <insert id="reserve" useGeneratedKeys="true" keyProperty="receipt.id" keyColumn="id" databaseId="postgresql">
+        INSERT INTO
+            dm_change_trigger_receipt(
+                gmt_create, gmt_modified, owner_uid, ref_flow_id, provider, delivery_id, commit_id, trigger_type
+            )
+        VALUES
+            (
+                NOW(), NOW(),
+                #{receipt.ownerUid},
+                #{receipt.refFlowId},
+                #{receipt.provider},
+                #{receipt.deliveryId},
+                #{receipt.commitId},
+                #{receipt.triggerType}
+            )
+        ON CONFLICT DO NOTHING
     </insert>
 
     <select id="queryOrphanIds" resultType="java.lang.Long">

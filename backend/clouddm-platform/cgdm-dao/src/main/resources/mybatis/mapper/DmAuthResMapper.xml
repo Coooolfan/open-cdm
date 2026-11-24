@@ -68,7 +68,7 @@
             owner_uid = #{ownerUid}
     </select>
 
-    <select id="queryByPathLike" resultMap="resAuthDO">
+    <select id="queryByPathLike" resultMap="resAuthDO" databaseId="mysql">
         SELECT
             <include refid="rdpResAuth"/>
         FROM
@@ -82,6 +82,24 @@
             <if test="prefixList != null and prefixList.size() > 0">
                 <foreach collection="prefixList" item="item" index="index" separator="or" open="and (" close=")">
                     #{item} LIKE CONCAT(res_path, '%')
+                </foreach>
+            </if>
+    </select>
+
+    <select id="queryByPathLike" resultMap="resAuthDO" databaseId="postgresql">
+        SELECT
+            <include refid="rdpResAuth"/>
+        FROM
+            dm_auth_res
+        WHERE
+            owner_uid = #{ownerUid}
+            AND
+            res_id    = #{resId}
+            AND
+            kind_type = #{authKind,javaType=com.clougence.clouddm.sdk.security.auth.AuthKind}
+            <if test="prefixList != null and prefixList.size() > 0">
+                <foreach collection="prefixList" item="item" index="index" separator="or" open="and (" close=")">
+                    #{item} LIKE (res_path || '%')
                 </foreach>
             </if>
     </select>

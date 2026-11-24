@@ -55,7 +55,7 @@
             (task_status = 'INIT' OR (task_status = 'RUNNING' AND gmt_modified <![CDATA[ < ]]> #{expiredBefore}))
     </update>
 
-    <update id="heartbeatPreInitTask">
+    <update id="heartbeatPreInitTask" databaseId="mysql">
         UPDATE
             dm_approval_process_activity
         SET
@@ -70,7 +70,22 @@
             JSON_UNQUOTE(JSON_EXTRACT(context, '$.runId')) = #{runId}
     </update>
 
-    <update id="updatePreInitContext">
+    <update id="heartbeatPreInitTask" databaseId="postgresql">
+        UPDATE
+            dm_approval_process_activity
+        SET
+            gmt_modified = NOW()
+        WHERE
+            process_id                            = #{processId}
+            AND
+            activity_id                           = #{activityId}
+            AND
+            task_status                           = 'RUNNING'
+            AND
+            (NULLIF(context, '')::jsonb ->> 'runId') = #{runId}
+    </update>
+
+    <update id="updatePreInitContext" databaseId="mysql">
         UPDATE
             dm_approval_process_activity
         SET
@@ -86,7 +101,23 @@
             JSON_UNQUOTE(JSON_EXTRACT(context, '$.runId')) = #{runId}
     </update>
 
-    <update id="completePreInitTask">
+    <update id="updatePreInitContext" databaseId="postgresql">
+        UPDATE
+            dm_approval_process_activity
+        SET
+            context      = #{context},
+            gmt_modified = NOW()
+        WHERE
+            process_id                            = #{processId}
+            AND
+            activity_id                           = #{activityId}
+            AND
+            task_status                           = 'RUNNING'
+            AND
+            (NULLIF(context, '')::jsonb ->> 'runId') = #{runId}
+    </update>
+
+    <update id="completePreInitTask" databaseId="mysql">
         UPDATE
             dm_approval_process_activity
         SET
@@ -101,6 +132,23 @@
             task_status                                    = 'RUNNING'
             AND
             JSON_UNQUOTE(JSON_EXTRACT(context, '$.runId')) = #{runId}
+    </update>
+
+    <update id="completePreInitTask" databaseId="postgresql">
+        UPDATE
+            dm_approval_process_activity
+        SET
+            task_status  = #{taskStatus},
+            context      = #{context},
+            gmt_modified = NOW()
+        WHERE
+            process_id                            = #{processId}
+            AND
+            activity_id                           = #{activityId}
+            AND
+            task_status                           = 'RUNNING'
+            AND
+            (NULLIF(context, '')::jsonb ->> 'runId') = #{runId}
     </update>
 
     <select id="queryByTicketId" resultType="com.clougence.clouddm.platform.dal.model.approval.DmApprovalProcessActivityDO">

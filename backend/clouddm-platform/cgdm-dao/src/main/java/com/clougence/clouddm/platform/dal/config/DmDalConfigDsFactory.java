@@ -28,27 +28,54 @@ import com.clougence.drivers.DsObject;
 import com.clougence.utils.StringUtils;
 
 public class DmDalConfigDsFactory implements DsFactory<Connection> {
-    private static final String DEFAULT_CONNECT_TIMEOUT_MS = "3000";
-    private static final String DEFAULT_SOCKET_TIMEOUT_MS  = "30000";
-    private static final String DEFAULT_CHARACTER_ENCODING = "utf8";
+
+    private static final String DEFAULT_MYSQL_CONNECT_TIMEOUT_MS = "3000";
+    private static final String DEFAULT_MYSQL_SOCKET_TIMEOUT_MS  = "30000";
+    private static final String DEFAULT_MYSQL_CHARACTER_ENCODING = "utf8";
+    private static final String DEFAULT_PG_CONNECT_TIMEOUT_SEC   = "3";
+    private static final String DEFAULT_PG_SOCKET_TIMEOUT_SEC    = "30";
+
     private final ClassLoader   driverClassLoader;
+    private final MetaDbType    dbType;
 
     public DmDalConfigDsFactory(ClassLoader driverClassLoader){
+        this(driverClassLoader, MetaDbType.MYSQL);
+    }
+
+    public DmDalConfigDsFactory(ClassLoader driverClassLoader, MetaDbType dbType){
         this.driverClassLoader = driverClassLoader;
+        this.dbType = dbType == null ? MetaDbType.MYSQL : dbType;
     }
 
     @Override
     public DsObject<Connection> create(Properties dsConfig) throws Exception {
-        String jdbcUrl = normalizeJdbcUrl(StringUtils.trimToNull(dsConfig.getProperty(DsConfigKeys.CUSTOM_URL.getConfigKey())));
+        String rawJdbcUrl = StringUtils.trimToNull(dsConfig.getProperty(DsConfigKeys.CUSTOM_URL.getConfigKey()));
+        String jdbcUrl = normalizeJdbcUrl(rawJdbcUrl);
         String username = dsConfig.getProperty(DsConfigKeys.USER.getConfigKey());
         String password = dsConfig.getProperty(DsConfigKeys.PASSWORD.getConfigKey());
         if (jdbcUrl == null) {
             throw new IllegalArgumentException("jdbcUrl is blank.");
         }
 
+        MetaDbType effectiveType = MetaDbType.tryFromJdbcUrl(rawJdbcUrl);
+        if (effectiveType == null) {
+            effectiveType = this.dbType;
+        }
+
+        Properties properties = buildConnectionProperties(effectiveType, rawJdbcUrl, username, password, dsConfig.getProperty(DsConfigKeys.LOGIN_TIMEOUT_MS.getConfigKey()));
+
+        Driver driver = (Driver) this.driverClassLoader.loadClass(effectiveType.getDriverClassName()).getDeclaredConstructor().newInstance();
+        Connection connection = driver.connect(jdbcUrl, properties);
+        if (connection == null) {
+            throw new SQLException(effectiveType.getDisplayName() + " driver refused jdbcUrl: " + jdbcUrl);
+        }
+        return new DsObject<>(dsConfig, connection, this);
+    }
+
+    static Properties buildConnectionProperties(MetaDbType dbType, String rawJdbcUrl, String username, String password, String loginTimeoutMsRaw) {
         Properties properties = new Properties();
-        applyDefaultJdbcProperties(properties);
-        collectJdbcUrlProperties(dsConfig.getProperty(DsConfigKeys.CUSTOM_URL.getConfigKey()), properties);
+        applyDefaultJdbcProperties(dbType, properties);
+        collectJdbcUrlProperties(rawJdbcUrl, properties);
 
         if (StringUtils.isNotBlank(username)) {
             properties.setProperty("user", username);
@@ -57,23 +84,48 @@ public class DmDalConfigDsFactory implements DsFactory<Connection> {
             properties.setProperty("password", password);
         }
 
-        String loginTimeoutMs = StringUtils.trimToNull(dsConfig.getProperty(DsConfigKeys.LOGIN_TIMEOUT_MS.getConfigKey()));
-        if (loginTimeoutMs != null && !properties.containsKey("connectTimeout")) {
-            properties.setProperty("connectTimeout", loginTimeoutMs);
+        String loginTimeoutMs = StringUtils.trimToNull(loginTimeoutMsRaw);
+        if (loginTimeoutMs != null && !hasExplicitConnectTimeout(rawJdbcUrl)) {
+            if (dbType.isPostgresql()) {
+                properties.setProperty("connectTimeout", millisToCeilSeconds(loginTimeoutMs));
+            } else {
+                properties.setProperty("connectTimeout", loginTimeoutMs);
+            }
         }
-
-        Driver driver = (Driver) this.driverClassLoader.loadClass("com.mysql.cj.jdbc.Driver").getDeclaredConstructor().newInstance();
-        Connection connection = driver.connect(jdbcUrl, properties);
-        if (connection == null) {
-            throw new SQLException("MySQL driver refused jdbcUrl: " + jdbcUrl);
-        }
-        return new DsObject<>(dsConfig, connection, this);
+        return properties;
     }
 
-    private static void applyDefaultJdbcProperties(Properties properties) {
-        properties.setProperty("connectTimeout", DEFAULT_CONNECT_TIMEOUT_MS);
-        properties.setProperty("socketTimeout", DEFAULT_SOCKET_TIMEOUT_MS);
-        properties.setProperty("characterEncoding", DEFAULT_CHARACTER_ENCODING);
+    private static void applyDefaultJdbcProperties(MetaDbType dbType, Properties properties) {
+        if (dbType.isPostgresql()) {
+            properties.setProperty("connectTimeout", DEFAULT_PG_CONNECT_TIMEOUT_SEC);
+            properties.setProperty("socketTimeout", DEFAULT_PG_SOCKET_TIMEOUT_SEC);
+            return;
+        }
+        properties.setProperty("connectTimeout", DEFAULT_MYSQL_CONNECT_TIMEOUT_MS);
+        properties.setProperty("socketTimeout", DEFAULT_MYSQL_SOCKET_TIMEOUT_MS);
+        properties.setProperty("characterEncoding", DEFAULT_MYSQL_CHARACTER_ENCODING);
+    }
+
+    private static boolean hasExplicitConnectTimeout(String rawJdbcUrl) {
+        if (StringUtils.isBlank(rawJdbcUrl)) {
+            return false;
+        }
+        Properties urlProps = new Properties();
+        collectJdbcUrlProperties(rawJdbcUrl, urlProps);
+        return urlProps.containsKey("connectTimeout");
+    }
+
+    static String millisToCeilSeconds(String millisText) {
+        try {
+            long ms = Long.parseLong(millisText.trim());
+            if (ms <= 0L) {
+                return DEFAULT_PG_CONNECT_TIMEOUT_SEC;
+            }
+            long seconds = (ms + 999L) / 1000L;
+            return Long.toString(Math.max(1L, seconds));
+        } catch (NumberFormatException e) {
+            return DEFAULT_PG_CONNECT_TIMEOUT_SEC;
+        }
     }
 
     private static String normalizeJdbcUrl(String jdbcUrl) {

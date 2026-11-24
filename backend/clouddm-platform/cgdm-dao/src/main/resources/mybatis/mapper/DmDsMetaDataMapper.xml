@@ -24,7 +24,7 @@
         context
     </sql>
 
-    <insert id="insertOrUpdate">
+    <insert id="insertOrUpdate" databaseId="mysql">
         INSERT INTO
             dm_ds_meta_data(primary_uid, ds_id, path, type, context)
         VALUES
@@ -37,6 +37,22 @@
             )
         ON DUPLICATE KEY UPDATE
             context      = #{context},
+            gmt_modified = NOW()
+    </insert>
+
+    <insert id="insertOrUpdate" databaseId="postgresql">
+        INSERT INTO
+            dm_ds_meta_data(primary_uid, ds_id, path, type, context)
+        VALUES
+            (
+                #{puid},
+                #{dsId},
+                #{path},
+                #{type},
+                #{context}
+            )
+        ON CONFLICT (ds_id, path, type) DO UPDATE SET
+            context      = EXCLUDED.context,
             gmt_modified = NOW()
     </insert>
 
@@ -64,12 +80,27 @@
             #{time} <![CDATA[ > ]]> gmt_modified
     </delete>
 
-    <delete id="deleteBeforeDate">
+    <delete id="deleteBeforeDate" databaseId="mysql">
         DELETE FROM
             dm_ds_meta_data
         WHERE
             #{date} <![CDATA[ > ]]> gmt_modified
         LIMIT 200
+    </delete>
+
+    <delete id="deleteBeforeDate" databaseId="postgresql">
+        DELETE FROM
+            dm_ds_meta_data
+        WHERE
+            id IN (
+                SELECT
+                    id
+                FROM
+                    dm_ds_meta_data
+                WHERE
+                    #{date} <![CDATA[ > ]]> gmt_modified
+                LIMIT 200
+            )
     </delete>
 
     <select id="queryCache" resultMap="dmAsyncTaskDO">
