@@ -32,6 +32,8 @@ import com.clougence.clouddm.api.console.sqlaudit.Type;
 import com.clougence.clouddm.api.sidecar.session.execute.ResultList;
 import com.clougence.clouddm.api.sidecar.session.execute.ResultPhaseOfBatch;
 import com.clougence.clouddm.api.sidecar.session.execute.StatusDTO;
+import com.clougence.clouddm.api.sidecar.session.workspace.WorkspaceQueryPlanDTO;
+import com.clougence.clouddm.api.sidecar.session.workspace.WorkspaceSourcePlanDTO;
 import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
 import com.clougence.clouddm.console.web.component.analysis.*;
 import com.clougence.clouddm.console.web.component.auth.DmAuthServiceForBiz;
@@ -45,6 +47,7 @@ import com.clougence.clouddm.console.web.component.detectrule.SecRulesEngine;
 import com.clougence.clouddm.console.web.component.dsconfig.DmDsConfigService;
 import com.clougence.clouddm.console.web.component.dsconfig.mode.DsLevels;
 import com.clougence.clouddm.console.web.component.execute.QueryService;
+import com.clougence.clouddm.console.web.component.workspace.WorkspacePlanBuilder;
 import com.clougence.clouddm.console.web.constants.RewriteTags;
 import com.clougence.clouddm.console.web.global.i18n.DmI18nUtils;
 import com.clougence.clouddm.console.web.global.i18n.I18nDmMsgKeys;
@@ -55,6 +58,7 @@ import com.clougence.clouddm.console.web.model.vo.editor.query.WsQueryResult;
 import com.clougence.clouddm.console.web.service.editor.DsQueryEditorService;
 import com.clougence.clouddm.console.web.service.envparam.DmEnvParamService;
 import com.clougence.clouddm.console.web.service.security.AuditService;
+import com.clougence.clouddm.console.web.service.workspace.WorkspaceSessionService;
 import com.clougence.clouddm.console.web.util.DmDsUtils;
 import com.clougence.clouddm.console.web.util.RdpAuthUtils;
 import com.clougence.clouddm.platform.dal.access.ExecutionDal;
@@ -62,6 +66,7 @@ import com.clougence.clouddm.platform.dal.access.SystemDal;
 import com.clougence.clouddm.platform.dal.model.datasource.DmDsDO;
 import com.clougence.clouddm.platform.dal.model.execution.DmExecFileDO;
 import com.clougence.clouddm.platform.dal.model.execution.DmExecSessionDO;
+import com.clougence.clouddm.platform.dal.model.execution.DsSessionType;
 import com.clougence.clouddm.platform.dal.model.execution.FileStatus;
 import com.clougence.clouddm.platform.dal.model.secrule.WarnLevel;
 import com.clougence.clouddm.platform.plugin.PluginManager;
@@ -120,10 +125,14 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
     @Resource
     private QueryService         queryService;
     @Resource
-    private AuditService         auditService;
+    private AuditService            auditService;
     @Resource
-    private DmEnvParamService    dmEnvParamService;
-    private QueryTaskExecutor    queryExecutor;
+    private DmEnvParamService       dmEnvParamService;
+    @Resource
+    private WorkspacePlanBuilder    workspacePlanBuilder;
+    @Resource
+    private WorkspaceSessionService workspaceSessionService;
+    private QueryTaskExecutor       queryExecutor;
 
     @Override
     public void init() throws Exception {
@@ -169,6 +178,15 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
                 consumer.accept(BuildResMsgUtils.buildDone(fo));
                 return;
             }
+        }
+
+        // 2.5 workspace cross-db session branch
+        DmExecSessionDO existingSession = this.queryService.getSessionInfo(curUid, sessionId);
+        boolean isWorkspaceSession = existingSession != null
+            && (existingSession.getSessionType() == DsSessionType.WORKSPACE || StringUtils.equalsIgnoreCase("WORKSPACE", existingSession.getDatasourceType()));
+        if (isWorkspaceSession) {
+            handleWorkspaceRequest(fo, consumer, existingSession);
+            return;
         }
 
         // 3. do operate
@@ -228,6 +246,156 @@ public class ConsoleQueryService implements UnifiedPostConstruct, ConsoleQueryAp
             consumer.accept(BuildResMsgUtils.buildHintMsg(fo, e.getMessage(), MessageLevel.Error));
             consumer.accept(BuildResMsgUtils.buildDone(fo));
         }
+    }
+
+    // ------------------------------------------------------------------------
+    //                                                            for Workspace
+    // ------------------------------------------------------------------------
+
+    private void handleWorkspaceRequest(WsQueryFO fo, Consumer<WsQueryResult> consumer, DmExecSessionDO sessionInfo) {
+        String curUid = fo.getCurrentUserId();
+        String sessionId = fo.getSessionId();
+        try {
+            switch (fo.getQueryType()) {
+                case RequestQuery:
+                    if (this.queryService.isExecuting(curUid, sessionId)) {
+                        this.executingCheckAndResponseIt(fo, consumer);
+                    } else {
+                        this.requestWorkspaceQuery(fo, consumer, sessionInfo, false);
+                    }
+                    break;
+                case RequestPlan:
+                    if (this.queryService.isExecuting(curUid, sessionId)) {
+                        this.executingCheckAndResponseIt(fo, consumer);
+                    } else {
+                        this.requestWorkspaceQuery(fo, consumer, sessionInfo, true);
+                    }
+                    break;
+                case CancelQuery:
+                    this.cancelQuery(fo, consumer);
+                    break;
+                case RecoveryStatus: {
+                    SessionContextDTO ctxDTO = sessionInfo.toRdbCtx();
+                    QueryCtx ctx = new QueryCtx(ctxDTO);
+                    consumer.accept(BuildResMsgUtils.buildStatus(fo, ctx, this.queryEditorService));
+                    consumer.accept(BuildResMsgUtils.buildDone(fo));
+                    break;
+                }
+                default:
+                    consumer.accept(BuildResMsgUtils.buildDone(fo));
+                    break;
+            }
+        } catch (Exception e) {
+            log.error("workspace query operation failed, sessionId=" + sessionId + ", type=" + fo.getQueryType(), e);
+            consumer.accept(BuildResMsgUtils.buildHintMsg(fo, e.getMessage(), MessageLevel.Error));
+            consumer.accept(BuildResMsgUtils.buildDone(fo));
+        }
+    }
+
+    private void requestWorkspaceQuery(WsQueryFO queryDTO, Consumer<WsQueryResult> consumer, DmExecSessionDO sessionInfo, boolean isExplain) {
+        if (StringUtils.isBlank(queryDTO.getQueryString())) {
+            String message = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_NO_SQL_SELECT_ERROR.name());
+            consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, message, MessageLevel.Error));
+            consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+            return;
+        }
+        if (queryDTO.getQueryString().length() > MAX_QUERY_INPUT_LENGTH) {
+            String message = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_SQL_TOO_LARGE_ERROR.name(), MAX_QUERY_INPUT_LENGTH);
+            consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, message, MessageLevel.Error));
+            consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+            return;
+        }
+
+        int curQueueSize = this.queryExecutor.getQueueSize();
+        int maxQueueSize = this.config.getConsoleQueryQueueSize();
+        if (curQueueSize >= maxQueueSize) {
+            String message = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_QUEUE_FULL_ERROR.name());
+            consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, message, MessageLevel.Error));
+            consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+            return;
+        }
+
+        QueryCtx ctx = new QueryCtx(sessionInfo.toRdbCtx());
+        ctx.setQueryStatus(QueryStatus.Prepare);
+        ctx.setStartTime(System.currentTimeMillis());
+        String prepareMsg = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_STAGE_PREPARE_MESSAGE.name());
+        consumer.accept(BuildResMsgUtils.buildCost(queryDTO, ctx, false));
+        consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, prepareMsg, MessageLevel.Info));
+
+        this.queryExecutor.submitTask(() -> {
+            try {
+                return asyncWorkspaceQueryPrepare(queryDTO, consumer, ctx, sessionInfo, isExplain);
+            } catch (Exception e) {
+                log.error("workspace query execution failed", e);
+                String errMsg = e instanceof ErrorMessageException eme ? eme.getErrorMessage() : ExceptionUtils.getRootCauseMessage(e);
+                consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, errMsg, MessageLevel.Error));
+                consumer.accept(BuildResMsgUtils.buildConsoleMsg(queryDTO, errMsg, MessageLevel.Error, true));
+                consumer.accept(BuildResMsgUtils.buildCost(queryDTO, ctx, true));
+                consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+                return ExitCode.finish();
+            }
+        });
+    }
+
+    private ExitCode asyncWorkspaceQueryPrepare(WsQueryFO queryDTO, Consumer<WsQueryResult> consumer, QueryCtx ctx, DmExecSessionDO sessionInfo, boolean isExplain) {
+        String puid = queryDTO.getPrimaryUserId();
+        String curUid = queryDTO.getCurrentUserId();
+        String sessionId = queryDTO.getSessionId();
+        long clusterId = Long.parseLong(sessionInfo.getClusterId());
+
+        String authMsg = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_STAGE_AUTH_MESSAGE.name());
+        consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, authMsg, MessageLevel.Info));
+
+        List<WorkspaceQueryPlanDTO> plans;
+        try {
+            plans = this.workspacePlanBuilder.buildPlans(queryDTO, clusterId, isExplain, this.isUsingCacheResult());
+        } catch (ErrorMessageException e) {
+            consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, e.getErrorMessage(), MessageLevel.Error));
+            consumer.accept(BuildResMsgUtils.buildConsoleMsg(queryDTO, e.getErrorMessage(), MessageLevel.Error, true));
+            consumer.accept(BuildResMsgUtils.buildCost(queryDTO, ctx, true));
+            consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+            return ExitCode.finish();
+        }
+
+        if (plans.isEmpty()) {
+            consumer.accept(BuildResMsgUtils.buildCost(queryDTO, ctx, true));
+            consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+            return ExitCode.finish();
+        }
+
+        DmExecSessionDO activeSession = this.workspaceSessionService.ensureActiveSession(puid, curUid, sessionId, clusterId);
+        if (activeSession == null) {
+            String msg = DmI18nUtils.getMessage(I18nDmMsgKeys.WORKSPACE_SESSION_NOT_FOUND_ERROR.name());
+            consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, msg, MessageLevel.Error));
+            consumer.accept(BuildResMsgUtils.buildCost(queryDTO, ctx, true));
+            consumer.accept(BuildResMsgUtils.buildDone(queryDTO));
+            return ExitCode.finish();
+        }
+
+        ctx.setQueryStatus(QueryStatus.Query);
+        ctx.setPrepareCost(System.currentTimeMillis() - ctx.getStartTime());
+        consumer.accept(BuildResMsgUtils.buildCost(queryDTO, ctx, false));
+
+        // Record SQL audit for every referenced remote business datasource (skip EXPLAIN metadata-only probe)
+        if (!isExplain) {
+            for (WorkspaceQueryPlanDTO plan : plans) {
+                if (plan.getSources() != null) {
+                    for (WorkspaceSourcePlanDTO src : plan.getSources()) {
+                        if (src.getDsId() != null && src.getSourceQueryRequest() != null) {
+                            this.auditService.prepareAudit(src.getDsId(), curUid, src.getSourceQueryRequest());
+                        }
+                    }
+                }
+            }
+        }
+
+        String batchId = UUID.randomUUID().toString().replace("-", "");
+        this.workspaceSessionService.asyncExecuteQuery(activeSession, batchId, plans);
+
+        String responseMsg = DmI18nUtils.getMessage(I18nDmMsgKeys.CONSOLE_QUERY_STAGE_RESPONSE_MESSAGE.name());
+        consumer.accept(BuildResMsgUtils.buildHintMsg(queryDTO, responseMsg, MessageLevel.Info));
+        this.queryExecutor.submitTask(() -> asyncQueryWaitResult(queryDTO, consumer, ctx));
+        return ExitCode.finish();
     }
 
     // ------------------------------------------------------------------------

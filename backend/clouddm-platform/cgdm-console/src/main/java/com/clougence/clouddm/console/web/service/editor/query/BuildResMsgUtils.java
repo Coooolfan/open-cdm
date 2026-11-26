@@ -103,7 +103,7 @@ public class BuildResMsgUtils {
         dto.setQuerySql(result.getQuerySql());
         dto.setOriginal(result.getOriginalScript());
 
-        if (result.isHasRewrite()) {
+        if (result.isHasRewrite() && ctx.getLevels() != null) {
             dto.setOriginal(result.getOriginalScript().trim());
             I18nUtils i18n = PluginManager.findDsI18nUtil(ctx.getLevels().dsDO().getDataSourceType());
             dto.setRewriteTags(result.getRewriteTag().stream().map(i18n::getMessage).collect(Collectors.toList()));
@@ -131,11 +131,12 @@ public class BuildResMsgUtils {
     }
 
     public static WsQueryResult buildStatus(WsQueryFO queryDTO, QueryCtx ctx, DsQueryEditorService queryService) {
-        DsAvailableDTO statusDTO = queryService.availableDataSource(queryDTO.getPrimaryUserId(), queryDTO.getCurrentUserId(), ctx.getLevels().dsDO().getId());
-
         WsStatusResMsg dto = fillResult(new WsStatusResMsg(), WsResultType.Status, queryDTO);
-        dto.setDsStatus(statusDTO.getDsStatus());
-        dto.setDsStatusMessage(statusDTO.getDsStatusMessage());
+        if (!ctx.isWorkspace() && ctx.getLevels() != null) {
+            DsAvailableDTO statusDTO = queryService.availableDataSource(queryDTO.getPrimaryUserId(), queryDTO.getCurrentUserId(), ctx.getLevels().dsDO().getId());
+            dto.setDsStatus(statusDTO.getDsStatus());
+            dto.setDsStatusMessage(statusDTO.getDsStatusMessage());
+        }
 
         dto.setRdbCatalog(ctx.getCtxDTO().getRdbCatalog());
         dto.setRdbSchema(ctx.getCtxDTO().getRdbSchema());
@@ -158,18 +159,22 @@ public class BuildResMsgUtils {
     public static WsQueryResult buildQueryMsg(WsQueryFO queryDTO, ResultPhase phase, QueryCtx ctx) {
         WsQueryInfoMsg dto = fillResult(new WsQueryInfoMsg(), WsResultType.QueryScript, queryDTO);
 
-        SessionContextDTO ctxDTO = ctx.getCtxDTO();
-        List<UmiTypes> levelsDef = ctx.getLevels().levelsDef();
+        if (ctx.isWorkspace() || ctx.getLevels() == null) {
+            dto.setLine("workspace>");
+        } else {
+            SessionContextDTO ctxDTO = ctx.getCtxDTO();
+            List<UmiTypes> levelsDef = ctx.getLevels().levelsDef();
 
-        List<String> lineData = new ArrayList<>();
-        if (levelsDef.contains(UmiTypes.Catalog)) {
-            lineData.add(ctxDTO.getRdbCatalog());
-        }
-        if (levelsDef.contains(UmiTypes.Schema)) {
-            lineData.add(ctxDTO.getRdbSchema());
-        }
+            List<String> lineData = new ArrayList<>();
+            if (levelsDef.contains(UmiTypes.Catalog)) {
+                lineData.add(ctxDTO.getRdbCatalog());
+            }
+            if (levelsDef.contains(UmiTypes.Schema)) {
+                lineData.add(ctxDTO.getRdbSchema());
+            }
 
-        dto.setLine(StringUtils.join(lineData.toArray(), ".") + ">");
+            dto.setLine(StringUtils.join(lineData.toArray(), ".") + ">");
+        }
 
         String preStr = "";
         if (queryDTO.getQueryType() == WsQueryType.RequestPlan) {
@@ -178,7 +183,7 @@ public class BuildResMsgUtils {
 
         dto.setScript(preStr + phase.getQuerySql().trim());
 
-        if (phase.isHasRewrite()) {
+        if (phase.isHasRewrite() && ctx.getLevels() != null) {
             dto.setOriginal(phase.getOriginalScript().trim());
             I18nUtils i18n = PluginManager.findDsI18nUtil(ctx.getLevels().dsDO().getDataSourceType());
             dto.setRewriteTags(phase.getRewriteTag().stream().map(i18n::getMessage).collect(Collectors.toList()));

@@ -1062,6 +1062,7 @@ public class DmConvertUtils {
         vo.setPublicIp(workerDO.getExternalIp());
         vo.setInstallOrUpgradeDate(workerDO.getInstallOrUpgradeDate());
         vo.setInstallOrUpgradeVersion(workerDO.getInstallOrUpgradeVersion());
+        vo.setWorkspaceEnabled(Boolean.TRUE.equals(workerDO.getWorkspaceEnabled()));
 
         vo.setHealthLevel(workerDetector.getHealthLevel(workerDO));
         return vo;

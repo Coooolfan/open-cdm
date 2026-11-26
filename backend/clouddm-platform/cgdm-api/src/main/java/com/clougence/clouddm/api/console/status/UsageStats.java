@@ -35,4 +35,6 @@ public class UsageStats {
 
     private Integer toolsPoolMax;
 
+    private Boolean workspaceEnabled;
+
 }

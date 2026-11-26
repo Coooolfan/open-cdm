@@ -152,6 +152,7 @@ export const ACTION_TYPE = {
 
 export const TAB_TYPE = {
   QUERY: 'QUERY',
+  WORKSPACE: 'WORKSPACE',
   STRUCT: 'STRUCT',
   DATA: 'DATA'
 };

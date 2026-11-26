@@ -84,7 +84,10 @@
                 {{ row.privateIp }}
               </template>
               <template #status="{ row }">
-                <div v-if="row.deployStatus !== 'INSTALLING' && row.deployStatus !== 'UNINSTALLING'" style="display: flex">
+                <div
+                  v-if="row.deployStatus !== 'INSTALLING' && row.deployStatus !== 'UNINSTALLING'"
+                  style="display: flex; align-items: center; white-space: nowrap"
+                >
                   <cc-status :type="HEALTH_LEVEL_COLOR[row.healthLevel]" />
                   {{ WORKER_STATE[row.workerState].name }}
                 </div>
@@ -106,6 +109,10 @@
                   <Icon v-if="row.consoleTaskState !== 'FAILED'" type="ios-loading" />
                   {{ $t('xie-zai-zhong') }}
                 </div>
+              </template>
+              <template #capability="{ row }">
+                <Tag v-if="row.workspaceEnabled" color="cyan">{{ $t('workspace-worker-capability-workspace') }}</Tag>
+                <Tag v-else color="default">{{ $t('workspace-worker-capability-standard') }}</Tag>
               </template>
               <template #actions="{ row }">
                 <div class="work-list-table-actions">
@@ -316,6 +323,11 @@ export default {
           title: this.$t('zhuang-tai'),
           width: 100,
           slot: 'status'
+        },
+        {
+          title: this.$t('workspace-worker-capability'),
+          width: 120,
+          slot: 'capability'
         },
         {
           title: this.$t('fu-zai'),

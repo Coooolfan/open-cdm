@@ -109,4 +109,6 @@ public class DmSysWorkerDO {
 
     private String         installOrUpgradeVersion;
 
+    private Boolean        workspaceEnabled;
+
 }

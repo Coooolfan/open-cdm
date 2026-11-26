@@ -80,6 +80,10 @@ import com.clougence.clouddm.platform.dal.util.PageObj;
 import com.clougence.clouddm.platform.dal.util.PageUtils;
 import com.clougence.clouddm.sdk.security.auth.AuthKind;
 import com.clougence.clouddm.api.console.sqlaudit.SqlStatus;
+import com.clougence.clouddm.api.console.status.WorkerState;
+import com.clougence.clouddm.comm.constants.worker.WorkerConnStatus;
+import com.clougence.clouddm.platform.dal.model.system.ArgSysWorkerObj;
+import com.clougence.clouddm.platform.dal.model.system.DmSysWorkerDO;
 import com.clougence.clouddm.sdk.service.secrules.Requester;
 
 public class DualMetaDbIntegrationTest {
@@ -530,6 +534,32 @@ public class DualMetaDbIntegrationTest {
             executionDal.asyncTaskMapper().updateProcess(task.getId(), AsyncTaskProcessType.PROGRESS.name(), 75L);
             DmExecAsyncTaskDO reloadedTask = executionDal.asyncTaskMapper().queryById(task.getId());
             Assert.assertEquals(Long.valueOf(75L), reloadedTask.getProcessValue());
+
+            // 15. Workspace worker capability column + queryConnectedWorkspaceByClusterId
+            DmSysWorkerDO worker = new DmSysWorkerDO();
+            worker.setClusterId(1L);
+            worker.setWorkerIp("127.0.0.1");
+            worker.setRegion("cn-hangzhou");
+            worker.setWorkerState(WorkerState.ONLINE);
+            worker.setConnStatus(WorkerConnStatus.CONNECTED);
+            worker.setScheduleIp("127.0.0.1");
+            worker.setWorkerName("ws_worker_" + suffix);
+            worker.setWorkerSeqNumber("wsn_ws_" + suffix);
+            worker.setWorkerDesc("Workspace Worker " + suffix);
+            worker.setUid(InitSeedConstants.ADMIN_UID);
+            worker.setLifeCycleState(LifeCycleState.CREATED);
+            worker.setWorkspaceEnabled(false);
+            Assert.assertEquals(1, systemDal.workerMapper().insert(worker));
+            Assert.assertTrue(systemDal.workerMapper().queryConnectedWorkspaceByClusterId(1L).stream()
+                .noneMatch(w -> worker.getWorkerSeqNumber().equals(w.getWorkerSeqNumber())));
+
+            ArgSysWorkerObj statsUpdate = new ArgSysWorkerObj();
+            statsUpdate.setWorkerId(worker.getId());
+            statsUpdate.setWorkspaceEnabled(true);
+            systemDal.workerMapper().updateWorkerDynamicStats(statsUpdate);
+            List<DmSysWorkerDO> wsWorkers = systemDal.workerMapper().queryConnectedWorkspaceByClusterId(1L);
+            Assert.assertTrue("queryConnectedWorkspaceByClusterId must return workspace-enabled worker on " + dbType,
+                wsWorkers.stream().anyMatch(w -> worker.getWorkerSeqNumber().equals(w.getWorkerSeqNumber()) && Boolean.TRUE.equals(w.getWorkspaceEnabled())));
         }
     }
 

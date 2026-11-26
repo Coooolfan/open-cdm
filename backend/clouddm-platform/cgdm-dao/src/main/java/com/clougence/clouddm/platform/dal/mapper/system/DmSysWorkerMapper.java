@@ -52,6 +52,8 @@ public interface DmSysWorkerMapper extends BaseMapper<DmSysWorkerDO> {
 
     List<DmSysWorkerDO> queryConnectedByClusterId(Long clusterId);
 
+    List<DmSysWorkerDO> queryConnectedWorkspaceByClusterId(Long clusterId);
+
     List<DmSysWorkerDO> queryByConnStatus(WorkerConnStatus connStatus);
 
     List<DmSysWorkerDO> queryInactiveConnectedByHeartbeatReport(@Param("checkPointEpochMs") Long checkPointEpochMs);

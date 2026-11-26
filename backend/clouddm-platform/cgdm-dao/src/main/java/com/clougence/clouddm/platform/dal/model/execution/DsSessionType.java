@@ -21,4 +21,5 @@ package com.clougence.clouddm.platform.dal.model.execution;
 public enum DsSessionType {
     TOOLS,
     QUERY,
+    WORKSPACE,
 }

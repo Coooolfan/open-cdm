@@ -38,6 +38,7 @@
         <result column="life_cycle_state" property="lifeCycleState"/>
         <result column="install_or_upgrade_date" property="installOrUpgradeDate"/>
         <result column="install_or_upgrade_version" property="installOrUpgradeVersion"/>
+        <result column="workspace_enabled" property="workspaceEnabled"/>
     </resultMap>
 
     <sql id="worker">
@@ -75,7 +76,8 @@
         console_job_id,
         life_cycle_state,
         install_or_upgrade_date,
-        install_or_upgrade_version
+        install_or_upgrade_version,
+        workspace_enabled
     </sql>
 
     <sql id="workerIdentity">
@@ -189,6 +191,21 @@
             cluster_id  = #{clusterId}
             AND
             conn_status = 'CONNECTED'
+        ORDER BY
+            gmt_create DESC
+    </select>
+
+    <select id="queryConnectedWorkspaceByClusterId" resultMap="workerDO">
+        SELECT
+            <include refid="worker"/>
+        FROM
+            dm_sys_worker
+        WHERE
+            cluster_id        = #{clusterId}
+            AND
+            conn_status       = 'CONNECTED'
+            AND
+            workspace_enabled = TRUE
         ORDER BY
             gmt_create DESC
     </select>
@@ -418,6 +435,9 @@
             </if>
             <if test="sessionPoolMax != null">
                 session_pool_max = #{sessionPoolMax},
+            </if>
+            <if test="workspaceEnabled != null">
+                workspace_enabled = #{workspaceEnabled},
             </if>
         </set>
         WHERE

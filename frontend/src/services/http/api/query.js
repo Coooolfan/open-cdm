@@ -11,5 +11,9 @@ export const queryApi = {
   dmQueryScriptUpdate: '/api/entry/query/script/update',
   dmQueryScriptList: '/api/entry/query/script/list',
   dmQueryScriptDetail: '/api/entry/query/script/detail',
-  dmQueryScriptDelete: '/api/entry/query/script/delete'
+  dmQueryScriptDelete: '/api/entry/query/script/delete',
+  dmWorkspaceListClusters: '/api/entry/workspace/listClusters',
+  dmWorkspaceListClusterDataSources: '/api/entry/workspace/listClusterDataSources',
+  dmWorkspaceCreateSession: '/api/entry/workspace/createSession',
+  dmWorkspaceCloseSession: '/api/entry/workspace/closeSession'
 };

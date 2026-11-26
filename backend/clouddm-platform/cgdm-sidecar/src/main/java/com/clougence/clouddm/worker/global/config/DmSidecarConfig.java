@@ -47,8 +47,32 @@ public class DmSidecarConfig {
     private int     exportMaxExecutor   = 200;
 
     @Value("${dm.sidecar.audit-report:true}")
-    private boolean auditReport         = true;
+    private boolean auditReport              = true;
 
     @Value("${dm.sidecar.metric-report:true}")
-    private boolean metricReport        = true;
+    private boolean metricReport             = true;
+
+    @Value("${dm.sidecar.workspace.enabled:false}")
+    private boolean workspaceEnabled         = false;
+
+    @Value("${dm.sidecar.workspace.memory-limit:1GB}")
+    private String  workspaceMemoryLimit     = "1GB";
+
+    @Value("${dm.sidecar.workspace.threads:4}")
+    private int     workspaceThreads         = 4;
+
+    @Value("${dm.sidecar.workspace.temp-dir:}")
+    private String  workspaceTempDir         = "";
+
+    @Value("${dm.sidecar.workspace.max-temp-dir-size:2GB}")
+    private String  workspaceMaxTempDirSize  = "2GB";
+
+    @Value("${dm.sidecar.workspace.max-sessions:20}")
+    private int     workspaceMaxSessions     = 20;
+
+    @Value("${dm.sidecar.workspace.max-source-rows:200000}")
+    private long    workspaceMaxSourceRows   = 200000L;
+
+    @Value("${dm.sidecar.workspace.query-timeout-sec:120}")
+    private int     workspaceQueryTimeoutSec = 120;
 }

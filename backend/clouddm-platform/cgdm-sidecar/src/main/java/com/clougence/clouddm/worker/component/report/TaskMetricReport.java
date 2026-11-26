@@ -103,6 +103,7 @@ public class TaskMetricReport implements Runnable {
         sessionDTO.setSessionPoolUse(this.sessionManager.getSessionCount());
         sessionDTO.setToolsPoolMax(this.toolSessionManager.getMaxSessionCount());
         sessionDTO.setToolsPoolUse(this.toolSessionManager.getSessionCount());
+        sessionDTO.setWorkspaceEnabled(this.dmConfig.isWorkspaceEnabled());
         return sessionDTO;
     }
 }

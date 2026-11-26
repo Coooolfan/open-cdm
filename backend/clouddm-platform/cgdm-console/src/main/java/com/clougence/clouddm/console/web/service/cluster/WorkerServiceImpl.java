@@ -291,6 +291,7 @@ public class WorkerServiceImpl implements WorkerService, UnifiedPostConstruct {
             UsageStats usageStats = metricStats.getUsageStats();
             param.setSessionPoolMax(usageStats.getSessionPoolMax());
             param.setSessionPoolUse(usageStats.getSessionPoolUse());
+            param.setWorkspaceEnabled(usageStats.getWorkspaceEnabled());
         }
         // cpuStats
         if (metricStats.getCpuStats() != null) {

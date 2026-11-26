@@ -1381,9 +1381,9 @@ export default {
       const providerItem = monaco.languages.registerHoverProvider(lang, {
         provideHover: (model, position) => {
           const word = model.getWordAtPosition(position);
-          if (word && word.word) {
+          if (word && word.word && this.currentTab?.node?.key) {
             const table =
-              this.completionData[this.currentTab.node.key][this.currentTab.leafType] &&
+              this.completionData[this.currentTab.node.key]?.[this.currentTab.leafType] &&
               this.completionData[this.currentTab.node.key][this.currentTab.leafType][word.word];
             let value = `|  ${this.$t('lie-ming')}   | ${this.$t('shu-xing')}  |\n|  ----  | ----  |`;
             if (table && table.columnList && table.columnList.length) {
@@ -1565,7 +1565,10 @@ export default {
     },
     getColumnSuggest(snippet) {
       const list = [];
-      const { node, leafType } = this.currentTab;
+      const { node, leafType } = this.currentTab || {};
+      if (!node || !node.key || !this.completionData[node.key]?.[leafType]) {
+        return list;
+      }
       const { wordRanges } = snippet;
       const tableListObj = this.completionData[node.key][leafType];
       Object.keys(tableListObj).forEach((tableKey) => {
@@ -1585,8 +1588,11 @@ export default {
       return list;
     },
     getTableSuggest(leafType = this.currentTab.leafType) {
-      const { node } = this.currentTab;
+      const { node } = this.currentTab || {};
       const list = [];
+      if (!node || !node.key) {
+        return list;
+      }
       let leafKey = {};
       this.currentTab.leafGroup.forEach((leaf) => {
         if (leaf.type === leafType) {

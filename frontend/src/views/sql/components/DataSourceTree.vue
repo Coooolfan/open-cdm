@@ -1,6 +1,14 @@
 <script lang="jsx">
 import appLogger from '@/utils/logger';
-import { DisconnectOutlined, DoubleLeftOutlined, LinkOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons-vue';
+import {
+  CopyOutlined,
+  DisconnectOutlined,
+  DoubleLeftOutlined,
+  LinkOutlined,
+  PartitionOutlined,
+  ReloadOutlined,
+  SearchOutlined
+} from '@ant-design/icons-vue';
 import ContextMenu from '@imengyu/vue3-context-menu';
 import { resolveBrowserMenuLabel } from '@/utils/browserMenuI18n';
 import VTree from '@wsfe/vue-tree';
@@ -22,11 +30,12 @@ const SIDEBAR_ANIMATION_DURATION = 260;
 
 export default {
   name: 'DataSourceTree',
-  emits: ['sidebar-state-change'],
+  emits: ['sidebar-state-change', 'open-workspace'],
   mixins: [copyMixin, datasourceMixin, browseMixin, utilMixin],
   components: {
     AddDataSource,
     DoubleLeftOutlined,
+    PartitionOutlined,
     SearchOutlined,
     SqlLoadingSkeleton,
     VTree
@@ -1074,6 +1083,29 @@ export default {
     handleShowAddDsModal() {
       this.showAddDsModal = true;
     },
+    formatCrossDbSegment(name) {
+      if (!name) return '""';
+      if (/^[A-Za-z0-9_\u4e00-\u9fa5$-]+$/.test(name)) {
+        return name;
+      }
+      return `"${String(name).replace(/"/g, '""')}"`;
+    },
+    copyCrossDbReference(node) {
+      if (!node || !node.INSTANCE) return;
+      const dsName = node.INSTANCE.attr?.dsInstanceDesc || node.INSTANCE.attr?.dsInstance || node.INSTANCE.title;
+      const parts = [`#${this.formatCrossDbSegment(dsName)}`];
+      if (node.CATALOG?.name) {
+        parts.push(this.formatCrossDbSegment(node.CATALOG.name));
+      }
+      if (node.SCHEMA?.name) {
+        parts.push(this.formatCrossDbSegment(node.SCHEMA.name));
+      }
+      if (!['INSTANCE', 'CATALOG', 'SCHEMA', 'ENV'].includes(node.nodeType) && node.title) {
+        parts.push(this.formatCrossDbSegment(node.title));
+      }
+      const refText = parts.join('.');
+      this.copyText(refText, this.$t('workspace-copy-cross-ref-success', [refText]));
+    },
     async handleAddDs() {
       await this.$refs.addDatasource.handleAddPersonalDataSource();
     },
@@ -1139,6 +1171,14 @@ export default {
             });
           }
         });
+
+        if (node.INSTANCE && node.nodeType !== NODE_TYPE.ENV) {
+          items.push({
+            label: this.$t('workspace-copy-cross-ref'),
+            icon: <CopyOutlined style={{ fontSize: '15px' }} />,
+            onClick: () => this.copyCrossDbReference(node)
+          });
+        }
 
         if (items.length) {
           ContextMenu.showContextMenu({
@@ -1455,6 +1495,16 @@ export default {
           @click="handleExpandCompactSearch"
         >
           <SearchOutlined aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          class="data-source-toolbar-button"
+          :aria-label="$t('workspace-open-entry')"
+          :title="$t('workspace-open-entry')"
+          data-testid="open-workspace-btn"
+          @click="$emit('open-workspace')"
+        >
+          <PartitionOutlined aria-hidden="true" />
         </button>
         <button
           type="button"

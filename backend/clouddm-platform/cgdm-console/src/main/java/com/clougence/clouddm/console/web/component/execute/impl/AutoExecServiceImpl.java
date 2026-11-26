@@ -780,7 +780,7 @@ public class AutoExecServiceImpl implements AutoExecService {
             throw new ErrorMessageException(DmErrorCode.CLUSTER_HAVE_NO_WORKS_ERROR.code(), MessageUtils.getClusterHaveNoWorksErrorMessage(bindClusterId));
         }
 
-        DmSysWorkerDO worker = workers.get(new Random(System.currentTimeMillis()).nextInt(workers.size()));
+        DmSysWorkerDO worker = com.clougence.clouddm.console.web.util.WorkerRouteUtils.pickNormalWorker(workers);
 
         RSocketSendDTO sendDTO = new RSocketSendDTO();
         sendDTO.setClusterId(worker.getClusterId());

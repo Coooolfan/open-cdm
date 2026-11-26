@@ -29,6 +29,7 @@ dependencies {
     implementation 'com.github.mwiede:jsch:0.2.20'
     implementation 'com.opencsv:opencsv:5.4'
     implementation 'org.codehaus.plexus:plexus-classworlds:2.6.0'
+    implementation 'org.duckdb:duckdb_jdbc:2.0.1.0'
 
     // test
 }

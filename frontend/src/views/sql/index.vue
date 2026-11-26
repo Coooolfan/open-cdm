@@ -20,6 +20,7 @@
         :get-workspace-connection="getWorkspaceConnection"
         :handle-workspace-connection="handleWorkspaceConnection"
         @sidebar-state-change="handleDataSourceSidebarStateChange"
+        @open-workspace="handleOpenWorkspace"
       />
       <div class="query-container" v-show="!compactWorkspace || mobileView !== 'datasources'">
         <div class="content">
@@ -75,7 +76,10 @@
                               <span class="dropdown-item-title truncate">{{ getTabDisplayTitle(tab) }}</span>
                             </Tooltip>
                             <span class="dropdown-item-desc truncate">
-                              <template v-if="tab.node?.INSTANCE">
+                              <template v-if="tab.type === TAB_TYPE.WORKSPACE">
+                                {{ `[${$t('workspace-tab-title')} · ${tab.clusterName || tab.clusterId}]` }}
+                              </template>
+                              <template v-else-if="tab.node?.INSTANCE">
                                 [{{ tab.node.INSTANCE.attr.dsInstanceDesc || tab.node.INSTANCE.attr.dsInstance }}]
                               </template>
                               <template v-else>[{{ $t('sql-query-unconnected') }}]</template>
@@ -100,10 +104,13 @@
           <Transition name="sql-content-reveal">
             <div class="query-content-container" v-if="tabs.length">
               <loading :active.sync="fullLoading" :is-full-page="false"></loading>
-              <div v-if="currentTab.type === TAB_TYPE.QUERY && globalDsSetting[currentTab.dsType]" class="query-content">
+              <div
+                v-if="(currentTab.type === TAB_TYPE.QUERY && globalDsSetting[currentTab.dsType]) || currentTab.type === TAB_TYPE.WORKSPACE"
+                class="query-content"
+              >
                 <div class="query">
                   <TableList
-                    v-if="currentTab.connected && currentTab.node && currentTab.leafGroup?.length"
+                    v-if="currentTab.type === TAB_TYPE.QUERY && currentTab.connected && currentTab.node && currentTab.leafGroup?.length"
                     v-show="!compactWorkspace || mobileView === 'objects'"
                     ref="tableList"
                     :get-node-data="getTableNodeData"
@@ -115,7 +122,11 @@
                     :rdb-object-detail="rdbObjectDetail"
                   />
                   <SqlLoadingSkeleton
-                    v-else-if="currentTab.node && ['connecting', 'reconnecting'].includes(currentTab.workspaceConnectionState)"
+                    v-else-if="
+                      currentTab.type === TAB_TYPE.QUERY &&
+                      currentTab.node &&
+                      ['connecting', 'reconnecting'].includes(currentTab.workspaceConnectionState)
+                    "
                     v-show="!compactWorkspace || mobileView === 'objects'"
                     variant="objects"
                     class="table-list-container"
@@ -147,7 +158,12 @@
                         @open-script="handleOpenSqlScript"
                       >
                         <template #connection-context>
-                          <div v-if="currentTab.connected && currentTab.node" class="query-schema-select__content">
+                          <div v-if="currentTab.type === TAB_TYPE.WORKSPACE" class="query-schema-select__content">
+                            <a-tag color="cyan" style="margin-right: 4px">{{ currentTab.dsType }}</a-tag>
+                            <span class="query-connection-label">{{ currentTab.clusterName }}</span>
+                            <WorkspaceSourceHelper :data-sources="currentTab.workspaceDataSources || []" @insert="insertWorkspaceSnippet" />
+                          </div>
+                          <div v-else-if="currentTab.connected && currentTab.node" class="query-schema-select__content">
                             <a-select
                               v-if="currentTab.selectOptions && currentTab.node.levels[currentTab.node.levels.length - 1] !== 'INSTANCE'"
                               class="schema-select-style"
@@ -175,7 +191,11 @@
                   </div>
                 </div>
               </div>
-              <div v-if="currentTab.type !== TAB_TYPE.QUERY && !currentTab.connected" class="workspace-connection-notice" role="status">
+              <div
+                v-if="currentTab.type !== TAB_TYPE.QUERY && currentTab.type !== TAB_TYPE.WORKSPACE && !currentTab.connected"
+                class="workspace-connection-notice"
+                role="status"
+              >
                 {{ currentTab.msgContent || $t('sql-connection-disconnected') }}
                 <Button v-if="!getWorkspaceConnection(currentTab.dsId).busy" @click="handleClickDsStatusIcon">{{ $t('sql-connection-open') }}</Button>
               </div>
@@ -218,6 +238,12 @@
         <Button @click="showConnectedModal = false">{{ $t('guan-bi') }}</Button>
       </template>
     </CCModal>
+    <WorkspaceClusterModal
+      :visible="showWorkspaceClusterModal"
+      :clusters="workspaceClusters"
+      @confirm="handleSelectWorkspaceCluster"
+      @cancel="showWorkspaceClusterModal = false"
+    />
   </div>
 </template>
 <script>
@@ -240,6 +266,8 @@ import StructView from '@/views/sql/components/StructView';
 import DataSourceTree from '@/views/sql/components/DataSourceTree';
 import SqlEmptyState from '@/views/sql/components/SqlEmptyState';
 import SqlLoadingSkeleton from '@/views/sql/components/SqlLoadingSkeleton';
+import WorkspaceClusterModal from '@/views/sql/components/WorkspaceClusterModal';
+import WorkspaceSourceHelper from '@/views/sql/components/WorkspaceSourceHelper';
 import { clearAllPending } from '@/services/http/cancelRequest';
 import LuckySheetDataView from '@/views/sql/components/LuckySheetDataView';
 import browseMixin from '@/mixins/browseMixin';
@@ -281,6 +309,8 @@ export default {
     TableList,
     SqlEmptyState,
     SqlLoadingSkeleton,
+    WorkspaceClusterModal,
+    WorkspaceSourceHelper,
     Loading
   },
   setup() {
@@ -339,7 +369,9 @@ export default {
       workspaceConnections: {},
       workspaceBlockedDsIds: [],
       sessionRequests: new Map(),
-      workspaceUnmounted: false
+      workspaceUnmounted: false,
+      showWorkspaceClusterModal: false,
+      workspaceClusters: []
     };
   },
   beforeRouteEnter(to, from, next) {
@@ -490,7 +522,7 @@ export default {
           object: {
             sessionId: tab.sessionId,
             queryType: WS_REQ_QUERY_TYPE.CANCEL_QUERY,
-            levels: this.browseGenLevelsData(tab.node),
+            levels: tab.node ? this.browseGenLevelsData(tab.node) : [],
             rdbAutoCommit: tab.autoCommit,
             rdbReadOnly: tab.readOnly,
             rdbIsolation: tab.isolation
@@ -1441,11 +1473,26 @@ export default {
               tab.executeInfo = [];
               tab.msgFromWs = false;
               tab.msgContent = '';
-              const connection = this.getWorkspaceConnection(tab.dsId);
-              if (connection.blocked) {
+              if (tab.type === TAB_TYPE.WORKSPACE) {
+                tab.sessionId = '';
                 tab.connected = false;
-                tab.workspaceConnectionState = 'disconnected';
-                tab.msgContent = this.$t('sql-connection-disconnected');
+                tab.support = this.buildWorkspaceSupport();
+                tab.running = false;
+                tab.stopping = false;
+                tab.result = {
+                  active: 'message',
+                  collapsed: false,
+                  maximized: false,
+                  collapsedBeforeMaximize: false,
+                  list: []
+                };
+              } else {
+                const connection = this.getWorkspaceConnection(tab.dsId);
+                if (connection.blocked) {
+                  tab.connected = false;
+                  tab.workspaceConnectionState = 'disconnected';
+                  tab.msgContent = this.$t('sql-connection-disconnected');
+                }
               }
               // Ensures that physical options exist
               if (!tab.selectOptions) {
@@ -1489,7 +1536,7 @@ export default {
       }
     },
     syncCurrentEditorTextToTab() {
-      if (this.currentTab.type !== TAB_TYPE.QUERY) {
+      if (this.currentTab.type !== TAB_TYPE.QUERY && this.currentTab.type !== TAB_TYPE.WORKSPACE) {
         return;
       }
       const sqlViewer = this.$refs.sqlViewer;
@@ -1683,16 +1730,28 @@ export default {
       }
     },
     async closesSession(tabs) {
-      const sessionId = [];
+      const normalIds = [];
+      const workspaceIds = [];
       tabs.forEach((tab) => {
         if (tab.sessionId) {
-          sessionId.push(tab.sessionId);
+          if (tab.type === TAB_TYPE.WORKSPACE) {
+            workspaceIds.push(tab.sessionId);
+          } else {
+            normalIds.push(tab.sessionId);
+          }
         }
       });
 
-      if (!sessionId.length) return true;
-      const res = await this.$services.dmQueryClosesSession({ data: { sessionId } });
-      return res.success;
+      let ok = true;
+      if (normalIds.length) {
+        const res = await this.$services.dmQueryClosesSession({ data: { sessionId: normalIds } });
+        ok = ok && !!res.success;
+      }
+      if (workspaceIds.length) {
+        const res = await this.$services.dmWorkspaceCloseSession({ data: { sessionId: workspaceIds } });
+        ok = ok && !!res.success;
+      }
+      return ok;
     },
     handleTabAction(actionType) {
       const index = this.tabs.findIndex((tab) => tab.key === this.contextData.key);
@@ -1789,7 +1848,142 @@ export default {
 
       this.storeQueryTabs();
     },
+    buildWorkspaceSupport() {
+      return {
+        isolation: { conf: 'No' },
+        autoCommit: { conf: 'No' },
+        readOnly: { conf: 'No' },
+        cancel: { conf: 'Allow' },
+        explain: { conf: 'Allow' },
+        language: null,
+        commandExamples: []
+      };
+    },
+    async handleOpenWorkspace() {
+      if (this.disableAddTab()) return;
+      try {
+        const res = await this.$services.dmWorkspaceListClusters({ data: {} });
+        if (!res.success) {
+          this.$Message.error(res.message || this.$t('workspace-session-create-failed'));
+          return;
+        }
+        const clusters = res.data || [];
+        const available = clusters.filter((c) => c.workspaceWorkerCount > 0);
+        if (!available.length) {
+          this.$Message.warning(this.$t('workspace-no-available-cluster'));
+          return;
+        }
+        if (available.length === 1) {
+          await this.openWorkspaceForCluster(available[0]);
+          return;
+        }
+        this.workspaceClusters = clusters;
+        this.showWorkspaceClusterModal = true;
+      } catch (e) {
+        this.$Message.error(e.message || this.$t('workspace-session-create-failed'));
+      }
+    },
+    async handleSelectWorkspaceCluster(cluster) {
+      this.showWorkspaceClusterModal = false;
+      await this.openWorkspaceForCluster(cluster);
+    },
+    async openWorkspaceForCluster(cluster) {
+      if (this.disableAddTab()) return;
+      this.syncCurrentEditorTextToTab();
+      const key = `workspace_${nanoid(8)}`;
+      const clusterName = cluster.clusterDesc || cluster.clusterName || `#${cluster.clusterId}`;
+      const existingCount = this.tabs.filter((t) => t.type === TAB_TYPE.WORKSPACE).length;
+      const title = existingCount > 0 ? `${this.$t('workspace-tab-title')} ${existingCount + 1}` : this.$t('workspace-tab-title');
+      const tab = {
+        key,
+        tabId: key,
+        type: TAB_TYPE.WORKSPACE,
+        title,
+        icon: 'icon-v2-ConsoleRun',
+        dsId: null,
+        dsType: 'DuckDB',
+        node: null,
+        clusterId: cluster.clusterId,
+        clusterName,
+        connected: false,
+        sessionId: '',
+        autoCommit: true,
+        readOnly: false,
+        isolation: null,
+        running: false,
+        stopping: false,
+        support: this.buildWorkspaceSupport(),
+        workspaceDataSources: [],
+        text: '',
+        selectOptions: [],
+        leafGroup: [],
+        executeInfo: [],
+        executeInfoScrollDown: true,
+        message: { text: '', show: false, type: '' },
+        cost: { popIndex: -1, popList: [] },
+        result: {
+          active: 'message',
+          collapsed: false,
+          maximized: false,
+          collapsedBeforeMaximize: false,
+          list: []
+        },
+        resultList: []
+      };
+
+      this.tabs.push(tab);
+      this.active = key;
+      const reactiveTab = this.tabs[this.tabs.length - 1];
+      this.currentTab = reactiveTab;
+      if (this.compactWorkspace) this.selectMobileWorkspace('query');
+      await this.ensureWorkspaceTabReady(reactiveTab);
+      this.storeQueryTabs();
+    },
+    async ensureWorkspaceTabReady(tab) {
+      if (!tab || tab.type !== TAB_TYPE.WORKSPACE || !tab.clusterId) return false;
+      if (!tab.support) {
+        tab.support = this.buildWorkspaceSupport();
+      }
+      try {
+        const dsRes = await this.$services.dmWorkspaceListClusterDataSources({ data: { clusterId: tab.clusterId } });
+        if (dsRes.success) {
+          tab.workspaceDataSources = dsRes.data || [];
+        }
+      } catch (e) {
+        appLogger.warn('Failed to load workspace cluster datasources', e);
+      }
+
+      if (tab.sessionId && tab.connected) return true;
+      try {
+        const res = await this.$services.dmWorkspaceCreateSession({
+          data: {
+            clusterId: tab.clusterId,
+            sessionId: tab.sessionId || undefined
+          }
+        });
+        if (!res.success || !res.data?.sessionId) {
+          tab.connected = false;
+          this.$Message.error(res.message || this.$t('workspace-session-create-failed'));
+          return false;
+        }
+        tab.sessionId = res.data.sessionId;
+        tab.connected = true;
+        return true;
+      } catch (e) {
+        tab.connected = false;
+        this.$Message.error(e.message || this.$t('workspace-session-create-failed'));
+        return false;
+      }
+    },
+    insertWorkspaceSnippet(snippet) {
+      this.$refs.sqlViewer?.insertSnippet?.(snippet);
+    },
     async createSession(tab, next, connectionAction = false) {
+      if (tab?.type === TAB_TYPE.WORKSPACE) {
+        const ok = await this.ensureWorkspaceTabReady(tab);
+        if (ok && next) next();
+        return ok;
+      }
       const connection = this.getWorkspaceConnection(tab.dsId);
       if ((connection.blocked || connection.busy) && !connectionAction) return false;
       if (tab.sessionId) return true;
@@ -1904,6 +2098,10 @@ export default {
     },
     async handleGetDsSetting(restore = false) {
       const targetTab = this.currentTab;
+      if (targetTab && targetTab.type === TAB_TYPE.WORKSPACE) {
+        await this.ensureWorkspaceTabReady(targetTab);
+        return;
+      }
       if (targetTab && targetTab.dsId) {
         const dsId = targetTab.dsId;
         const connection = this.getWorkspaceConnection(dsId);

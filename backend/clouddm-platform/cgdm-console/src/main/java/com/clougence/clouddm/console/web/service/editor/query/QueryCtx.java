@@ -46,6 +46,7 @@ public class QueryCtx {
     private final boolean          supportSwitchIsolation;
     private final boolean          supportChangeAutoCommit;
     private final boolean          supportChangeReadOnly;
+    private final boolean          workspace;
 
     private boolean                hasUnCommitted;
     private QueryStatus            queryStatus;
@@ -69,6 +70,26 @@ public class QueryCtx {
         this.supportSwitchIsolation = supportSpi.supportChangeIsolation(dsConfig) != RdbSupportLevel.No;
         this.supportChangeAutoCommit = supportSpi.supportChangeAutoCommit(dsConfig) != RdbSupportLevel.No;
         this.supportChangeReadOnly = supportSpi.supportChangeReadOnly(dsConfig) != RdbSupportLevel.No;
+        this.workspace = false;
+        this.hasUnCommitted = false;
+
+        this.queryStatus = QueryStatus.Free;
+        this.receiveTimes = new AtomicLong();
+    }
+
+    public QueryCtx(SessionContextDTO ctxDTO){
+        this.levels = null;
+        this.dsConfig = null;
+        this.ctxDTO = ctxDTO;
+        this.ctxParams = null;
+        this.sessionSpi = null;
+        this.sqlEngine = null;
+        this.supportSwitchCatalog = false;
+        this.supportSwitchSchema = false;
+        this.supportSwitchIsolation = false;
+        this.supportChangeAutoCommit = false;
+        this.supportChangeReadOnly = false;
+        this.workspace = true;
         this.hasUnCommitted = false;
 
         this.queryStatus = QueryStatus.Free;

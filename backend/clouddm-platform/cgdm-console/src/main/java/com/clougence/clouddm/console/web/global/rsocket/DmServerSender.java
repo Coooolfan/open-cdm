@@ -226,10 +226,10 @@ public class DmServerSender implements RSocketServerSender {
         throw new ErrorMessageException(DmErrorCode.CLUSTER_HAVE_NO_WORKS_ERROR.code(), MessageUtils.getClusterHaveNoWorksErrorMessage(clusterId));
     }
 
-    /** get one worker of cluster in local */
+    /** get one worker of cluster in local, preferring pure NORMAL workers */
     protected DmSysWorkerDO chooseLocalRegisteredWorker(List<DmSysWorkerDO> statusDOs) {
         DmSysWorkerDO localBindSidecar = null;
-        for (DmSysWorkerDO statusDO : statusDOs) {
+        for (DmSysWorkerDO statusDO : com.clougence.clouddm.console.web.util.WorkerRouteUtils.orderForNormalTraffic(statusDOs)) {
             if (registry.getRequesterMap().get(statusDO.getWorkerSeqNumber()) != null) {
                 localBindSidecar = statusDO;
                 break;

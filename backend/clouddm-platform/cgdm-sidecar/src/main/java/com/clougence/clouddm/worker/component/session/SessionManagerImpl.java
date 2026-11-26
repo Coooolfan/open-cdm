@@ -30,6 +30,7 @@ import com.clougence.clouddm.api.common.exception.DmErrorCode;
 import com.clougence.clouddm.api.common.exception.ErrorMessageException;
 import com.clougence.clouddm.api.sidecar.session.drivers.DriverRef;
 import com.clougence.clouddm.api.sidecar.session.drivers.DriverUtils;
+import com.clougence.clouddm.api.sidecar.session.workspace.WorkspaceSessionInitDTO;
 import com.clougence.clouddm.base.metadata.ds.DataSourceConfig;
 import com.clougence.clouddm.platform.plugin.DsPluginInfo;
 import com.clougence.clouddm.platform.plugin.PluginManager;
@@ -42,6 +43,7 @@ import com.clougence.clouddm.sdk.service.file.FileService;
 import com.clougence.clouddm.worker.component.notify.SidecarSqlNotifyService;
 import com.clougence.clouddm.worker.component.session.ssh.SshTunnelHandle;
 import com.clougence.clouddm.worker.component.session.ssh.SshTunnelManager;
+import com.clougence.clouddm.worker.component.workspace.WorkspaceSession;
 import com.clougence.clouddm.worker.global.config.DmSidecarConfig;
 import com.clougence.utils.ExceptionUtils;
 import com.clougence.utils.StringUtils;
@@ -54,9 +56,11 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class SessionManagerImpl implements SessionManager, UnifiedPostConstruct {
 
-    private final Map<String, SessionAgent> sessionMap  = new ConcurrentHashMap<>();
-    private final AtomicBoolean             inited      = new AtomicBoolean(false);
-    private final AtomicInteger             counter     = new AtomicInteger();
+    private final Map<String, SessionAgent> sessionMap       = new ConcurrentHashMap<>();
+    private final Map<String, Boolean>      workspaceSessions = new ConcurrentHashMap<>();
+    private final AtomicBoolean             inited           = new AtomicBoolean(false);
+    private final AtomicInteger             counter          = new AtomicInteger();
+    private final AtomicInteger             workspaceCounter = new AtomicInteger();
     @Resource
     private DmSidecarConfig                 dmConfig;
     @Resource
@@ -204,6 +208,63 @@ public class SessionManagerImpl implements SessionManager, UnifiedPostConstruct 
         }
     }
 
+    @Override
+    public SessionAgent createWorkspaceSession(DsResourceManager rm, WorkspaceSessionInitDTO initDTO) {
+        if (!this.dmConfig.isWorkspaceEnabled()) {
+            throw new IllegalStateException("Workspace cross-db query is disabled on this worker.");
+        }
+        if (!rm.isReady()) {
+            throw new RuntimeException("ResourceManager is not ready.");
+        }
+
+        String newSessionId = initDTO.getSessionId();
+        if (StringUtils.isBlank(newSessionId)) {
+            throw new RuntimeException("workspace sessionId is blank.");
+        }
+        if (this.sessionMap.containsKey(newSessionId)) {
+            throw new RuntimeException(newSessionId + " workspace session already exists.");
+        }
+
+        Integer maxIdleTimeSec = initDTO.getMaxIdleTimeSec();
+        if (maxIdleTimeSec == null || maxIdleTimeSec <= 0) {
+            maxIdleTimeSec = 1800;
+        }
+
+        int maxWorkspaceSessions = Math.max(1, this.dmConfig.getWorkspaceMaxSessions());
+        if (this.workspaceCounter.incrementAndGet() > maxWorkspaceSessions) {
+            this.workspaceCounter.decrementAndGet();
+            throw new IllegalStateException("Exceed workspace max session limit: " + maxWorkspaceSessions);
+        }
+
+        try {
+            WorkspaceSession session = new WorkspaceSession(newSessionId, rm, this.sshTunnelManager, this.findValueProcessSpi(), this.notifyService, this.dmConfig);
+            session.addCloseListener(this::closeSessionById);
+
+            SessionSupport ss = new SessionSupport();
+            ss.setSessionId(newSessionId);
+            ss.setLocalWsn(this.localWsn);
+            ss.setFileService(this.fileService);
+            ss.setNotifyService(this.notifyService);
+            ss.setResultProcessSpi(null);
+
+            SessionAgent agent = new SessionAgent(session, ss, rm, maxIdleTimeSec);
+            this.workspaceSessions.put(newSessionId, Boolean.TRUE);
+            this.sessionMap.put(newSessionId, agent);
+            log.info("finish create workspace session, sessionId={}, clusterId={}", newSessionId, initDTO.getClusterId());
+            return agent;
+        } catch (Throwable e) {
+            this.workspaceCounter.decrementAndGet();
+            log.error("failed create workspace session, sessionId=" + newSessionId, e);
+            if (e instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            if (e instanceof Error error) {
+                throw error;
+            }
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
     private static boolean isPluginPackageCorrupted(Throwable e) {
         for (Throwable item : ExceptionUtils.getThrowableList(e)) {
             if (!(item instanceof IndexOutOfBoundsException)) {
@@ -223,19 +284,20 @@ public class SessionManagerImpl implements SessionManager, UnifiedPostConstruct 
     /** close by outside */
     @Override
     public void closeSessionById(String sessionId) {
-        if (this.sessionMap.containsKey(sessionId)) {
-            Session rdbSession = this.sessionMap.get(sessionId);
-            if (rdbSession == null) {
-                return;
-            }
+        Session rdbSession = this.sessionMap.remove(sessionId);
+        if (rdbSession == null) {
+            return;
+        }
 
-            this.sessionMap.remove(sessionId);
+        if (this.workspaceSessions.remove(sessionId) != null) {
+            this.workspaceCounter.decrementAndGet();
+        } else {
             this.counter.decrementAndGet();
-            try {
-                rdbSession.close();
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-            }
+        }
+        try {
+            rdbSession.close();
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
     }
 

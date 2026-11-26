@@ -31,6 +31,7 @@ import com.clougence.clouddm.platform.dal.access.entry.DsCacheEntry;
 import com.clougence.clouddm.platform.dal.model.datasource.DmDsDO;
 import com.clougence.clouddm.platform.plugin.PluginManager;
 import com.clougence.clouddm.sdk.execute.session.QueryRequest;
+import com.clougence.clouddm.sdk.execute.session.QueryResultConf;
 import com.clougence.clouddm.sdk.execute.session.ResultLimit;
 import com.clougence.clouddm.sdk.execute.session.SessionContextDTO;
 import com.clougence.clouddm.sdk.execute.session.SessionSpi;
@@ -197,14 +198,16 @@ public class DmDsUtils {
             limit.setFetchColumnBytesLimit(safeGetConfSize(configMap.get(RootUserConfig.Fields.onlineMaxColumnMegaByte), 4) * MB_SIZE);
             limit.setFetchElementBytesLimit(safeGetConfSize(configMap.get(RootUserConfig.Fields.onlineMaxElementMegaByte), 1) * MB_SIZE);
             limit.setFetchPageSize(30);
-            limit.setQueryTimeoutSec(Objects.requireNonNullElse(dsConfig.getOnlineMaxQueryTimeoutSec(), 30));
+            Integer onlineTimeout = dsConfig == null ? null : dsConfig.getOnlineMaxQueryTimeoutSec();
+            limit.setQueryTimeoutSec(Objects.requireNonNullElse(onlineTimeout, 30));
         } else {
             limit.setFetchRecordCountLimit(safeGetConfSize(configMap.get(RootUserConfig.Fields.taskMaxRecordCount), 3000));
             limit.setFetchResultSetBytesLimit(safeGetConfSize(configMap.get(RootUserConfig.Fields.taskMaxResultSetMegaByte), 200) * MB_SIZE);
             limit.setFetchColumnBytesLimit(safeGetConfSize(configMap.get(RootUserConfig.Fields.taskMaxColumnMegaByte), 4) * MB_SIZE);
             limit.setFetchElementBytesLimit(safeGetConfSize(configMap.get(RootUserConfig.Fields.taskMaxElementMegaByte), 1) * MB_SIZE);
             limit.setFetchPageSize(-1);
-            limit.setQueryTimeoutSec(Objects.requireNonNullElse(dsConfig.getExportMaxQueryTimeoutSec(), 300));
+            Integer exportTimeout = dsConfig == null ? null : dsConfig.getExportMaxQueryTimeoutSec();
+            limit.setQueryTimeoutSec(Objects.requireNonNullElse(exportTimeout, 300));
         }
         return limit;
     }
@@ -240,6 +243,34 @@ public class DmDsUtils {
             query.getResultConf().setTimeWithZoneFormat(WellKnowFormat.WKF_OFFSET_TIME24_S9);
             query.getResultConf().setDataTimeWithZoneFormat(WellKnowFormat.WKF_OFFSET_DATE_TIME24_S9);
         });
+    }
+
+    public static void fillWorkspaceResultConf(QueryResultConf resultConf) {
+        if (resultConf == null) {
+            return;
+        }
+
+        Map<String, String> configMap = consoleService.fetchSettingsMap(Arrays.asList(//
+                RootUserConfig.Fields.defaultColumnDisplayChars, //
+                RootUserConfig.Fields.onlineMaxRecordCount,      //
+                RootUserConfig.Fields.onlineMaxResultSetMegaByte,//
+                RootUserConfig.Fields.onlineMaxColumnMegaByte,   //
+                RootUserConfig.Fields.onlineMaxElementMegaByte)  //
+        );
+
+        ResultLimit limit = fetchResultLimit(configMap, Requester.CONSOLE, null);
+        resultConf.setQueryTimeoutSec(limit.getQueryTimeoutSec());
+        resultConf.setFetchRecordCountLimit(limit.getFetchRecordCountLimit());
+        resultConf.setFetchResultSetBytesLimit(limit.getFetchResultSetBytesLimit());
+        resultConf.setFetchColumnBytesLimit(limit.getFetchColumnBytesLimit());
+        resultConf.setFetchElementBytesLimit(limit.getFetchElementBytesLimit());
+        resultConf.setFetchPageSize(limit.getFetchPageSize());
+        resultConf.setDisplayChars(safeGetConfSize(configMap.get(RootUserConfig.Fields.defaultColumnDisplayChars), 256));
+        resultConf.setDataFormat(WellKnowFormat.WKF_DATE10);
+        resultConf.setTimeFormat(WellKnowFormat.WKF_TIME24_S9);
+        resultConf.setDataTimeFormat(WellKnowFormat.WKF_DATE_TIME24_S9);
+        resultConf.setTimeWithZoneFormat(WellKnowFormat.WKF_OFFSET_TIME24_S9);
+        resultConf.setDataTimeWithZoneFormat(WellKnowFormat.WKF_OFFSET_DATE_TIME24_S9);
     }
 
     private static int safeGetConfSize(String val, int defaultVal) {

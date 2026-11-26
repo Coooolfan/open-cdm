@@ -49,7 +49,12 @@
         >
           <template #editor-controls>
             <CommandExamples v-if="tab.support.commandExamples?.length" :key="tab.dsId" :examples="tab.support.commandExamples" />
-            <SqlScriptPopover :tab="tab" :get-editor-content="getEditorContent" @open-script="$emit('open-script', $event)" />
+            <SqlScriptPopover
+              v-if="tab.type !== TAB_TYPE.WORKSPACE"
+              :tab="tab"
+              :get-editor-content="getEditorContent"
+              @open-script="$emit('open-script', $event)"
+            />
           </template>
         </Editor>
         <Transition name="sql-editor-loading">
@@ -174,6 +179,7 @@ import browseMixin from '@/mixins/browseMixin';
 import { sendWebSocket } from '@/services/socket';
 import sqlMixin from '@/mixins/sqlMixin';
 import { RULE_WARN_LEVEL, WS_REQ_QUERY_TYPE, WS_TYPE } from '@/utils';
+import { TAB_TYPE } from '@/const';
 import { UPDATE_SOCKET_STATUS } from '@/store/mutationTypes';
 import { EVENT_BUS_NAME_LIST } from '@/utils/eventBusName';
 import formatError from '@/services/formatError';
@@ -210,6 +216,7 @@ export default {
     ...mapGetters(['isDesktop']),
     ...mapState(['dmGlobalSetting', 'aiCapabilities', 'aiCapabilitiesError']),
     aiSupported() {
+      if (this.tab.type === TAB_TYPE.WORKSPACE) return false;
       return !['MongoDB', 'Redis', 'Valkey'].includes(this.tab.dsType);
     },
     aiTabs() {
@@ -265,6 +272,7 @@ export default {
   mixins: [sqlMixin, browseMixin],
   data() {
     return {
+      TAB_TYPE,
       RULE_WARN_LEVEL,
       currentSql: '',
       position: {},
@@ -406,6 +414,21 @@ export default {
         editor.focus();
       });
     },
+    insertSnippet(snippet) {
+      const editor = this.monacoEditor;
+      if (!editor || !snippet) return;
+      const model = editor.getModel();
+      const position = editor.getPosition() || { lineNumber: 1, column: 1 };
+      const offset = model.getOffsetAt(position);
+      const text = String(snippet).replace(/\r\n|\r|\n/g, model.getEOL());
+      editor.pushUndoStop();
+      editor.executeEdits('workspace-insert', [
+        { range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column), text }
+      ]);
+      editor.pushUndoStop();
+      editor.setPosition(model.getPositionAt(offset + text.length));
+      editor.focus();
+    },
     ...mapMutations([UPDATE_SOCKET_STATUS]),
     handleCloseModal() {
       this.currentSql = '';
@@ -437,7 +460,10 @@ export default {
     },
     //
     handleGetRecoveryStatus() {
-      if (!this.tab.connected || !this.tab.sessionId || !this.tab.node) {
+      if (!this.tab.connected || !this.tab.sessionId) {
+        return;
+      }
+      if (this.tab.type !== TAB_TYPE.WORKSPACE && !this.tab.node) {
         return;
       }
       sendWebSocket(
@@ -446,7 +472,7 @@ export default {
           object: {
             sessionId: this.tab.sessionId,
             queryType: WS_REQ_QUERY_TYPE.RECOVER_STATUS,
-            levels: this.browseGenLevelsData(this.tab.node),
+            levels: this.tab.node ? this.browseGenLevelsData(this.tab.node) : [],
             rdbAutoCommit: this.tab.autoCommit,
             rdbReadOnly: this.tab.readOnly,
             rdbIsolation: this.tab.isolation
@@ -485,7 +511,7 @@ export default {
               object: {
                 sessionId: this.tab.sessionId,
                 queryType: WS_REQ_QUERY_TYPE.CANCEL_QUERY,
-                levels: this.browseGenLevelsData(this.tab.node),
+                levels: this.tab.node ? this.browseGenLevelsData(this.tab.node) : [],
                 rdbAutoCommit: this.tab.autoCommit,
                 rdbReadOnly: this.tab.readOnly,
                 rdbIsolation: this.tab.isolation
@@ -567,7 +593,7 @@ export default {
       });
     },
     async onRun(type = 'run', asyncForm) {
-      if (!this.tab.connected || !this.tab.node || !this.tab.sessionId) {
+      if (!this.tab.connected || (this.tab.type !== TAB_TYPE.WORKSPACE && !this.tab.node) || !this.tab.sessionId) {
         this.$Message.warning(this.$t('lian-jie-yi-duan-kai'));
         return;
       }
@@ -630,7 +656,7 @@ export default {
           queryArgs: [],
           sessionId: this.tab.sessionId,
           queryType: WS_REQ_QUERY_TYPE.REQUEST_QUERY,
-          levels: this.browseGenLevelsData(this.tab.node),
+          levels: this.tab.node ? this.browseGenLevelsData(this.tab.node) : [],
           rdbAutoCommit: this.tab.autoCommit,
           rdbReadOnly: this.tab.readOnly,
           rdbIsolation: this.tab.isolation
@@ -675,7 +701,7 @@ export default {
           basicCodeColumn: Math.min(position.selectionStartColumn, position.positionColumn),
           sessionId: this.tab.sessionId,
           queryType: WS_REQ_QUERY_TYPE.REQUEST_PLAN,
-          levels: this.browseGenLevelsData(this.tab.node),
+          levels: this.tab.node ? this.browseGenLevelsData(this.tab.node) : [],
           queryString: selectedSql,
           queryArgs: [],
           rdbAutoCommit: this.tab.autoCommit

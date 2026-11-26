@@ -75,4 +75,6 @@ public class WorkerVO {
     private Date           installOrUpgradeDate;
 
     private String         installOrUpgradeVersion;
+
+    private Boolean        workspaceEnabled;
 }

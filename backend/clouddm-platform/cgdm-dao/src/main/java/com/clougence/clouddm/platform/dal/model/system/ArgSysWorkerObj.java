@@ -49,4 +49,6 @@ public class ArgSysWorkerObj {
 
     private Integer     sessionPoolUse;
     private Integer     sessionPoolMax;
+
+    private Boolean     workspaceEnabled;
 }

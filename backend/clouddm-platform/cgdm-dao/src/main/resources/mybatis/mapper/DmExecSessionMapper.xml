@@ -9,6 +9,7 @@
         <result column="last_query_time" property="lastQueryTime"/>
         <result column="uid" property="uid"/>
         <result column="session_id" property="sessionId"/>
+        <result column="session_type" property="sessionType"/>
         <result column="config" property="config"/>
         <result column="wsn" property="wsn"/>
         <result column="cluster_id" property="clusterId"/>
@@ -21,6 +22,7 @@
         id,
         uid,
         session_id,
+        session_type,
         wsn,
         cluster_id,
         datasource_id,
